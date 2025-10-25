@@ -12,7 +12,7 @@ psycopg2-binary==2.9.9
 
 # ==================================
 # AUTHENTICATION & SECURITY
-# ==================================
+# ==================================clear
 djangorestframework-simplejwt==5.3.1
 PyJWT==2.8.0
 
