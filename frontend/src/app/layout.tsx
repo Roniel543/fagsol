@@ -1,13 +1,10 @@
 import { AuthProvider } from '@/shared/hooks/useAuth'
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 import './globals.css'
-
-const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'FagSol Escuela Virtual',
-  description: 'Plataforma de educación virtual',
+  description: 'Plataforma de educación virtual moderna y escalable',
 }
 
 export default function RootLayout({
@@ -17,7 +14,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={inter.className}>
+      <body className="">
         <AuthProvider>
           {children}
         </AuthProvider>
