@@ -9,35 +9,38 @@ module.exports = {
   ],
   theme: {
     extend: {
-      colors:{
-        primario:{
-          50:'#eff6ff',
-          100:'#dbeafe',
-          200:'#bfdbfe',
-          300:'#bfdbfe',
-          400:'#93c5fd',
-          500:'#60a5fa',
-          600:'#3b82f6',
-          700:'#2563eb',
-          800:'#1d4ed8',
-          900:'#1e40af',
+      colors: {
+        // Colores Primarios
+        primary: {
+          black: '#000',
+          orange: '#F5A623',
+          white: '#FFFFFF',
         },
-        secundario:{
-          50:'#f8fafc',
-          100:'#f1f5f9',
-          200:'#e2e8f0',
-          300:'#cbd5e1',
-          400:'#94a3b8',
-          500:'#64748b',
-          600:'#475569',
-          700:'#334155',
-          800:'#1e293b',
-          900:'#0f172a',
+        // Colores Secundarios
+        secondary: {
+          'dark-gray': '#1A1A1A',
+          'medium-gray': '#282828',
+          'light-gray': '#A3A3A3',
+        },
+        // Colores de Estado
+        status: {
+          error: '#FF6B6B',
+          success: '#2D9B7F',
+          info: '#1E5A6B',
+          warning: '#FFD93D',
+        },
+        // Colores de Gráficos
+        chart: {
+          1: '#F5A623',
+          2: '#2D9B7F',
+          3: '#1E5A6B',
+          4: '#FFD93D',
+          5: '#FF9F43',
         },
       },
-      fontFamily:{
-        sans:['Sora', 'system-ui', 'sans-serif'],
-        sora:['Sora', 'sans-serif'],
+      fontFamily: {
+        sans: ['var(--font-soraa)', 'system-ui', 'sans-serif'],
+        sora: ['var(--font-soraa)', 'sans-serif'],
       },
     },
   },

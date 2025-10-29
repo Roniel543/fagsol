@@ -1,10 +1,12 @@
 import React from 'react';
+export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
+export { HeroSkeleton, ProcessSkeleton, SkeletonImage } from './SkeletonComponents';
 
 interface ButtonProps {
     children: React.ReactNode;
     onClick?: () => void;
     type?: 'button' | 'submit' | 'reset';
-    variant?: 'primary' | 'secondary' | 'danger' | 'success';
+    variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'success';
     size?: 'sm' | 'md' | 'lg';
     disabled?: boolean;
     loading?: boolean;
@@ -24,16 +26,17 @@ export function Button({
     const baseClasses = 'font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
 
     const variantClasses = {
-        primary: 'bg-indigo-600 hover:bg-indigo-700 text-white focus:ring-indigo-500',
-        secondary: 'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500',
-        danger: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
-        success: 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500',
+        primary: 'bg-primary-orange hover:bg-primary-orange/90 text-primary-black focus:ring-primary-orange',
+        secondary: 'bg-secondary-medium-gray hover:bg-secondary-medium-gray/90 text-primary-white focus:ring-secondary-medium-gray',
+        outline: 'border-2 border-primary-orange bg-transparent text-primary-orange hover:bg-primary-orange hover:text-primary-black focus:ring-primary-orange',
+        danger: 'bg-status-error hover:bg-status-error/90 text-primary-white focus:ring-status-error',
+        success: 'bg-status-success hover:bg-status-success/90 text-primary-white focus:ring-status-success',
     };
 
     const sizeClasses = {
         sm: 'px-3 py-1.5 text-sm',
-        md: 'px-4 py-2 text-sm',
-        lg: 'px-6 py-3 text-base',
+        md: 'px-6 py-3 text-sm',
+        lg: 'px-8 py-4 text-base',
     };
 
     return (
@@ -81,9 +84,9 @@ export function Input({
     return (
         <div className={className}>
             {label && (
-                <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor={name} className="block text-sm font-medium text-primary-white mb-1">
                     {label}
-                    {required && <span className="text-red-500 ml-1">*</span>}
+                    {required && <span className="text-status-error ml-1">*</span>}
                 </label>
             )}
             <input
@@ -94,11 +97,11 @@ export function Input({
                 onChange={onChange}
                 placeholder={placeholder}
                 required={required}
-                className={`appearance-none relative block w-full px-3 py-2 border ${error ? 'border-red-300' : 'border-gray-300'
-                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                className={`appearance-none relative block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
+                    } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`}
             />
             {error && (
-                <p className="mt-1 text-sm text-red-600">{error}</p>
+                <p className="mt-1 text-sm text-status-error">{error}</p>
             )}
         </div>
     );
@@ -149,7 +152,7 @@ export function Select({
                 ))}
             </select>
             {error && (
-                <p className="mt-1 text-sm text-red-600">{error}</p>
+                <p className="mt-1 text-sm text-status-error">{error}</p>
             )}
         </div>
     );
@@ -162,7 +165,7 @@ interface CardProps {
 
 export function Card({ children, className = '' }: CardProps) {
     return (
-        <div className={`bg-white rounded-lg shadow-md p-6 ${className}`}>
+        <div className={`bg-secondary-dark-gray border border-secondary-medium-gray rounded-xl p-6 shadow-lg ${className}`}>
             {children}
         </div>
     );
@@ -181,6 +184,38 @@ export function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerPr
     };
 
     return (
-        <div className={`animate-spin rounded-full border-b-2 border-indigo-600 ${sizeClasses[size]} ${className}`}></div>
+        <div className={`animate-spin rounded-full border-b-2 border-primary-orange ${sizeClasses[size]} ${className}`}></div>
+    );
+}
+
+interface SidebarProps {
+    children: React.ReactNode;
+    className?: string;
+}
+
+export function Sidebar({ children, className = '' }: SidebarProps) {
+    return (
+        <div className={`bg-primary-black text-primary-white min-h-screen w-64 ${className}`}>
+            {children}
+        </div>
+    );
+}
+
+interface SidebarItemProps {
+    children: React.ReactNode;
+    active?: boolean;
+    onClick?: () => void;
+    className?: string;
+}
+
+export function SidebarItem({ children, active = false, onClick, className = '' }: SidebarItemProps) {
+    return (
+        <div
+            onClick={onClick}
+            className={`px-4 py-3 cursor-pointer transition-colors hover:bg-secondary-dark-gray ${active ? 'border-l-4 border-primary-orange bg-secondary-dark-gray' : ''
+                } ${className}`}
+        >
+            {children}
+        </div>
     );
 }
