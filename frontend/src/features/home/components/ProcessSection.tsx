@@ -1,6 +1,7 @@
 'use client';
 
 import { ProcessSkeleton } from '@/shared/components';
+import {CircleCheck, Zap, Flame} from 'lucide-react';
 
 export function ProcessSection() {
     const processes = [
@@ -8,7 +9,7 @@ export function ProcessSection() {
             id: 1,
             title: "Separación por Gravedad",
             description: "Tecnología de separación mineral por densidad específica. Separa materiales ligeros de pesados con alta precisión, ideal para oro, plata y minerales pesados.",
-            icon: "⚖️",
+            icon: <CircleCheck className="w-6 h-6 text-yellow-500" />,
             image: "/assets/img/gravity-separation.jpg",
             labels: [
                 { text: "Sin Químicos Tóxicos", color: "success" },
@@ -19,7 +20,7 @@ export function ProcessSection() {
             id: 2,
             title: "Extracción Electrolítica",
             description: "Proceso de extracción de metales preciosos mediante electrólisis. Recuperación de oro y plata de desechos electrónicos y concentrados minerales.",
-            icon: "⚡",
+            icon: <Zap className="w-6 h-6 text-yellow-500" />,
             image: "/assets/img/electrolytic-extraction.jpg",
             labels: [
                 { text: "Proceso Limpio", color: "success" },
@@ -30,7 +31,7 @@ export function ProcessSection() {
             id: 3,
             title: "Fundición Especializada",
             description: "Hornos de fundición para metales preciosos con control de temperatura preciso. Procesamiento de concentrados auríferos y argentíferos.",
-            icon: "🔥",
+            icon: <Flame className="w-6 h-6 text-yellow-500" />,
             image: "/assets/img/smelting.jpg",
             labels: [
                 { text: "Emisiones Controladas", color: "success" },
@@ -40,7 +41,7 @@ export function ProcessSection() {
     ];
 
     return (
-        <section className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
+        <section id="procesos" className="py-20 px-4 sm:px-6 lg:px-8 bg-black">
             <div className="max-w-7xl mx-auto">
                 {/* Título de la sección */}
                 <div className="text-center mb-16">

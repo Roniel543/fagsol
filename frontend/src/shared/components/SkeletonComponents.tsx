@@ -31,7 +31,7 @@ export function SkeletonImage({
 interface ProcessSkeletonProps {
     title: string;
     description: string;
-    icon: string;
+    icon: React.ReactNode;
     labels: { text: string; color: 'success' | 'error' | 'warning' | 'info' | 'primary' | 'secondary' }[];
 }
 
@@ -40,7 +40,9 @@ export function ProcessSkeleton({ title, description, icon, labels }: ProcessSke
         <div className="bg-zinc-950 rounded-xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300">
             {/* Icono */}
             <div className="text-center mb-4">
-                <div className="text-4xl mb-2">{icon}</div>
+                <div className='w-14 h-14 flex items-center justify-center rounded-full mx-auto mb-2 bg-yellow-500/10'>
+                    {icon}
+                </div>
                 <h3 className="text-xl font-bold text-primary-white mb-3">
                     {title}
                 </h3>

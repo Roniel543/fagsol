@@ -13,21 +13,21 @@ export function Badge({
     size = 'md',
     className = ''
 }: BadgeProps) {
-    const baseClasses = 'inline-flex items-center font-medium rounded-full transition-colors';
+    const baseClasses = 'inline-flex items-center font-semibold rounded-lg transition-all duration-200 border';
 
     const variantClasses = {
-        success: 'bg-green-500 text-white hover:bg-green-600',
-        error: 'bg-red-500 text-white hover:bg-red-600',
-        warning: 'bg-yellow-500 text-black hover:bg-yellow-600',
-        info: 'bg-blue-500 text-white hover:bg-blue-600',
-        primary: 'bg-primary-orange text-primary-black hover:bg-primary-orange/90',
-        secondary: 'bg-gray-500 text-white hover:bg-gray-600',
+        success: 'bg-green-950/50 text-green-400 border-green-500/30 hover:bg-green-950/70 hover:border-green-500/50',
+        error: 'bg-red-950/50 text-red-400 border-red-500/30 hover:bg-red-950/70 hover:border-red-500/50',
+        warning: 'bg-yellow-950/50 text-yellow-400 border-yellow-500/30 hover:bg-yellow-950/70 hover:border-yellow-500/50',
+        info: 'bg-blue-950/50 text-blue-400 border-blue-500/30 hover:bg-blue-950/70 hover:border-blue-500/50',
+        primary: 'bg-orange-950/50 text-primary-orange border-primary-orange/30 hover:bg-orange-950/70 hover:border-primary-orange/50',
+        secondary: 'bg-gray-900/50 text-gray-300 border-gray-600/30 hover:bg-gray-900/70 hover:border-gray-600/50',
     };
 
     const sizeClasses = {
-        sm: 'px-2 py-1 text-xs',
-        md: 'px-3 py-1.5 text-sm',
-        lg: 'px-4 py-2 text-base',
+        sm: 'px-3 py-1.5 text-xs',
+        md: 'px-4 py-2 text-sm',
+        lg: 'px-5 py-2.5 text-base',
     };
 
     return (

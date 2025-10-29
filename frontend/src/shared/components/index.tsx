@@ -1,6 +1,9 @@
 import React from 'react';
 export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
 export { HeroSkeleton, ProcessSkeleton, SkeletonImage } from './SkeletonComponents';
+export { AnimatedCounter } from './AnimatedCounter';
+export { default as Header } from './Header';
+export { default as Footer } from './Footer';
 
 interface ButtonProps {
     children: React.ReactNode;
