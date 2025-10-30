@@ -1,4 +1,6 @@
 import { AuthProvider } from '@/shared/hooks/useAuth'
+import { ToastProvider } from '@/shared/components'
+import { CartProvider } from '@/shared/contexts/CartContext'
 import type { Metadata } from 'next'
 import { Sora } from 'next/font/google'
 import './globals.css'
@@ -24,7 +26,11 @@ export default function RootLayout({
       <body className={`${sora.className} min-h-screen bg-cover bg-center bg-no-repeat`}>
         <div className="min-h-screen bg-primary-black ">
           <AuthProvider>
-            {children}
+            <CartProvider>
+              <ToastProvider>
+                {children}
+              </ToastProvider>
+            </CartProvider>
           </AuthProvider>
         </div>
       </body>

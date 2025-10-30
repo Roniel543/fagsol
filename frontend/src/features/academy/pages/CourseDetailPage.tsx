@@ -3,16 +3,39 @@
 import { notFound, useParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { CourseCard } from '../components/CourseCard';
+import { AcademyHeader } from '../components/AcademyHeader';
+import { Footer } from '@/shared/components';
 import { getCourseDetailBySlug, MOCK_COURSES } from '../services/catalog.mock';
+import { useToast } from '@/shared/components';
+import { useCart } from '@/shared/contexts/CartContext';
 
 export default function CourseDetailPage() {
     // using next/navigation in client for simplicity (App Router)
     // fallback: this page is client-rendered with mock data
     const params = useParams<{ slug: string }>();
     const slug = params?.slug as string;
-
+    const { showToast } = useToast();
+    const { addToCart, cartItems } = useCart();
+    
     const detail = useMemo(() => getCourseDetailBySlug(slug), [slug]);
     if (!detail) return notFound();
+
+    // Verificar si el curso ya está en el carrito (se actualiza automáticamente con cartItems)
+    const isInCart = useMemo(() => {
+        return cartItems.some((item) => item.id === detail.id);
+    }, [cartItems, detail.id]);
+
+    const handleAddToCart = () => {
+        // Validar si ya está en el carrito
+        if (isInCart) {
+            showToast('Este curso ya está en tu carrito', 'info');
+            return;
+        }
+        
+        // Agregar al carrito usando el hook (esto dispara el evento automáticamente)
+        addToCart(detail.id);
+        showToast('¡Curso agregado al carrito!', 'cart');
+    };
 
     const priceBlock = (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 sticky top-6">
@@ -23,23 +46,25 @@ export default function CourseDetailPage() {
                 )}
             </div>
             <button
-                onClick={() => {
-                    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                    if (!cart.find((c: any) => c.id === detail.id)) cart.push({ id: detail.id, qty: 1 });
-                    localStorage.setItem('cart', JSON.stringify(cart));
-                    alert('Agregado al carrito');
-                }}
-                className="mt-4 w-full rounded-lg bg-primary-orange text-primary-black font-semibold py-3 hover:opacity-90"
+                onClick={handleAddToCart}
+                disabled={isInCart}
+                className={`mt-4 w-full rounded-lg font-semibold py-3 transition-all ${
+                    isInCart 
+                        ? 'bg-zinc-700 text-gray-400 cursor-not-allowed' 
+                        : 'bg-primary-orange text-primary-black hover:opacity-90 hover:scale-105'
+                }`}
             >
-                Agregar al carrito
+                {isInCart ? '✓ Ya está en el carrito' : 'Agregar al carrito'}
             </button>
             <div className="mt-3 text-xs text-gray-400">Acceso de por vida • Certificado • Actualizaciones incluidas</div>
         </div>
     );
 
     return (
-        <main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
-            <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+        <>
+            <AcademyHeader />
+            <main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
+                <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">
                         <span className="text-xs text-primary-orange font-semibold">{detail.category} • {detail.provider === 'fagsol' ? 'Fagsol' : 'Instructor'}</span>
@@ -96,9 +121,11 @@ export default function CourseDetailPage() {
                             <CourseCard key={c.id} course={c} />
                         ))}
                     </div>
+                    </div>
                 </div>
-            </div>
-        </main>
+            </main>
+            <Footer />
+        </>
     );
 }
 

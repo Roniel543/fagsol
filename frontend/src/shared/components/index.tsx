@@ -4,6 +4,9 @@ export { HeroSkeleton, ProcessSkeleton, SkeletonImage } from './SkeletonComponen
 export { AnimatedCounter } from './AnimatedCounter';
 export { default as Header } from './Header';
 export { default as Footer } from './Footer';
+export { ToastProvider, useToast } from './Toast';
+export { MiniCart } from './MiniCart';
+export { CoursePlaceholder } from './CoursePlaceholder';
 
 interface ButtonProps {
     children: React.ReactNode;

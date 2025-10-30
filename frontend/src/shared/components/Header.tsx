@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from ".";
 import { Menu, X, ChevronRight, Search } from 'lucide-react';
+import { MiniCart } from './MiniCart';
 
 const Header = () => {
     const [isScrolled, setIsScrolled] = useState(false);
@@ -214,6 +215,11 @@ const Header = () => {
                             ))}
                         </div>
 
+                        {/* Cart Button Desktop */}
+                        <div className="hidden md:block">
+                            <MiniCart />
+                        </div>
+
                         {/* Academy Link - Destacado */}
                         <a
                             href="/academy"
@@ -235,6 +241,9 @@ const Header = () => {
                         </a>
                         {/* Mobile Buttons */}
                         <div className="flex items-center gap-2 lg:hidden">
+                            {/* Cart Button Mobile */}
+                            <MiniCart />
+
                             {/* Search Button Mobile */}
                             <button
                                 onClick={() => setIsSearchFocused(!isSearchFocused)}
