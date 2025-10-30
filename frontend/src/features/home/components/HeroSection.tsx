@@ -1,10 +1,10 @@
 'use client';
 
-import { Button, AnimatedCounter } from '@/shared/components';
+import { AnimatedCounter, Button } from '@/shared/components';
 
 export function HeroSection() {
     return (
-        <section id="inicio" className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <section id="inicio" className="relative pt-20 flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
             {/* Fondo de imagen con parallax */}
             <div
                 className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-transform duration-700 scale-105 hover:scale-100"
@@ -13,7 +13,7 @@ export function HeroSection() {
 
             {/* Overlay con gradiente mejorado */}
             <div className="absolute inset-0 bg-gradient-to-b from-black/90 via-black/80 to-black" />
-            
+
             {/* Elementos decorativos animados */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl animate-pulse"></div>
@@ -30,7 +30,7 @@ export function HeroSection() {
                 </div>
 
                 {/* Título principal con animación */}
-                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6 animate-slide-up leading-tight" style={{ animationDelay: '0.3s' }}>
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 animate-slide-up leading-tight" style={{ animationDelay: '0.3s' }}>
                     <span className="text-primary-white">Aprende, Aplica y</span>
                     <br />
                     <span className="bg-gradient-to-r from-primary-orange via-yellow-500 to-primary-orange bg-clip-text text-transparent animate-gradient">
@@ -39,7 +39,7 @@ export function HeroSection() {
                 </h1>
 
                 {/* Descripción */}
-                <p className="text-base sm:text-lg md:text-xl text-gray-300 mb-10 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.5s' }}>
+                <p className="text-base sm:text-sm md:text-lg text-gray-300 mb-6 max-w-3xl mx-auto leading-relaxed animate-fade-in" style={{ animationDelay: '0.5s' }}>
                     Plataforma de educación en línea especializada en procesos industriales y metalúrgicos.
                     Ofrecemos cursos prácticos y servicios profesionales para la pequeña minería en Perú y toda Latinoamérica.
                 </p>
@@ -72,7 +72,7 @@ export function HeroSection() {
                 </div>
 
                 {/* Stats con animación al aparecer */}
-                <div className="grid grid-cols-3 gap-6 sm:gap-8 mt-12 pt-8 border-t border-zinc-800 max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.9s' }}>
+                <div className="grid grid-cols-3 gap-5 sm:gap-6 mt-10 pt-6 border-t border-zinc-800 max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.9s' }}>
                     <div className="text-center group cursor-default">
                         <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-orange to-yellow-500 bg-clip-text text-transparent mb-1 group-hover:scale-110 transition-transform duration-300">
                             <AnimatedCounter end={500} suffix="+" duration={2500} />

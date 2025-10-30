@@ -1,7 +1,7 @@
 'use client';
 
-import { GraduationCap, BookOpen, Users, TrendingUp } from 'lucide-react';
 import { Badge } from '@/shared/components';
+import { BookOpen, GraduationCap, TrendingUp, Users } from 'lucide-react';
 
 export function EducationSection() {
     const courses = [

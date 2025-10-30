@@ -41,3 +41,33 @@ export interface ApiResponse<T = any> {
     message?: string;
     errors?: Record<string, string[]>;
 }
+
+// ===== Academy Types (Catálogo)
+export type CourseLevel = 'beginner' | 'intermediate' | 'advanced';
+export type CourseProvider = 'fagsol' | 'instructor';
+
+export interface Course {
+    id: string;
+    slug: string;
+    title: string;
+    subtitle?: string;
+    description: string;
+    category: string; // e.g., Metalurgia, Agroindustria, Renovables
+    tags: string[];
+    level: CourseLevel;
+    language: string;
+    hours: number; // duración estimada
+    lessons: number;
+    rating: number; // 0-5
+    ratingsCount: number;
+    price: number; // en PEN por ahora
+    discountPrice?: number;
+    thumbnailUrl: string;
+    provider: CourseProvider;
+    instructor: {
+        id: string;
+        name: string;
+        title?: string;
+        avatarUrl?: string;
+    };
+}

@@ -1,7 +1,7 @@
 'use client';
 
-import { Badge, AnimatedCounter } from '@/shared/components';
-import { Clock, Users, BookOpen, CheckCircle, Play, MessageCircle, ShoppingCart } from 'lucide-react';
+import { AnimatedCounter, Badge } from '@/shared/components';
+import { BookOpen, CheckCircle, Clock, MessageCircle, Play, ShoppingCart, Users } from 'lucide-react';
 
 export function CoursesPreviewSection() {
     const featuredCourse = {
@@ -75,8 +75,8 @@ export function CoursesPreviewSection() {
                             Especializados
                         </span>
                     </h2>
-                    <p className="text-base sm:text-lg text-gray-400 max-w-3xl mx-auto">
-                        Domina las técnicas más avanzadas en procesamiento de minerales con nuestros cursos modulares. 
+                    <p className="text-base sm:text-sm md:text-lg text-gray-400 max-w-3xl mx-auto">
+                        Domina las técnicas más avanzadas en procesamiento de minerales con nuestros cursos modulares.
                         Cada módulo es independiente - aprende solo lo que necesitas o completa la especialización completa.
                     </p>
                 </div>
@@ -150,7 +150,7 @@ export function CoursesPreviewSection() {
 
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row gap-3">
-                        <button className="flex-1 flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-semibold text-sm rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/40">
+                        <button className="flex flex-1 items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-semibold text-sm rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/40">
                             <ShoppingCart className="w-4 h-4" />
                             <span>Comprar Curso Completo</span>
                         </button>
@@ -182,11 +182,10 @@ export function CoursesPreviewSection() {
                                 <div className="p-5">
                                     {/* Badge + Price */}
                                     <div className="flex items-center justify-between mb-4">
-                                        <span className={`px-2.5 py-1 text-xs font-bold rounded-md ${
-                                            module.badgeColor === 'success' ? 'bg-green-500/20 text-green-400' :
+                                        <span className={`px-2.5 py-1 text-xs font-bold rounded-md ${module.badgeColor === 'success' ? 'bg-green-500/20 text-green-400' :
                                             module.badgeColor === 'warning' ? 'bg-yellow-500/20 text-yellow-400' :
-                                            'bg-red-500/20 text-red-400'
-                                        }`}>
+                                                'bg-red-500/20 text-red-400'
+                                            }`}>
                                             {module.badge}
                                         </span>
                                         <span className="text-2xl font-bold text-primary-orange">{module.price}</span>
