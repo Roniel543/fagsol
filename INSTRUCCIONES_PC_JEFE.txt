@@ -1,0 +1,174 @@
+═══════════════════════════════════════════════════════════════
+  🚀 FAGSOL ACADEMY - INSTRUCCIONES PROFESIONALES
+═══════════════════════════════════════════════════════════════
+
+📋 COMANDOS PARA EJECUTAR (Total: ~5-10 minutos)
+
+┌─────────────────────────────────────────────────────────────┐
+│ 1️⃣ VERIFICAR QUE DOCKER ESTÁ INSTALADO                      │
+└─────────────────────────────────────────────────────────────┘
+
+⚠️ IMPORTANTE: En una máquina limpia, Docker es lo ÚNICO que necesitas instalar.
+Todo lo demás (Node.js, Python, PostgreSQL) corre en contenedores.
+
+Abre PowerShell o CMD como Administrador:
+
+   docker --version
+   docker-compose --version
+
+✅ Si aparece una versión → Sigue al paso 2
+
+❌ Si dice "no encontrado" → Instalar Docker Desktop:
+   1. Ir a: https://www.docker.com/products/docker-desktop
+   2. Descargar "Download for Windows"
+   3. Ejecutar instalador, aceptar términos
+   4. Reiniciar PC si lo solicita
+   5. Abrir Docker Desktop desde menú inicio
+   6. Esperar a que ícono en bandeja muestre "Docker Desktop is running"
+   7. Verificar con: docker --version
+
+📖 Guía completa: Ver INSTALACION_DOCKER.md
+
+┌─────────────────────────────────────────────────────────────┐
+│ 2️⃣ NAVEGAR AL DIRECTORIO DEL PROYECTO                       │
+└─────────────────────────────────────────────────────────────┘
+
+   cd C:\Users\[TU_USUARIO]\Documents\fagsol
+
+┌─────────────────────────────────────────────────────────────┐
+│ 3️⃣ CONFIGURAR VARIABLES DE ENTORNO                          │
+└─────────────────────────────────────────────────────────────┘
+
+   if (!(Test-Path .env)) { Copy-Item .env.example .env }
+
+┌─────────────────────────────────────────────────────────────┐
+│ 4️⃣ CONSTRUIR LAS IMÁGENES DOCKER                            │
+└─────────────────────────────────────────────────────────────┘
+
+   docker-compose build
+
+⏳ Espera 3-5 minutos (solo primera vez)
+
+┌─────────────────────────────────────────────────────────────┐
+│ 5️⃣ INICIAR LOS CONTENEDORES                                  │
+└─────────────────────────────────────────────────────────────┘
+
+   docker-compose up -d
+
+┌─────────────────────────────────────────────────────────────┐
+│ 6️⃣ VERIFICAR ESTADO DE LOS SERVICIOS                        │
+└─────────────────────────────────────────────────────────────┘
+
+   docker-compose ps
+
+Todos deben mostrar estado "Up"
+
+┌─────────────────────────────────────────────────────────────┐
+│ 7️⃣ EJECUTAR MIGRACIONES (Primera vez)                      │
+└─────────────────────────────────────────────────────────────┘
+
+   docker-compose exec backend python manage.py migrate
+
+┌─────────────────────────────────────────────────────────────┐
+│ 8️⃣ CREAR SUPERUSUARIO (Primera vez)                         │
+└─────────────────────────────────────────────────────────────┘
+
+   docker-compose exec backend python create_superuser.py
+
+┌─────────────────────────────────────────────────────────────┐
+│ 9️⃣ VERIFICAR QUE TODO FUNCIONA                              │
+└─────────────────────────────────────────────────────────────┘
+
+Abre tu navegador y visita:
+   ✅ http://localhost:3000  (Frontend - Debe cargar)
+   ✅ http://localhost:8000/admin  (Admin - Usuario: admin, Pass: admin123)
+
+Ver logs en tiempo real:
+   docker-compose logs -f
+
+Ver logs de un servicio específico:
+   docker-compose logs -f frontend
+   docker-compose logs -f backend
+
+┌─────────────────────────────────────────────────────────────┐
+│ 🔟 MOSTRAR LA DEMO                                          │
+└─────────────────────────────────────────────────────────────┘
+
+Flujo sugerido:
+   1. Ir a: http://localhost:3000/academy/catalog
+   2. Agregar cursos al carrito
+   3. Ir al carrito: http://localhost:3000/academy/cart
+   4. Proceder al checkout: http://localhost:3000/academy/checkout
+   5. Completar formulario
+   6. Hacer clic en "Pagar con Mercado Pago (demo)"
+   7. Ver página de éxito con matriculación
+
+═══════════════════════════════════════════════════════════════
+
+🔧 COMANDOS ÚTILES
+
+Ver estado de servicios:
+   docker-compose ps
+
+Ver logs en tiempo real:
+   docker-compose logs -f
+
+Ver logs de un servicio específico:
+   docker-compose logs -f frontend
+   docker-compose logs -f backend
+
+Reiniciar un servicio:
+   docker-compose restart frontend
+   docker-compose restart backend
+
+Reiniciar todo:
+   docker-compose restart
+
+Reconstruir un servicio:
+   docker-compose up -d --build frontend
+
+Detener servicios:
+   docker-compose stop
+
+Detener y eliminar contenedores:
+   docker-compose down
+
+Reinicio completo desde cero:
+   docker-compose down -v
+   docker-compose build --no-cache
+   docker-compose up -d
+   docker-compose exec backend python manage.py migrate
+   docker-compose exec backend python create_superuser.py
+
+Ejecutar comandos Django:
+   docker-compose exec backend python manage.py shell
+   docker-compose exec backend python manage.py makemigrations
+   docker-compose exec backend python manage.py collectstatic --noinput
+
+═══════════════════════════════════════════════════════════════
+
+💡 PUNTOS CLAVE PARA EXPLICAR AL JEFE
+
+✓ "Todo funciona en contenedores Docker - aislado y profesional"
+✓ "Listo para producción - solo falta conectar APIs de pago reales"
+✓ "Arquitectura escalable - Frontend/Backend separados"
+✓ "Puede desplegarse fácilmente en cualquier servidor"
+
+═══════════════════════════════════════════════════════════════
+
+📞 COMANDOS ÚTILES RÁPIDOS
+
+Ver estado de servicios:
+   docker-compose ps
+
+Ver logs en tiempo real:
+   docker-compose logs -f frontend
+   docker-compose logs -f backend
+
+Detener todo:
+   docker-compose down
+
+═══════════════════════════════════════════════════════════════
+
+¡Éxito en la demo! 🎉
+

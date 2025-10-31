@@ -19,12 +19,12 @@ RUN apt-get update && apt-get install -y \
 # Crear directorio de trabajo
 WORKDIR /app
 
-# Copiar archivos de dependencias
+# Copiar archivos de dependencias primero (para aprovechar cache de Docker)
 COPY requirements.txt .
 
 # Instalar dependencias de Python
 RUN pip install --upgrade pip && \
-    pip install -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt
 
 # Copiar el código de la aplicación
 COPY . .
