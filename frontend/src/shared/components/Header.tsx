@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Button } from ".";
 import { Menu, X, ChevronRight, Search } from 'lucide-react';
 
@@ -58,11 +59,13 @@ const Header = () => {
 
     // Cursos sugeridos para búsqueda
     const suggestedCourses = [
-        { name: 'Procesos Metalúrgicos del Oro', category: 'Metalurgia', icon: '⚗️' },
-        { name: 'Energías Renovables Aplicadas', category: 'Energías', icon: '☀️' },
-        { name: 'Procesos Agroindustriales', category: 'Agroindustria', icon: '🌾' },
-        { name: 'Tratamiento de Aguas', category: 'Ambiental', icon: '💧' },
-        { name: 'Mantenimiento Industrial', category: 'Técnico', icon: '🔧' },
+        { name: 'Programación Web', category: 'Tecnología', icon: '💻' },
+        { name: 'Marketing Digital', category: 'Negocios', icon: '📱' },
+        { name: 'Diseño Gráfico', category: 'Diseño', icon: '🎨' },
+        { name: 'Inglés Avanzado', category: 'Idiomas', icon: '🌍' },
+        { name: 'Fotografía', category: 'Artes', icon: '📸' },
+        { name: 'Excel Avanzado', category: 'Negocios', icon: '📊' },
+        { name: 'Diseño UX/UI', category: 'Diseño', icon: '🎯' }
     ];
 
     // Filtrar cursos basados en búsqueda
@@ -106,14 +109,15 @@ const Header = () => {
                     <div className="flex items-center">
                             <a 
                                 href="/" 
-                                className="group relative w-40 sm:w-48 transition-all duration-300 hover:scale-105 hover:rotate-1"
+                                className="group relative w-48 sm:w-56 md:w-64 transition-all duration-300 hover:scale-105 hover:rotate-1"
                                 onClick={(e) => handleNavClick(e, '#inicio', 'inicio')}
                             >
-                            <img
-                                width="100%"
-                                src="/assets/logo_text.svg"
+                            <Image
+                                width={200}
+                                height={60}
+                                src="/assets/logo_school.png"
                                 alt="Fagsol S.A.C"
-                                    className="transition-all duration-300 group-hover:opacity-90 group-hover:drop-shadow-lg"
+                                className="w-full h-auto transition-all duration-300 group-hover:opacity-90 group-hover:drop-shadow-lg"
                             />
                         </a>
                     </div>
@@ -173,7 +177,7 @@ const Header = () => {
                                         ) : (
                                             <div className="px-3 py-8 text-center">
                                                 <div className="text-gray-500 text-sm">
-                                                    No se encontraron cursos para "{searchQuery}"
+                                                    No se encontraron cursos para &quot;{searchQuery}&quot;
                                                 </div>
                                                 <a
                                                     href="#cursos"
@@ -380,7 +384,7 @@ const Header = () => {
                         ) : (
                             <div className="px-3 py-8 text-center">
                                 <div className="text-gray-500 text-sm">
-                                    No se encontraron cursos para "{searchQuery}"
+                                    No se encontraron cursos para &quot;{searchQuery}&quot;
                                 </div>
                                 <a
                                     href="#cursos"

@@ -1,4 +1,4 @@
-import { ApiResponse } from '@/shared/types';
+import { ApiResponse, AuthResponse } from '@/shared/types';
 
 // Configuración de la API
 export const API_CONFIG = {
@@ -52,11 +52,11 @@ export const apiRequest = async <T = any>(
 
 // Funciones específicas para diferentes módulos
 export const authAPI = {
-    login: async (email: string, password: string) => {
-        return apiRequest(API_CONFIG.ENDPOINTS.LOGIN, {
+    login: async (email: string, password: string): Promise<AuthResponse> => {
+        return apiRequest<AuthResponse>(API_CONFIG.ENDPOINTS.LOGIN, {
             method: 'POST',
             body: JSON.stringify({ email, password }),
-        });
+        }) as Promise<AuthResponse>;
     },
 
     register: async (userData: {
@@ -65,11 +65,11 @@ export const authAPI = {
         first_name: string;
         last_name: string;
         role: string;
-    }) => {
-        return apiRequest(API_CONFIG.ENDPOINTS.REGISTER, {
+    }): Promise<AuthResponse> => {
+        return apiRequest<AuthResponse>(API_CONFIG.ENDPOINTS.REGISTER, {
             method: 'POST',
             body: JSON.stringify(userData),
-        });
+        }) as Promise<AuthResponse>;
     },
 
     healthCheck: async () => {

@@ -41,3 +41,31 @@ export interface ApiResponse<T = any> {
     message?: string;
     errors?: Record<string, string[]>;
 }
+
+// Course types
+export interface Instructor {
+    id: string;
+    name: string;
+    title?: string;
+}
+
+export interface Course {
+    id: string;
+    slug: string;
+    title: string;
+    subtitle?: string;
+    description: string;
+    category: string;
+    tags: string[];
+    level: 'beginner' | 'intermediate' | 'advanced';
+    language: string;
+    hours: number;
+    lessons: number;
+    rating: number;
+    ratingsCount: number;
+    price: number;
+    discountPrice?: number;
+    thumbnailUrl: string;
+    provider: string;
+    instructor: Instructor;
+}

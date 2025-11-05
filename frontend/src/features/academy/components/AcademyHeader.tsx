@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Search, ShoppingCart, User, Menu, X, BookOpen, GraduationCap, TrendingUp, ChevronDown, ArrowLeft } from 'lucide-react';
+import { MiniCart } from '@/shared/components/MiniCart';
 
 export function AcademyHeader() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
-    const [cartCount, setCartCount] = useState(2); // Simular carrito
+    // cartCount ya no se usa, se maneja en MiniCart
     const searchRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -52,17 +53,20 @@ export function AcademyHeader() {
     }, []);
 
     const navLinks = [
-        { name: 'Explorar', href: '/academy/cursos', icon: BookOpen },
+        { name: 'Explorar', href: '/academy/catalog', icon: BookOpen },
         { name: 'Mis Cursos', href: '/academy/mis-cursos', icon: GraduationCap },
         { name: 'Mi Progreso', href: '/academy/progreso', icon: TrendingUp }
     ];
 
     const suggestedCourses = [
-        { title: 'Procesamiento de Minerales Auríferos', category: 'Metalurgia', students: 657 },
-        { title: 'Energías Renovables Aplicadas', category: 'Energías', students: 523 },
-        { title: 'Tratamiento de Aguas Industriales', category: 'Tratamiento', students: 445 },
-        { title: 'Procesos Agroindustriales', category: 'Agroindustria', students: 389 },
-        { title: 'Mantenimiento Industrial Preventivo', category: 'Mantenimiento', students: 312 }
+        { title: 'Curso de Programación Web', category: 'Tecnología', students: 1250 },
+        { title: 'Marketing Digital Completo', category: 'Negocios', students: 980 },
+        { title: 'Diseño Gráfico Profesional', category: 'Diseño', students: 750 },
+        { title: 'Inglés Avanzado', category: 'Idiomas', students: 1100 },
+        { title: 'Fotografía y Edición', category: 'Artes', students: 650 },
+        { title: 'Emprendimiento y Startups', category: 'Negocios', students: 850 },
+        { title: 'Diseño UX/UI', category: 'Diseño', students: 720 },
+        { title: 'Excel Avanzado', category: 'Negocios', students: 680 }
     ];
 
     const filteredCourses = searchQuery.trim()
@@ -93,16 +97,16 @@ export function AcademyHeader() {
                         </a>
                     </div>
 
-                    <div className="flex items-center justify-between h-20">
+                    <div className="flex items-center justify-between h-24 sm:h-28">
                         {/* Logo */}
                         <div className="flex items-center gap-3">
                             <a href="/academy" className="flex items-center gap-3 group">
                                 <Image
-                                    src="/assets/logo_text.svg"
+                                    src="/assets/logo_school.png"
                                     alt="Fagsol Academy"
-                                    width={160}
-                                    height={50}
-                                    className="h-10 w-auto transition-all duration-300 group-hover:scale-105"
+                                    width={200}
+                                    height={60}
+                                    className="h-16 sm:h-20 w-auto transition-all duration-300 group-hover:scale-105"
                                 />
                                 <div className="hidden sm:block">
                                     <span className="px-3 py-1 bg-gradient-to-r from-green-600 to-green-500 text-white text-xs font-bold rounded-lg">
@@ -127,7 +131,7 @@ export function AcademyHeader() {
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         onFocus={() => setIsSearchFocused(true)}
-                                        placeholder="Buscar cursos de metalurgia, energías, agroindustria..."
+                                        placeholder="Buscar cursos de cualquier industria..."
                                         className={`w-full pl-12 pr-4 py-3 bg-zinc-900/80 border-2 rounded-xl text-white placeholder-gray-500 focus:outline-none transition-all duration-300 ${
                                             isSearchFocused
                                                 ? 'border-primary-orange focus:ring-2 focus:ring-primary-orange/20 shadow-xl shadow-primary-orange/10'
@@ -214,18 +218,10 @@ export function AcademyHeader() {
                                 })}
                             </nav>
 
-                            {/* Carrito */}
-                            <a
-                                href="/academy/carrito"
-                                className="relative p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-primary-orange transition-all duration-300 group"
-                            >
-                                <ShoppingCart className="w-5 h-5 text-gray-300 group-hover:text-primary-orange transition-colors" />
-                                {cartCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                                        {cartCount}
-                                    </span>
-                                )}
-                            </a>
+                            {/* Carrito con MiniCart */}
+                            <div className="group relative">
+                                <MiniCart />
+                            </div>
 
                             {/* Perfil */}
                             <a
@@ -286,18 +282,13 @@ export function AcademyHeader() {
                             {/* Mobile Actions */}
                             <div className="pt-4 space-y-3 border-t border-zinc-800">
                                 <a
-                                    href="/academy/carrito"
+                                    href="/academy/cart"
                                     className="flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 transition-all"
                                 >
                                     <div className="flex items-center gap-3">
                                         <ShoppingCart className="w-5 h-5 text-primary-orange" />
                                         <span className="text-white font-medium">Mi Carrito</span>
                                     </div>
-                                    {cartCount > 0 && (
-                                        <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                                            {cartCount}
-                                        </span>
-                                    )}
                                 </a>
 
                                 <a
@@ -314,7 +305,7 @@ export function AcademyHeader() {
             </header>
 
             {/* Spacer */}
-            <div className="h-[152px]"></div>
+            <div className="h-[160px] sm:h-[172px]"></div>
         </>
     );
 }

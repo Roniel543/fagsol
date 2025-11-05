@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ShoppingCart, X, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useCart } from '@/features/academy/hooks/useCart';
+import { useCart } from '@/shared/contexts/CartContext';
 import { CoursePlaceholder } from './CoursePlaceholder';
 
 export function MiniCart() {
