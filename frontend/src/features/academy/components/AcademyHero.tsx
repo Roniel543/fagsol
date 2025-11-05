@@ -12,15 +12,19 @@ export function AcademyHero() {
     ];
 
     const categories = [
-        { name: 'Metalurgia', icon: '⚒️', courses: 15 },
-        { name: 'Agroindustria', icon: '🌾', courses: 12 },
-        { name: 'Energías Renovables', icon: '⚡', courses: 10 },
-        { name: 'Tratamiento de Aguas', icon: '💧', courses: 8 },
-        { name: 'Mantenimiento Industrial', icon: '🔧', courses: 9 }
+        { name: 'Tecnología', icon: '💻', courses: 25 },
+        { name: 'Negocios', icon: '💼', courses: 22 },
+        { name: 'Salud', icon: '🏥', courses: 18 },
+        { name: 'Diseño', icon: '🎨', courses: 15 },
+        { name: 'Industria', icon: '🏭', courses: 20 },
+        { name: 'Ciencias', icon: '🔬', courses: 16 },
+        { name: 'Artes', icon: '🎭', courses: 14 },
+        { name: 'Idiomas', icon: '🌍', courses: 13 },
+        { name: 'Más categorías', icon: '📚', courses: 50 }
     ];
 
     return (
-        <section className="relative min-h-[90vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-black via-zinc-950 to-black">
+        <section className="relative min-h-[75vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden bg-gradient-to-b from-black via-zinc-950 to-black py-12">
             {/* Background decorativo */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-green-600/10 rounded-full blur-3xl animate-pulse"></div>
@@ -33,7 +37,7 @@ export function AcademyHero() {
                     {/* Badge */}
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-600/20 to-primary-orange/20 border border-green-500/30 rounded-full mb-8 animate-fade-in">
                         <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                        <span className="text-sm font-semibold text-green-400">El Puente entre la Teoría y la Práctica</span>
+                        <span className="text-sm font-semibold text-green-400">Plataforma Universal • Educación para Todos</span>
                     </div>
 
                     {/* Título Principal */}
@@ -43,12 +47,12 @@ export function AcademyHero() {
                             Habilidades Prácticas
                         </span>
                         <br />
-                        <span className="text-white">para la Industria</span>
+                        <span className="text-white">para Cualquier Industria</span>
                     </h1>
 
                     {/* Descripción */}
                     <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-10 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                        Cursos cortos y prácticos en metalurgia, agroindustria, energías renovables y más. 
+                        Plataforma de educación en línea abierta a todo el público. Encuentra cursos sobre cualquier tema que te interese. 
                         Aprende a tu ritmo, certifícate y transforma tu carrera con conocimientos aplicables al mundo real.
                     </p>
 
@@ -58,7 +62,7 @@ export function AcademyHero() {
                             <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400 group-hover:text-primary-orange transition-colors" />
                             <input
                                 type="text"
-                                placeholder="¿Qué quieres aprender hoy? Ej: Procesos metalúrgicos, Energías renovables, Tratamiento de aguas..."
+                                placeholder="Busca cualquier curso que te interese..."
                                 className="w-full pl-16 pr-6 py-5 bg-zinc-900/80 border-2 border-zinc-700 hover:border-zinc-600 focus:border-primary-orange rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-primary-orange/20 transition-all duration-300 shadow-xl text-base"
                             />
                             <button className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-3 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/40">
@@ -87,20 +91,22 @@ export function AcademyHero() {
                     </div>
 
                     {/* Categorías Rápidas */}
-                    <div className="max-w-4xl mx-auto animate-fade-in" style={{ animationDelay: '0.5s' }}>
-                        <p className="text-sm text-gray-500 mb-4">Categorías Populares:</p>
+                    <div className="max-w-5xl mx-auto animate-fade-in" style={{ animationDelay: '0.5s' }}>
+                        <p className="text-sm text-gray-500 mb-5 text-center">Categorías Populares:</p>
                         <div className="flex flex-wrap justify-center gap-3">
                             {categories.map((category, index) => (
                                 <a
                                     key={index}
                                     href={`/academy/categoria/${category.name.toLowerCase()}`}
-                                    className="group flex items-center gap-2 px-4 py-2 bg-zinc-900/60 hover:bg-zinc-800 border border-zinc-700 hover:border-primary-orange rounded-lg transition-all duration-300 hover:scale-105"
+                                    className="group flex items-center gap-3 px-5 py-3 bg-zinc-900/70 hover:bg-zinc-800/90 border border-zinc-700/50 hover:border-primary-orange/50 rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/20"
                                 >
-                                    <span className="text-xl">{category.icon}</span>
-                                    <span className="text-sm font-medium text-gray-300 group-hover:text-primary-orange transition-colors">
-                                        {category.name}
-                                    </span>
-                                    <span className="text-xs text-gray-500">({category.courses})</span>
+                                    <span className="text-2xl group-hover:scale-110 transition-transform duration-300">{category.icon}</span>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-semibold text-gray-200 group-hover:text-primary-orange transition-colors">
+                                            {category.name}
+                                        </span>
+                                        <span className="text-xs text-gray-500">{category.courses} cursos</span>
+                                    </div>
                                 </a>
                             ))}
                         </div>
