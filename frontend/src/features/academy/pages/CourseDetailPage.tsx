@@ -5,7 +5,7 @@ import { useMemo } from 'react';
 import { CourseCard } from '../components/CourseCard';
 import { AcademyHeader } from '../components/AcademyHeader';
 import { Footer } from '@/shared/components';
-import { getCourseDetailBySlug, MOCK_COURSES } from '../services/catalog.mock';
+import { getCourseDetailBySlug, MOCK_COURSES, CourseSection } from '../services/catalog.mock';
 import { useToast } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
 
@@ -18,12 +18,15 @@ export default function CourseDetailPage() {
     const { addToCart, cartItems } = useCart();
     
     const detail = useMemo(() => getCourseDetailBySlug(slug), [slug]);
-    if (!detail) return notFound();
-
+    
     // Verificar si el curso ya está en el carrito (se actualiza automáticamente con cartItems)
+    // Debe estar antes del return condicional para cumplir las reglas de hooks
     const isInCart = useMemo(() => {
+        if (!detail) return false;
         return cartItems.some((item) => item.id === detail.id);
-    }, [cartItems, detail.id]);
+    }, [cartItems, detail]);
+    
+    if (!detail) return notFound();
 
     const handleAddToCart = () => {
         // Validar si ya está en el carrito
@@ -75,7 +78,7 @@ export default function CourseDetailPage() {
                             <div>
                                 <h2 className="font-semibold">Qué aprenderás</h2>
                                 <ul className="mt-2 list-disc list-inside text-gray-300 text-sm space-y-1">
-                                    {detail.objectives.map((o, i) => (
+                                    {detail.objectives.map((o: string, i: number) => (
                                         <li key={i}>{o}</li>
                                     ))}
                                 </ul>
@@ -83,7 +86,7 @@ export default function CourseDetailPage() {
                             <div>
                                 <h2 className="font-semibold">Requisitos</h2>
                                 <ul className="mt-2 list-disc list-inside text-gray-300 text-sm space-y-1">
-                                    {detail.requirements.map((r, i) => (
+                                    {detail.requirements.map((r: string, i: number) => (
                                         <li key={i}>{r}</li>
                                     ))}
                                 </ul>
@@ -93,11 +96,11 @@ export default function CourseDetailPage() {
                         <div className="mt-8">
                             <h2 className="font-semibold">Contenido del curso</h2>
                             <div className="mt-3 space-y-3">
-                                {detail.sections.map((section, si) => (
+                                {detail.sections.map((section: CourseSection, si: number) => (
                                     <div key={si} className="rounded-lg border border-zinc-800">
                                         <div className="px-4 py-3 bg-zinc-900/60 font-medium">{section.title}</div>
                                         <ul className="p-4 space-y-2">
-                                            {section.lessons.map((l, li) => (
+                                            {section.lessons.map((l: { title: string; durationMin: number; preview?: boolean }, li: number) => (
                                                 <li key={li} className="flex items-center justify-between text-sm text-gray-300">
                                                     <span>
                                                         {l.title} {l.preview && <span className="ml-2 text-xs text-primary-orange">Preview</span>}

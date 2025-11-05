@@ -74,7 +74,7 @@ export function AnimatedCounter({
         };
 
         requestAnimationFrame(updateCounter);
-    }, [isVisible, end, duration]);
+    }, [isVisible, end, duration, decimals]);
 
     return (
         <span ref={counterRef} className={className}>

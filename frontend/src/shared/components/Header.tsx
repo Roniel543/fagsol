@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { Button } from ".";
 import { Menu, X, ChevronRight, Search } from 'lucide-react';
 
@@ -109,11 +110,12 @@ const Header = () => {
                                 className="group relative w-40 sm:w-48 transition-all duration-300 hover:scale-105 hover:rotate-1"
                                 onClick={(e) => handleNavClick(e, '#inicio', 'inicio')}
                             >
-                            <img
-                                width="100%"
+                            <Image
+                                width={160}
+                                height={50}
                                 src="/assets/logo_text.svg"
                                 alt="Fagsol S.A.C"
-                                    className="transition-all duration-300 group-hover:opacity-90 group-hover:drop-shadow-lg"
+                                className="transition-all duration-300 group-hover:opacity-90 group-hover:drop-shadow-lg"
                             />
                         </a>
                     </div>
@@ -173,7 +175,7 @@ const Header = () => {
                                         ) : (
                                             <div className="px-3 py-8 text-center">
                                                 <div className="text-gray-500 text-sm">
-                                                    No se encontraron cursos para "{searchQuery}"
+                                                    No se encontraron cursos para &quot;{searchQuery}&quot;
                                                 </div>
                                                 <a
                                                     href="#cursos"
@@ -380,7 +382,7 @@ const Header = () => {
                         ) : (
                             <div className="px-3 py-8 text-center">
                                 <div className="text-gray-500 text-sm">
-                                    No se encontraron cursos para "{searchQuery}"
+                                    No se encontraron cursos para &quot;{searchQuery}&quot;
                                 </div>
                                 <a
                                     href="#cursos"
