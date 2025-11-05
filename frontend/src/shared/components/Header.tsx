@@ -113,7 +113,7 @@ const Header = () => {
                             <Image
                                 width={160}
                                 height={50}
-                                src="/assets/logo_text.svg"
+                                src="/assets/logo_school.png"
                                 alt="Fagsol S.A.C"
                                 className="transition-all duration-300 group-hover:opacity-90 group-hover:drop-shadow-lg"
                             />
