@@ -3,13 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { Search, ShoppingCart, User, Menu, X, BookOpen, GraduationCap, TrendingUp, ChevronDown, ArrowLeft } from 'lucide-react';
+import { MiniCart } from '@/shared/components/MiniCart';
 
 export function AcademyHeader() {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isSearchFocused, setIsSearchFocused] = useState(false);
-    const [cartCount, setCartCount] = useState(2); // Simular carrito
+    // cartCount ya no se usa, se maneja en MiniCart
     const searchRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -52,7 +53,7 @@ export function AcademyHeader() {
     }, []);
 
     const navLinks = [
-        { name: 'Explorar', href: '/academy/cursos', icon: BookOpen },
+        { name: 'Explorar', href: '/academy/catalog', icon: BookOpen },
         { name: 'Mis Cursos', href: '/academy/mis-cursos', icon: GraduationCap },
         { name: 'Mi Progreso', href: '/academy/progreso', icon: TrendingUp }
     ];
@@ -214,18 +215,10 @@ export function AcademyHeader() {
                                 })}
                             </nav>
 
-                            {/* Carrito */}
-                            <a
-                                href="/academy/carrito"
-                                className="relative p-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 hover:border-primary-orange transition-all duration-300 group"
-                            >
-                                <ShoppingCart className="w-5 h-5 text-gray-300 group-hover:text-primary-orange transition-colors" />
-                                {cartCount > 0 && (
-                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center animate-pulse">
-                                        {cartCount}
-                                    </span>
-                                )}
-                            </a>
+                            {/* Carrito con MiniCart */}
+                            <div className="group relative">
+                                <MiniCart />
+                            </div>
 
                             {/* Perfil */}
                             <a
@@ -286,18 +279,13 @@ export function AcademyHeader() {
                             {/* Mobile Actions */}
                             <div className="pt-4 space-y-3 border-t border-zinc-800">
                                 <a
-                                    href="/academy/carrito"
+                                    href="/academy/cart"
                                     className="flex items-center justify-between px-4 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 transition-all"
                                 >
                                     <div className="flex items-center gap-3">
                                         <ShoppingCart className="w-5 h-5 text-primary-orange" />
                                         <span className="text-white font-medium">Mi Carrito</span>
                                     </div>
-                                    {cartCount > 0 && (
-                                        <span className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded-full">
-                                            {cartCount}
-                                        </span>
-                                    )}
                                 </a>
 
                                 <a

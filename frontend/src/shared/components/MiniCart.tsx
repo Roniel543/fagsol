@@ -10,6 +10,7 @@ import { CoursePlaceholder } from './CoursePlaceholder';
 export function MiniCart() {
     const { cartItemsWithDetails, removeFromCart, total, itemCount } = useCart();
     const [isOpen, setIsOpen] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
     const [forceUpdate, setForceUpdate] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +43,12 @@ export function MiniCart() {
     }, []);
 
     return (
-        <div className="relative" ref={dropdownRef}>
+        <div 
+            className="relative" 
+            ref={dropdownRef}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
             {/* Botón del carrito */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -57,8 +63,8 @@ export function MiniCart() {
                 )}
             </button>
 
-            {/* Dropdown del mini-cart */}
-            {isOpen && (
+            {/* Dropdown del mini-cart - se abre con hover o click */}
+            {(isOpen || isHovered) && (
                 <div className="absolute right-0 top-full mt-3 w-96 max-w-[calc(100vw-2rem)] bg-zinc-950 border-2 border-zinc-800 rounded-xl shadow-2xl shadow-black/70 overflow-hidden animate-slide-down z-[9999]">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/60">

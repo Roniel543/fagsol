@@ -70,7 +70,7 @@ export function AcademyHero() {
                     {/* CTAs */}
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-fade-in" style={{ animationDelay: '0.4s' }}>
                         <a
-                            href="/academy/cursos"
+                            href="/academy/catalog"
                             className="group flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-bold rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-2xl hover:shadow-primary-orange/50 text-base"
                         >
                             <BookOpen className="w-5 h-5 group-hover:rotate-12 transition-transform" />
