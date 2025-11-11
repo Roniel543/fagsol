@@ -2,6 +2,13 @@
 
 import { authAPI } from '@/shared/services/api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '@/shared/types';
+import {
+    clearTokens,
+    getUserData,
+    migrateTokensFromLocalStorage,
+    setTokens,
+    setUserData
+} from '@/shared/utils/tokenStorage';
 import { useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useState } from 'react';
 
@@ -10,7 +17,7 @@ interface AuthContextType {
     loading: boolean;
     login: (credentials: LoginRequest) => Promise<AuthResponse>;
     register: (userData: RegisterRequest) => Promise<AuthResponse>;
-    logout: () => void;
+    logout: () => Promise<void>;
     isAuthenticated: boolean;
 }
 
@@ -22,17 +29,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Verificar si hay usuario en localStorage
-        const userData = localStorage.getItem('user');
-        const accessToken = localStorage.getItem('access_token');
+        // Migrar tokens de localStorage a sessionStorage (compatibilidad)
+        migrateTokensFromLocalStorage();
+
+        // Verificar si hay usuario en sessionStorage
+        const userData = getUserData();
+        const accessToken = typeof window !== 'undefined'
+            ? sessionStorage.getItem('access_token')
+            : null;
 
         if (userData && accessToken) {
             try {
-                const userObj = JSON.parse(userData);
-                setUser(userObj);
+                setUser(userData);
             } catch (error) {
                 console.error('Error parsing user data:', error);
-                localStorage.clear();
+                clearTokens();
             }
         }
 
@@ -44,11 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const response = await authAPI.login(credentials.email, credentials.password);
 
             if (response.success && response.user && response.tokens) {
-                // Guardar datos en localStorage
-                localStorage.setItem('access_token', response.tokens.access);
-                localStorage.setItem('refresh_token', response.tokens.refresh);
-                localStorage.setItem('user', JSON.stringify(response.user));
-
+                // Guardar datos de forma segura en sessionStorage
+                setTokens(response.tokens.access, response.tokens.refresh);
+                setUserData(response.user);
                 setUser(response.user);
             }
 
@@ -67,11 +76,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const response = await authAPI.register(userData);
 
             if (response.success && response.user && response.tokens) {
-                // Guardar datos en localStorage
-                localStorage.setItem('access_token', response.tokens.access);
-                localStorage.setItem('refresh_token', response.tokens.refresh);
-                localStorage.setItem('user', JSON.stringify(response.user));
-
+                // Guardar datos de forma segura en sessionStorage
+                setTokens(response.tokens.access, response.tokens.refresh);
+                setUserData(response.user);
                 setUser(response.user);
             }
 
@@ -85,12 +92,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const logout = () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user');
-        setUser(null);
-        router.push('/auth/login');
+    const logout = async () => {
+        try {
+            // Invalidar token en el servidor
+            await authAPI.logout();
+        } catch (error) {
+            console.error('Logout error:', error);
+        } finally {
+            // Siempre limpiar tokens localmente
+            clearTokens();
+            setUser(null);
+            router.push('/auth/login');
+        }
     };
 
     const value: AuthContextType = {

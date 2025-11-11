@@ -1,11 +1,12 @@
 import React from 'react';
-export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
-export { HeroSkeleton, ProcessSkeleton, SkeletonImage } from './SkeletonComponents';
 export { AnimatedCounter } from './AnimatedCounter';
-export { default as Header } from './Header';
-export { default as Footer } from './Footer';
-export { MiniCart } from './MiniCart';
+export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
 export { CoursePlaceholder } from './CoursePlaceholder';
+export { default as Footer } from './Footer';
+export { default as Header } from './Header';
+export { MiniCart } from './MiniCart';
+export { SafeHTML } from './SafeHTML';
+export { HeroSkeleton, ProcessSkeleton, SkeletonImage } from './SkeletonComponents';
 export { ToastProvider, useToast } from './Toast';
 
 interface ButtonProps {
