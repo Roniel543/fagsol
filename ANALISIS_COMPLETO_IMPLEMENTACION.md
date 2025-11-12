@@ -326,41 +326,45 @@
 
 ### **FRONTEND - Según Prompt Ultra Brutal**
 
-#### 1. 🟡 **DATA FETCHING CON SWR** (IMPORTANTE)
+#### 1. ✅ **DATA FETCHING CON SWR** (COMPLETADO)
 
-**Estado:** ⚠️ **FALTA IMPLEMENTAR**
+**Estado:** ✅ **COMPLETADO**
 
-**Requisitos del Prompt:**
-- SWR o React Query para data fetching
-- Hooks de auth y data bien organizados
+**Implementado:**
+- ✅ SWR instalado (`npm install swr`)
+- ✅ Hooks de data fetching creados:
+  - `useCourses()` - Listar cursos con filtros
+  - `useCourse(id)` - Obtener curso por ID
+  - `useCourseBySlug(slug)` - Obtener curso por slug
+  - `useEnrollments()` - Listar enrollments del usuario
+  - `useEnrollment(id)` - Obtener enrollment por ID
+- ✅ Servicios API creados:
+  - `frontend/src/shared/services/courses.ts` ✅
+  - `frontend/src/shared/services/enrollments.ts` ✅
+- ✅ Componentes migrados de MOCK a SWR:
+  - `CatalogPage.tsx` ✅
+  - `CourseDetailPage.tsx` ✅
+  - `AcademyHomePage.tsx` ✅
+  - `CartContext.tsx` ✅
+- ✅ Error handling y loading states implementados
+- ✅ Backend mejorado: endpoint `/api/v1/courses/slug/{slug}/` creado
+- ✅ Modelo `Course` extendido con nuevos campos
 
-**Lo que falta:**
-- [ ] Instalar SWR (`npm install swr`)
-- [ ] Crear hooks de data fetching:
-  - `useCourses()` - Listar cursos
-  - `useCourse(id)` - Obtener curso
-  - `useEnrollments()` - Cursos del usuario
-- [ ] Crear servicios API:
-  - `frontend/src/shared/services/courses.ts` (ya existe parcialmente)
-  - `frontend/src/shared/services/enrollments.ts`
-- [ ] Migrar componentes de MOCK a SWR:
-  - `CatalogPage.tsx`
-  - `CourseDetailPage.tsx`
-  - `CheckoutPage.tsx`
-- [ ] Agregar error handling y retry
+**Archivos creados:**
+- `frontend/src/shared/hooks/useCourses.ts` ✅
+- `frontend/src/shared/hooks/useEnrollments.ts` ✅
+- `frontend/src/shared/services/courses.ts` ✅
+- `frontend/src/shared/services/enrollments.ts` ✅
 
-**Archivos a crear:**
-- `frontend/src/shared/hooks/useCourses.ts`
-- `frontend/src/shared/hooks/useCourse.ts`
-- `frontend/src/shared/hooks/useEnrollments.ts`
-- `frontend/src/shared/services/enrollments.ts`
+**Archivos modificados:**
+- `frontend/src/features/academy/pages/CatalogPage.tsx` ✅
+- `frontend/src/features/academy/pages/CourseDetailPage.tsx` ✅
+- `frontend/src/features/academy/pages/AcademyHomePage.tsx` ✅
+- `frontend/src/shared/contexts/CartContext.tsx` ✅
+- `backend/apps/courses/models.py` ✅ (Campos nuevos)
+- `backend/presentation/views/course_views.py` ✅ (Endpoint por slug)
 
-**Archivos a modificar:**
-- `frontend/src/features/academy/pages/CatalogPage.tsx`
-- `frontend/src/features/academy/pages/CourseDetailPage.tsx`
-- `frontend/src/features/academy/pages/CheckoutPage.tsx`
-
-**Prioridad:** 🟡 **MEDIA-ALTA** - Necesario para conectar con backend real
+**Prioridad:** ✅ **COMPLETADO**
 
 ---
 

@@ -1,14 +1,14 @@
 # 📋 Contexto del Proyecto FagSol Escuela Virtual - Estado Actual
 
 **Fecha de actualización:** 2025-11-12  
-**Última sesión:** Configuración de OpenAPI/Swagger completada
+**Última sesión:** Frontend SWR - COMPLETADO ✅
 
 ---
 
 ## 🎯 **PROYECTO: FagSol Escuela Virtual**
 
 Plataforma educativa en línea con:
-- **Frontend:** Next.js 14 + TypeScript + Tailwind CSS
+- **Frontend:** Next.js 14 + TypeScript + Tailwind CSS + SWR
 - **Backend:** Django 5.0 + DRF + PostgreSQL
 - **Arquitectura:** Clean Architecture (domain, application, infrastructure, presentation)
 - **Seguridad:** JWT, Argon2, Rate limiting, Token blacklist
@@ -131,7 +131,7 @@ python manage.py test apps.users.tests -v 1
 
 ## ⏳ **LO QUE FALTA POR HACER**
 
-### **FASE 2: Backend - CI/CD** ⏳ **PENDIENTE** (Próximo paso recomendado)
+### **FASE 4: Backend - CI/CD** ⏳ **PENDIENTE** (Próximo paso recomendado)
 
 #### 5. Configurar CI/CD con GitHub Actions
 **Tiempo estimado:** 4-6 horas
@@ -180,42 +180,53 @@ jobs:
 
 ---
 
-### **FASE 3: Frontend - Data Fetching** ⏳ **PENDIENTE**
+### **FASE 3: Frontend - Data Fetching** ✅ **COMPLETADO**
 
-#### 6. Instalar y configurar SWR
-**Tiempo estimado:** 4-6 horas
-
-**Qué hacer:**
-- Instalar `swr` en frontend
-- Crear hooks de data fetching:
-  - `useCourses()` - Listar cursos
+#### 6. SWR Instalado y Configurado ✅
+- ✅ `swr` instalado en `frontend/package.json`
+- ✅ Hooks SWR creados:
+  - `useCourses()` - Listar cursos con filtros
   - `useCourse(id)` - Obtener curso por ID
-  - `useEnrollments()` - Cursos del usuario
-  - `usePaymentIntent(id)` - Obtener payment intent
-- Configurar provider SWR con opciones globales
+  - `useCourseBySlug(slug)` - Obtener curso por slug
+  - `useEnrollments()` - Listar enrollments del usuario
+  - `useEnrollment(id)` - Obtener enrollment por ID
 
-**Archivos a crear:**
-- `frontend/src/shared/hooks/useCourses.ts`
-- `frontend/src/shared/hooks/useEnrollments.ts`
-- `frontend/src/shared/services/courses.ts`
+**Archivos creados:**
+- `frontend/src/shared/hooks/useCourses.ts` ✅
+- `frontend/src/shared/hooks/useEnrollments.ts` ✅
+- `frontend/src/shared/services/courses.ts` ✅
+- `frontend/src/shared/services/enrollments.ts` ✅
 
-#### 7. Migrar componentes de MOCK a SWR
-**Tiempo estimado:** 4-6 horas
+#### 7. Componentes Migrados de MOCK a SWR ✅
+- ✅ `CatalogPage.tsx` - Usa `useCourses()` con loading/error states
+- ✅ `CourseDetailPage.tsx` - Usa `useCourseBySlug()` con módulos reales
+- ✅ `AcademyHomePage.tsx` - Usa `useCourses()` para cursos destacados
+- ✅ `CartContext.tsx` - Usa datos reales del backend en lugar de `MOCK_COURSES`
 
-**Componentes a migrar:**
-- `CatalogPage.tsx` - Usar `useCourses()`
-- `CourseDetailPage.tsx` - Usar `useCourse(id)`
-- `CheckoutPage.tsx` - Usar API real para payment intents
-- `AcademyHomePage.tsx` - Usar `useCourses()`
+**Archivos migrados:**
+- `frontend/src/features/academy/pages/CatalogPage.tsx` ✅
+- `frontend/src/features/academy/pages/CourseDetailPage.tsx` ✅
+- `frontend/src/features/academy/pages/AcademyHomePage.tsx` ✅
+- `frontend/src/shared/contexts/CartContext.tsx` ✅
 
-**Archivos que usan MOCK actualmente:**
-- `frontend/src/features/academy/pages/CatalogPage.tsx`
-- `frontend/src/features/academy/pages/CourseDetailPage.tsx`
-- `frontend/src/features/academy/pages/CheckoutPage.tsx`
+#### 8. Backend - Endpoints y Modelos Mejorados ✅
+- ✅ Endpoint `/api/v1/courses/slug/{slug}/` creado
+- ✅ Modelo `Course` extendido con campos:
+  - `category`, `level`, `provider`
+  - `discount_price`, `hours`, `rating`, `ratings_count`
+  - `instructor` (JSONField)
+- ✅ Migraciones aplicadas
+- ✅ Cursos de ejemplo creados en base de datos
+
+#### 9. Configuración de Variables de Entorno ✅
+- ✅ `.env` en `backend/` - Django lo encuentra correctamente
+- ✅ `.env.local` en `frontend/` - Next.js lo encuentra correctamente
+- ✅ CSP configurado para permitir conexiones al backend
+- ✅ URLs de API correctas (`/api/v1/`)
 
 ---
 
-### **FASE 4: Frontend - Testing y Observabilidad** ⏳ **PENDIENTE**
+### **FASE 5: Frontend - Testing y Observabilidad** ⏳ **PENDIENTE**
 
 #### 8. Configurar Playwright y tests E2E
 **Tiempo estimado:** 6-8 horas
@@ -239,7 +250,7 @@ jobs:
 
 ---
 
-### **FASE 5: Opcionales** ⏳ **PENDIENTE**
+### **FASE 6: Opcionales** ⏳ **PENDIENTE**
 
 #### 10. MFA/2FA
 **Tiempo estimado:** 6-8 horas
@@ -373,9 +384,15 @@ frontend/
 ├── src/
 │   ├── shared/
 │   │   ├── hooks/
-│   │   │   └── useAuth.tsx
+│   │   │   ├── useAuth.tsx
+│   │   │   ├── useCourses.ts ✅
+│   │   │   └── useEnrollments.ts ✅
 │   │   ├── services/
-│   │   │   └── api.ts
+│   │   │   ├── api.ts
+│   │   │   ├── courses.ts ✅
+│   │   │   └── enrollments.ts ✅
+│   │   └── contexts/
+│   │       └── CartContext.tsx ✅ (Migrado a SWR)
 │   │   └── utils/
 │   │       ├── tokenStorage.ts
 │   │       └── sanitize.ts
@@ -425,10 +442,10 @@ python manage.py axes_reset
 2. Documentar verificación de seguridad
 3. Incluir pasos para auth, pagos, certificados
 
-### **Opción 3: Frontend SWR (8-12 horas)**
-1. Instalar SWR
-2. Crear hooks de data fetching
-3. Migrar componentes de MOCK a SWR
+### **Opción 3: Playwright E2E (6-8 horas)** ✅ SWR ya completado
+1. Instalar Playwright
+2. Crear tests E2E para flujos críticos
+3. Integrar en CI/CD
 
 ---
 
@@ -453,5 +470,5 @@ python manage.py axes_reset
 ---
 
 **Última actualización:** 2025-11-12  
-**Estado:** ✅ FASE 1 y FASE 2 (Swagger) completadas. Listo para CI/CD o Frontend SWR.
+**Estado:** ✅ FASE 1, 2 y 3 (SWR) completadas. Listo para CI/CD o E2E tests.
 

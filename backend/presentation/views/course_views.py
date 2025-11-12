@@ -107,9 +107,18 @@ def list_courses(request):
                 'slug': course.slug,
                 'short_description': course.short_description or course.description[:200] + '...' if len(course.description) > 200 else course.description,
                 'price': float(course.price),
+                'discount_price': float(course.discount_price) if course.discount_price else None,
                 'currency': course.currency,
                 'thumbnail_url': course.thumbnail_url,
                 'status': course.status,
+                'category': course.category,
+                'level': course.level,
+                'provider': course.provider,
+                'tags': course.tags,
+                'hours': course.hours,
+                'rating': float(course.rating),
+                'ratings_count': course.ratings_count,
+                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
                 'created_at': course.created_at.isoformat(),
             })
         
@@ -127,6 +136,135 @@ def list_courses(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene un curso por slug',
+    manual_parameters=[
+        openapi.Parameter(
+            'slug',
+            openapi.IN_PATH,
+            description='Slug del curso',
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Detalle del curso'),
+        404: openapi.Response(description='Curso no encontrado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    tags=['Cursos']
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_course_by_slug(request, slug):
+    """
+    Obtiene los detalles de un curso por slug
+    GET /api/v1/courses/slug/{slug}/
+    """
+    try:
+        # Obtener curso por slug
+        course = get_object_or_404(Course, slug=slug, is_active=True)
+        
+        # Verificar permisos
+        if not can_view_course(request.user, course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para ver este curso'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Obtener módulos
+        modules = []
+        for module in course.modules.filter(is_active=True).order_by('order'):
+            lessons = []
+            for lesson in module.lessons.filter(is_active=True).order_by('order'):
+                lessons.append({
+                    'id': lesson.id,
+                    'title': lesson.title,
+                    'lesson_type': lesson.lesson_type,
+                    'duration_minutes': lesson.duration_minutes,
+                    'order': lesson.order
+                })
+            
+            modules.append({
+                'id': module.id,
+                'title': module.title,
+                'description': module.description,
+                'price': float(module.price) if module.is_purchasable else None,
+                'is_purchasable': module.is_purchasable,
+                'lessons': lessons,
+                'order': module.order
+            })
+        
+        # Verificar si el usuario está inscrito (si está autenticado)
+        is_enrolled = False
+        if request.user.is_authenticated:
+            is_enrolled = Enrollment.objects.filter(
+                user=request.user,
+                course=course,
+                status='active'
+            ).exists()
+        
+        return Response({
+            'success': True,
+            'data': {
+                'id': course.id,
+                'title': course.title,
+                'slug': course.slug,
+                'description': course.description,
+                'short_description': course.short_description,
+                'price': float(course.price),
+                'discount_price': float(course.discount_price) if course.discount_price else None,
+                'currency': course.currency,
+                'thumbnail_url': course.thumbnail_url,
+                'banner_url': course.banner_url,
+                'status': course.status,
+                'category': course.category,
+                'level': course.level,
+                'provider': course.provider,
+                'tags': course.tags,
+                'hours': course.hours,
+                'rating': float(course.rating),
+                'ratings_count': course.ratings_count,
+                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+                'modules': modules,
+                'is_enrolled': is_enrolled,
+                'created_at': course.created_at.isoformat(),
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Course.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Curso no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error en get_course_by_slug: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene los detalles de un curso por ID',
+    manual_parameters=[
+        openapi.Parameter(
+            'course_id',
+            openapi.IN_PATH,
+            description='ID del curso',
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Detalle del curso'),
+        404: openapi.Response(description='Curso no encontrado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    tags=['Cursos']
+)
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_course(request, course_id):
@@ -179,10 +317,19 @@ def get_course(request, course_id):
                 'description': course.description,
                 'short_description': course.short_description,
                 'price': float(course.price),
+                'discount_price': float(course.discount_price) if course.discount_price else None,
                 'currency': course.currency,
                 'thumbnail_url': course.thumbnail_url,
                 'banner_url': course.banner_url,
                 'status': course.status,
+                'category': course.category,
+                'level': course.level,
+                'provider': course.provider,
+                'tags': course.tags,
+                'hours': course.hours,
+                'rating': float(course.rating),
+                'ratings_count': course.ratings_count,
+                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
                 'modules': modules,
                 'is_enrolled': is_enrolled,
                 'created_at': course.created_at.isoformat(),

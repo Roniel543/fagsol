@@ -3,12 +3,13 @@
 import { AcademyHeader, AcademyHero } from '../index';
 import { FagsolServicesSection } from '../components/FagsolServicesSection';
 import { CourseCard } from '../components/CourseCard';
-import { MOCK_COURSES } from '../services/catalog.mock';
 import { Footer } from '@/shared/components';
+import { useCourses } from '@/shared/hooks/useCourses';
 
 export function AcademyHomePage() {
-    // Usar los cursos mock existentes - no duplicar código
-    const featuredCourses = MOCK_COURSES.slice(0, 3);
+    // Obtener cursos del backend usando SWR
+    const { courses, isLoading } = useCourses({ status: 'published' });
+    const featuredCourses = courses.slice(0, 3);
 
     return (
         <main className="flex min-h-screen flex-col">
@@ -30,11 +31,22 @@ export function AcademyHomePage() {
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-                        {featuredCourses.map((course) => (
-                            <CourseCard key={course.id} course={course} />
-                        ))}
-                    </div>
+                    {isLoading ? (
+                        <div className="text-center py-12">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-orange"></div>
+                            <p className="mt-4 text-gray-400">Cargando cursos...</p>
+                        </div>
+                    ) : featuredCourses.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                            {featuredCourses.map((course) => (
+                                <CourseCard key={course.id} course={course} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12">
+                            <p className="text-gray-400">No hay cursos disponibles en este momento.</p>
+                        </div>
+                    )}
 
                     <div className="text-center mt-12">
                         <a

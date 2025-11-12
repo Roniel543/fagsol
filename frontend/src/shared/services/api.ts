@@ -2,9 +2,20 @@ import { ApiResponse, AuthResponse } from '@/shared/types';
 import { clearTokens, getAccessToken, getRefreshToken, isTokenExpiringSoon, setTokens } from '@/shared/utils/tokenStorage';
 
 // Configuración de la API
+// NEXT_PUBLIC_API_URL se carga automáticamente desde .env en Next.js
+// OBLIGATORIO: Debe estar definida en .env
+const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+if (!baseUrl) {
+    throw new Error(
+        'NEXT_PUBLIC_API_URL no está definida. ' +
+        'Por favor, agrega NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 en tu archivo .env'
+    );
+}
+
 export const API_CONFIG = {
-    BASE_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1',
-    JWT_BASE_URL: process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000',
+    BASE_URL: baseUrl,
+    JWT_BASE_URL: baseUrl.replace('/api', ''),
     ENDPOINTS: {
         LOGIN: '/login/',
         REGISTER: '/register/',
@@ -83,7 +94,14 @@ export const apiRequest = async <T = any>(
     endpoint: string,
     options: RequestInit = {}
 ): Promise<ApiResponse<T>> => {
-    const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+    // Asegurar que el endpoint comience con /
+    const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    const url = `${API_CONFIG.BASE_URL}${normalizedEndpoint}`;
+    
+    // Debug: mostrar URL en desarrollo
+    if (process.env.NODE_ENV === 'development') {
+        console.log('🔗 API Request:', url);
+    }
 
     // Verificar si el token está próximo a expirar y refrescarlo preventivamente
     if (isTokenExpiringSoon()) {

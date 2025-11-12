@@ -52,6 +52,46 @@ class Course(models.Model):
     order = models.IntegerField(default=0, verbose_name="Orden")
     tags = models.JSONField(default=list, blank=True, verbose_name="Tags")
     
+    # Campos adicionales para frontend
+    LEVEL_CHOICES = [
+        ('beginner', 'Principiante'),
+        ('intermediate', 'Intermedio'),
+        ('advanced', 'Avanzado'),
+    ]
+    
+    category = models.CharField(max_length=100, blank=True, default='General', verbose_name="Categoría")
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='beginner', verbose_name="Nivel")
+    provider = models.CharField(max_length=50, default='fagsol', verbose_name="Proveedor", help_text="fagsol o instructor")
+    
+    # Precio con descuento
+    discount_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name="Precio con descuento"
+    )
+    
+    # Metadatos del curso
+    hours = models.IntegerField(default=0, validators=[MinValueValidator(0)], verbose_name="Horas totales")
+    rating = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=0.00,
+        validators=[MinValueValidator(Decimal('0.00')), MaxValueValidator(Decimal('5.00'))],
+        verbose_name="Calificación"
+    )
+    ratings_count = models.IntegerField(default=0, validators=[MinValueValidator(0)], verbose_name="Número de calificaciones")
+    
+    # Instructor (almacenado como JSON para flexibilidad)
+    instructor = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name="Instructor",
+        help_text="JSON con id, name, title del instructor"
+    )
+    
     class Meta:
         db_table = 'courses'
         verbose_name = 'Curso'

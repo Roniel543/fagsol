@@ -6,26 +6,48 @@ import { notFound, useParams } from 'next/navigation';
 import { useMemo } from 'react';
 import { AcademyHeader } from '../components/AcademyHeader';
 import { CourseCard } from '../components/CourseCard';
-import { CourseSection, getCourseDetailBySlug, MOCK_COURSES } from '../services/catalog.mock';
+import { useCourseBySlug, useCourses } from '@/shared/hooks/useCourses';
 
 export default function CourseDetailPage() {
-    // using next/navigation in client for simplicity (App Router)
-    // fallback: this page is client-rendered with mock data
     const params = useParams<{ slug: string }>();
     const slug = params?.slug as string;
     const { showToast } = useToast();
     const { addToCart, cartItems } = useCart();
 
-    const detail = useMemo(() => getCourseDetailBySlug(slug), [slug]);
+    // Obtener curso del backend usando SWR
+    const { course: detail, isLoading, isError } = useCourseBySlug(slug);
+    
+    // Obtener otros cursos para recomendaciones
+    const { courses: allCourses } = useCourses({ status: 'published' });
 
-    // Verificar si el curso ya está en el carrito (se actualiza automáticamente con cartItems)
-    // Debe estar antes del return condicional para cumplir las reglas de hooks
+    // Verificar si el curso ya está en el carrito
     const isInCart = useMemo(() => {
         if (!detail) return false;
         return cartItems.some((item) => item.id === detail.id);
     }, [cartItems, detail]);
 
-    if (!detail) return notFound();
+    // Loading state
+    if (isLoading) {
+        return (
+            <>
+                <AcademyHeader />
+                <main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
+                    <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+                        <div className="text-center py-12">
+                            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary-orange"></div>
+                            <p className="mt-4 text-gray-400">Cargando curso...</p>
+                        </div>
+                    </div>
+                </main>
+                <Footer />
+            </>
+        );
+    }
+
+    // Error state o curso no encontrado
+    if (isError || !detail) {
+        return notFound();
+    }
 
     const handleAddToCart = () => {
         // Validar si ya está en el carrito
@@ -68,61 +90,59 @@ export default function CourseDetailPage() {
                 <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2">
-                            <span className="text-xs text-primary-orange font-semibold">{detail.category} • {detail.provider === 'fagsol' ? 'Fagsol' : 'Instructor'}</span>
+                            <span className="text-xs text-primary-orange font-semibold">
+                                {detail.category || 'General'} • {detail.provider === 'fagsol' ? 'Fagsol' : 'Instructor'}
+                            </span>
                             <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-bold">{detail.title}</h1>
                             <SafeHTML html={detail.description} className="mt-2 text-gray-300" tag="div" />
 
-                            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <h2 className="font-semibold">Qué aprenderás</h2>
-                                    <ul className="mt-2 list-disc list-inside text-gray-300 text-sm space-y-1">
-                                        {detail.objectives.map((o: string, i: number) => (
-                                            <li key={i}>{o}</li>
+                            {/* Mostrar módulos si están disponibles */}
+                            {detail.modules && detail.modules.length > 0 && (
+                                <div className="mt-8">
+                                    <h2 className="font-semibold">Contenido del curso</h2>
+                                    <div className="mt-3 space-y-3">
+                                        {detail.modules.map((module) => (
+                                            <div key={module.id} className="rounded-lg border border-zinc-800">
+                                                <div className="px-4 py-3 bg-zinc-900/60 font-medium">
+                                                    {module.title}
+                                                    {module.description && (
+                                                        <p className="text-sm text-gray-400 mt-1">{module.description}</p>
+                                                    )}
+                                                </div>
+                                                <ul className="p-4 space-y-2">
+                                                    {module.lessons.map((lesson) => (
+                                                        <li key={lesson.id} className="flex items-center justify-between text-sm text-gray-300">
+                                                            <span>
+                                                                {lesson.title}
+                                                                {lesson.order === 0 && (
+                                                                    <span className="ml-2 text-xs text-primary-orange">Preview</span>
+                                                                )}
+                                                            </span>
+                                                            <span className="text-xs text-gray-400">
+                                                                {lesson.duration_minutes > 0 ? `${lesson.duration_minutes} min` : ''}
+                                                            </span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
                                         ))}
-                                    </ul>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h2 className="font-semibold">Requisitos</h2>
-                                    <ul className="mt-2 list-disc list-inside text-gray-300 text-sm space-y-1">
-                                        {detail.requirements.map((r: string, i: number) => (
-                                            <li key={i}>{r}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-
-                            <div className="mt-8">
-                                <h2 className="font-semibold">Contenido del curso</h2>
-                                <div className="mt-3 space-y-3">
-                                    {detail.sections.map((section: CourseSection, si: number) => (
-                                        <div key={si} className="rounded-lg border border-zinc-800">
-                                            <div className="px-4 py-3 bg-zinc-900/60 font-medium">{section.title}</div>
-                                            <ul className="p-4 space-y-2">
-                                                {section.lessons.map((l: { title: string; durationMin: number; preview?: boolean }, li: number) => (
-                                                    <li key={li} className="flex items-center justify-between text-sm text-gray-300">
-                                                        <span>
-                                                            {l.title} {l.preview && <span className="ml-2 text-xs text-primary-orange">Preview</span>}
-                                                        </span>
-                                                        <span className="text-xs text-gray-400">{l.durationMin} min</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                            )}
                         </div>
                         <div>{priceBlock}</div>
                     </div>
 
-                    <div className="mt-12">
-                        <h3 className="text-lg font-bold">Otros cursos recomendados</h3>
-                        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                            {MOCK_COURSES.filter(c => c.id !== detail.id).slice(0, 3).map(c => (
-                                <CourseCard key={c.id} course={c} />
-                            ))}
+                    {allCourses.length > 1 && (
+                        <div className="mt-12">
+                            <h3 className="text-lg font-bold">Otros cursos recomendados</h3>
+                            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                                {allCourses.filter(c => c.id !== detail.id).slice(0, 3).map(c => (
+                                    <CourseCard key={c.id} course={c} />
+                                ))}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </main>
             <Footer />

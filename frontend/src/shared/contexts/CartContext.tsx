@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { Course } from '@/shared/types';
-import { MOCK_COURSES } from '@/features/academy/services/catalog.mock';
+import { useCourses } from '@/shared/hooks/useCourses';
 
 export interface CartItem {
     id: string;
@@ -29,6 +29,9 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
+    
+    // Obtener todos los cursos del backend para poder buscar detalles
+    const { courses, isLoading: coursesLoading } = useCourses({ status: 'published' });
 
     // Cargar carrito desde localStorage al montar
     useEffect(() => {
@@ -75,15 +78,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, []);
 
     // Obtener items con detalles completos (MEMOIZADO)
+    // Ahora usa datos reales del backend en lugar de MOCK_COURSES
     const cartItemsWithDetails = useMemo((): CartItemWithDetails[] => {
+        if (coursesLoading || !isLoaded) {
+            return [];
+        }
+        
         return cartItems
             .map((item) => {
-                const course = MOCK_COURSES.find((c) => c.id === item.id);
-                if (!course) return null;
+                const course = courses.find((c) => c.id === item.id);
+                if (!course) {
+                    console.warn(`⚠️ Course ${item.id} not found in backend courses`);
+                    return null;
+                }
                 return { ...item, course };
             })
             .filter((item): item is CartItemWithDetails => item !== null);
-    }, [cartItems]);
+    }, [cartItems, courses, coursesLoading, isLoaded]);
 
     // Calcular total (MEMOIZADO)
     const total = useMemo(() => {
@@ -106,7 +117,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         total,
         itemCount,
-        isLoaded,
+        isLoaded: isLoaded && !coursesLoading, // Considerar cargado solo cuando ambos están listos
     };
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

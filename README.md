@@ -7,7 +7,7 @@ Plataforma educativa web moderna desarrollada para **FagSol S.A.C.**, orientada 
 **Versión:** 1.0 (Piloto)  
 **Fecha:** Octubre 2025  
 **Desarrollador:** Roniel Fernando Chambilla del Carpio  
-**Última actualización:** FASE 1 (Seguridad Frontend) - Completada ✅
+**Última actualización:** FASE 3 (Frontend SWR) - Completada ✅
 
 ---
 
@@ -26,6 +26,7 @@ Este proyecto implementa **Clean Architecture** con **Hexagonal Architecture**, 
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
+- SWR (Data Fetching)
 - DOMPurify (Sanitización HTML)
 - Jest + React Testing Library (Testing)
 - Arquitectura feature-based
@@ -327,11 +328,12 @@ LinkedIn: [tu-perfil]
 - Panel administrativo
 - Certificados básicos
 
-### Fase 2 - Data Fetching (Próximo)
-- [ ] Instalar y configurar SWR
-- [ ] Hooks de data fetching
-- [ ] Migración de componentes a SWR
-- [ ] Error handling y retry
+### Fase 2 - Data Fetching ✅ (Completado)
+- ✅ Instalar y configurar SWR
+- ✅ Hooks de data fetching (useCourses, useCourse, useCourseBySlug, useEnrollments)
+- ✅ Migración de componentes a SWR (CatalogPage, CourseDetailPage, AcademyHomePage, CartContext)
+- ✅ Error handling y loading states
+- ✅ Backend mejorado: endpoint por slug, modelo Course extendido
 
 ### Fase 3 - Testing E2E (Próximo)
 - [ ] Configurar Playwright
