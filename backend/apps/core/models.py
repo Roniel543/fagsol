@@ -11,9 +11,10 @@ class UserProfile(models.Model):
     Perfil extendido del usuario de Django
     """
     ROLE_CHOICES = [
-        ('student', 'Estudiante'),
-        ('teacher', 'Docente'),
         ('admin', 'Administrador'),
+        ('instructor', 'Instructor'),
+        ('student', 'Estudiante'),
+        ('guest', 'Invitado'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -39,8 +40,11 @@ class UserProfile(models.Model):
     def is_student(self):
         return self.role == 'student'
 
-    def is_teacher(self):
-        return self.role == 'teacher'
+    def is_instructor(self):
+        return self.role == 'instructor'
 
     def is_admin(self):
         return self.role == 'admin'
+    
+    def is_guest(self):
+        return self.role == 'guest'

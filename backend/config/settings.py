@@ -29,7 +29,10 @@ INSTALLED_APPS = [
     # Third party apps
     'rest_framework',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',  # Token blacklist
     'corsheaders',
+    'axes',  # Rate limiting y lockouts
+    'drf_yasg',  # OpenAPI/Swagger
     
     # Django Apps (Models & Admin)
     'apps.core',
@@ -45,6 +48,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'axes.middleware.AxesMiddleware',  # Rate limiting - debe ir después de AuthenticationMiddleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -70,13 +74,24 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
+# Si DB_HOST no está configurado, usar 'localhost' para desarrollo local
+DB_HOST = config('DB_HOST', default='localhost')
+# Si el host es 'db' (Docker) pero no está disponible, usar localhost
+if DB_HOST == 'db':
+    try:
+        import socket
+        socket.gethostbyname('db')
+    except socket.gaierror:
+        # Si 'db' no se puede resolver, usar localhost
+        DB_HOST = 'localhost'
+
 DATABASES = {
     'default': {
         'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
         'NAME': config('DB_NAME', default='fagsol_db'),
         'USER': config('DB_USER', default='postgres'),
         'PASSWORD': config('DB_PASSWORD', default='postgres'),
-        'HOST': config('DB_HOST', default='localhost'),
+        'HOST': DB_HOST,
         'PORT': config('DB_PORT', default='5432'),
     }
 }
@@ -88,6 +103,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -95,6 +113,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+# Use Argon2 for password hashing (más seguro que bcrypt)
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
 ]
 
 # Internationalization
@@ -211,3 +237,157 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # ==================================
 
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+
+# ==================================
+# SECURITY HEADERS
+# ==================================
+
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 año en producción
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Solo en producción
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# ==================================
+# RATE LIMITING (Axes)
+# ==================================
+
+AXES_ENABLED = True
+AXES_FAILURE_LIMIT = 10  # 10 intentos fallidos (aumentado para desarrollo)
+AXES_COOLOFF_TIME = 0.5  # 30 minutos de bloqueo (reducido para desarrollo)
+AXES_LOCKOUT_TEMPLATE = None
+AXES_LOCKOUT_URL = None
+AXES_RESET_ON_SUCCESS = True
+AXES_IP_WHITELIST = []
+
+# Authentication backends (incluir Axes)
+AUTHENTICATION_BACKENDS = [
+    'axes.backends.AxesStandaloneBackend',  # Axes debe ir primero
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# ==================================
+# MERCADOPAGO CONFIGURATION
+# ==================================
+
+MERCADOPAGO_ACCESS_TOKEN = config('MERCADOPAGO_ACCESS_TOKEN', default='')
+MERCADOPAGO_WEBHOOK_SECRET = config('MERCADOPAGO_WEBHOOK_SECRET', default='')
+MERCADOPAGO_PUBLIC_KEY = config('NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY', default='')
+
+# ==================================
+# AWS S3 CONFIGURATION (Para certificados y archivos)
+# ==================================
+
+USE_S3 = config('USE_S3', default=False, cast=bool)
+AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
+AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
+AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='')
+AWS_S3_REGION_NAME = config('AWS_S3_REGION_NAME', default='us-east-1')
+AWS_S3_SIGNATURE_VERSION = 's3v4'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = 'private'
+AWS_S3_VERIFY = True
+
+# URLs firmadas expiran en 1 hora por defecto
+AWS_QUERYSTRING_EXPIRE = 3600
+
+# ==================================
+# OPENAPI/SWAGGER CONFIGURATION
+# ==================================
+
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'JWT Authorization header usando el esquema Bearer. Ingresa SOLO el token (sin "Bearer "). Ejemplo: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+        }
+    },
+    'USE_SESSION_AUTH': False,  # No usar autenticación de sesión
+    'JSON_EDITOR': True,
+    'SUPPORTED_SUBMIT_METHODS': [
+        'get',
+        'post',
+        'put',
+        'delete',
+        'patch'
+    ],
+    'OPERATIONS_SORTER': 'alpha',
+    'TAGS_SORTER': 'alpha',
+    'DOC_EXPANSION': 'none',
+    'DEEP_LINKING': True,
+    'SHOW_EXTENSIONS': True,
+    'DEFAULT_MODEL_RENDERING': 'example',
+    # Seguridad: No exponer información sensible
+    'HIDE_SENSITIVE_SCHEMAS': True,
+}
+
+# ==================================
+# LOGGING CONFIGURATION
+# ==================================
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'filters': {
+        'require_debug_true': {
+            '()': 'django.utils.log.RequireDebugTrue',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        },
+        'file': {
+            'level': 'WARNING',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs' / 'django.log',
+            'formatter': 'verbose'
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console', 'file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'apps': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# Crear directorio de logs si no existe
+import os
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)

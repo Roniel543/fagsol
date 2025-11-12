@@ -17,13 +17,28 @@ class AuthService:
     def __init__(self):
         pass
 
-    def login(self, email: str, password: str) -> dict:
+    def login(self, email: str, password: str, request=None) -> dict:
         """
         Autentica un usuario y retorna tokens JWT
+        
+        Args:
+            email: Email del usuario
+            password: Contraseña del usuario
+            request: Objeto request de Django (requerido para AxesBackend)
         """
         try:
-            # Autenticar con Django
-            user = authenticate(username=email, password=password)
+            from django.contrib.auth.models import User
+            
+            # Intentar autenticar primero con email como username
+            user = authenticate(request=request, username=email, password=password)
+            
+            # Si no funciona, buscar usuario por email y autenticar con su username
+            if not user:
+                try:
+                    user_obj = User.objects.get(email=email)
+                    user = authenticate(request=request, username=user_obj.username, password=password)
+                except User.DoesNotExist:
+                    user = None
             
             if user and user.is_active:
                 # Generar tokens JWT
@@ -34,7 +49,7 @@ class AuthService:
                 try:
                     profile = user.profile
                 except UserProfile.DoesNotExist:
-                    # Crear perfil si no existe
+                    # Crear perfil si no existe (rol por defecto: student)
                     profile = UserProfile.objects.create(user=user, role='student')
                 
                 return {

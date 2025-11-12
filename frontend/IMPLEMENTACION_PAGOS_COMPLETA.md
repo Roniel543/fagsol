@@ -158,25 +158,7 @@ Body: { "course_ids": ["c-001", "c-002"] }
 - ✅ Calcular total desde BD (NO del request)
 - ✅ Usuario no tiene cursos ya
 
-**Response esperado:**
-```json
-{
-  "success": true,
-  "data": {
-    "id": "pi_123",
-    "total": 149.00,
-    "currency": "PEN",
-    "items": [
-      {
-        "course_id": "c-001",
-        "course_title": "Curso 1",
-        "price": 99.00
-      }
-    ],
-    "status": "pending"
-  }
-}
-```
+
 
 ### **2. Procesar Pago**
 ```

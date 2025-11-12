@@ -1,0 +1,430 @@
+"""
+Sistema de Permisos y Roles - FagSol Escuela Virtual
+
+Este módulo implementa el sistema de autorización usando roles y permisos.
+Utiliza grupos de Django para gestionar roles y policies reutilizables.
+"""
+
+from rest_framework import permissions
+from rest_framework.exceptions import PermissionDenied
+from django.contrib.auth.models import Group
+from apps.core.models import UserProfile
+
+
+# Constantes de roles
+ROLE_ADMIN = 'admin'
+ROLE_INSTRUCTOR = 'instructor'
+ROLE_STUDENT = 'student'
+ROLE_GUEST = 'guest'
+
+# Nombres de grupos de Django (se crearán automáticamente)
+GROUP_ADMIN = 'Administradores'
+GROUP_INSTRUCTOR = 'Instructores'
+GROUP_STUDENT = 'Estudiantes'
+GROUP_GUEST = 'Invitados'
+
+
+def get_user_role(user):
+    """
+    Obtiene el rol del usuario desde su perfil.
+    
+    Args:
+        user: Usuario de Django
+        
+    Returns:
+        str: Rol del usuario ('admin', 'instructor', 'student', 'guest')
+    """
+    if not user or not user.is_authenticated:
+        return ROLE_GUEST
+    
+    try:
+        profile = user.profile
+        return profile.role
+    except UserProfile.DoesNotExist:
+        # Si no tiene perfil, es guest
+        return ROLE_GUEST
+
+
+def has_role(user, role):
+    """
+    Verifica si el usuario tiene un rol específico.
+    
+    Args:
+        user: Usuario de Django
+        role: Rol a verificar ('admin', 'instructor', 'student', 'guest')
+        
+    Returns:
+        bool: True si el usuario tiene el rol
+    """
+    user_role = get_user_role(user)
+    return user_role == role
+
+
+def has_any_role(user, roles):
+    """
+    Verifica si el usuario tiene alguno de los roles especificados.
+    
+    Args:
+        user: Usuario de Django
+        roles: Lista de roles a verificar
+        
+    Returns:
+        bool: True si el usuario tiene alguno de los roles
+    """
+    user_role = get_user_role(user)
+    return user_role in roles
+
+
+def is_admin(user):
+    """Verifica si el usuario es administrador"""
+    return has_role(user, ROLE_ADMIN)
+
+
+def is_instructor(user):
+    """Verifica si el usuario es instructor"""
+    return has_role(user, ROLE_INSTRUCTOR)
+
+
+def is_student(user):
+    """Verifica si el usuario es estudiante"""
+    return has_role(user, ROLE_STUDENT)
+
+
+def is_guest(user):
+    """Verifica si el usuario es invitado (no autenticado)"""
+    return not user or not user.is_authenticated or has_role(user, ROLE_GUEST)
+
+
+# ============================================
+# POLICIES REUTILIZABLES
+# ============================================
+
+def can_view_course(user, course):
+    """
+    Policy: Verifica si el usuario puede ver un curso.
+    
+    Reglas:
+    - Admin e instructores pueden ver todos los cursos
+    - Estudiantes pueden ver cursos publicados o cursos en los que están inscritos
+    - Invitados solo pueden ver cursos publicados
+    
+    Args:
+        user: Usuario de Django
+        course: Instancia de Course
+        
+    Returns:
+        bool: True si el usuario puede ver el curso
+    """
+    if not user or not user.is_authenticated:
+        # Invitados solo pueden ver cursos publicados
+        return course.status == 'published' and course.is_active
+    
+    user_role = get_user_role(user)
+    
+    # Admin e instructores pueden ver todo
+    if user_role in [ROLE_ADMIN, ROLE_INSTRUCTOR]:
+        return True
+    
+    # Estudiantes pueden ver cursos publicados o cursos en los que están inscritos
+    if user_role == ROLE_STUDENT:
+        if course.status == 'published' and course.is_active:
+            return True
+        # Verificar si está inscrito
+        from apps.users.models import Enrollment
+        return Enrollment.objects.filter(
+            user=user,
+            course=course,
+            status='active'
+        ).exists()
+    
+    return False
+
+
+def can_edit_course(user, course):
+    """
+    Policy: Verifica si el usuario puede editar un curso.
+    
+    Reglas:
+    - Solo admin e instructores pueden editar cursos
+    - Los instructores solo pueden editar sus propios cursos (si tienen campo owner)
+    
+    Args:
+        user: Usuario de Django
+        course: Instancia de Course
+        
+    Returns:
+        bool: True si el usuario puede editar el curso
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin puede editar todo
+    if user_role == ROLE_ADMIN:
+        return True
+    
+    # Instructores pueden editar sus propios cursos
+    if user_role == ROLE_INSTRUCTOR:
+        # Si el curso tiene un campo instructor/owner, verificar
+        if hasattr(course, 'instructor') and course.instructor == user:
+            return True
+        if hasattr(course, 'owner') and course.owner == user:
+            return True
+        # Por ahora, instructores pueden editar cualquier curso
+        # TODO: Implementar ownership cuando se agregue el campo
+        return True
+    
+    return False
+
+
+def can_access_course_content(user, course):
+    """
+    Policy: Verifica si el usuario puede acceder al contenido completo de un curso.
+    
+    Reglas:
+    - Admin e instructores pueden acceder a todo
+    - Estudiantes solo si están inscritos y el enrollment está activo
+    
+    Args:
+        user: Usuario de Django
+        course: Instancia de Course
+        
+    Returns:
+        bool: True si el usuario puede acceder al contenido
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin e instructores pueden acceder a todo
+    if user_role in [ROLE_ADMIN, ROLE_INSTRUCTOR]:
+        return True
+    
+    # Estudiantes solo si están inscritos
+    if user_role == ROLE_STUDENT:
+        from apps.users.models import Enrollment
+        return Enrollment.objects.filter(
+            user=user,
+            course=course,
+            status='active'
+        ).exists()
+    
+    return False
+
+
+def can_view_enrollment(user, enrollment):
+    """
+    Policy: Verifica si el usuario puede ver un enrollment.
+    
+    Reglas:
+    - Admin e instructores pueden ver todos los enrollments
+    - Estudiantes solo pueden ver sus propios enrollments
+    
+    Args:
+        user: Usuario de Django
+        enrollment: Instancia de Enrollment
+        
+    Returns:
+        bool: True si el usuario puede ver el enrollment
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin e instructores pueden ver todo
+    if user_role in [ROLE_ADMIN, ROLE_INSTRUCTOR]:
+        return True
+    
+    # Estudiantes solo pueden ver sus propios enrollments
+    if user_role == ROLE_STUDENT:
+        return enrollment.user == user
+    
+    return False
+
+
+def can_view_certificate(user, certificate):
+    """
+    Policy: Verifica si el usuario puede ver/descargar un certificado.
+    
+    Reglas:
+    - Admin e instructores pueden ver todos los certificados
+    - Estudiantes solo pueden ver sus propios certificados
+    
+    Args:
+        user: Usuario de Django
+        certificate: Instancia de Certificate
+        
+    Returns:
+        bool: True si el usuario puede ver el certificado
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin e instructores pueden ver todo
+    if user_role in [ROLE_ADMIN, ROLE_INSTRUCTOR]:
+        return True
+    
+    # Estudiantes solo pueden ver sus propios certificados
+    if user_role == ROLE_STUDENT:
+        return certificate.user == user
+    
+    return False
+
+
+def can_process_payment(user):
+    """
+    Policy: Verifica si el usuario puede procesar pagos.
+    
+    Reglas:
+    - Solo estudiantes autenticados pueden procesar pagos
+    - Admin e instructores no pueden procesar pagos (solo ver)
+    
+    Args:
+        user: Usuario de Django
+        
+    Returns:
+        bool: True si el usuario puede procesar pagos
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Solo estudiantes pueden procesar pagos
+    return user_role == ROLE_STUDENT
+
+
+# ============================================
+# PERMISSION CLASSES PARA DRF
+# ============================================
+
+class IsAdmin(permissions.BasePermission):
+    """
+    Permission class: Solo permite acceso a administradores
+    """
+    
+    def has_permission(self, request, view):
+        return is_admin(request.user)
+
+
+class IsInstructor(permissions.BasePermission):
+    """
+    Permission class: Solo permite acceso a instructores
+    """
+    
+    def has_permission(self, request, view):
+        return is_instructor(request.user)
+
+
+class IsStudent(permissions.BasePermission):
+    """
+    Permission class: Solo permite acceso a estudiantes
+    """
+    
+    def has_permission(self, request, view):
+        return is_student(request.user)
+
+
+class IsAdminOrInstructor(permissions.BasePermission):
+    """
+    Permission class: Permite acceso a admin e instructores
+    """
+    
+    def has_permission(self, request, view):
+        return has_any_role(request.user, [ROLE_ADMIN, ROLE_INSTRUCTOR])
+
+
+class IsAdminOrStudent(permissions.BasePermission):
+    """
+    Permission class: Permite acceso a admin y estudiantes
+    """
+    
+    def has_permission(self, request, view):
+        return has_any_role(request.user, [ROLE_ADMIN, ROLE_STUDENT])
+
+
+class CanViewCourse(permissions.BasePermission):
+    """
+    Permission class: Verifica si el usuario puede ver un curso específico
+    """
+    
+    def has_object_permission(self, request, view, obj):
+        return can_view_course(request.user, obj)
+
+
+class CanAccessCourseContent(permissions.BasePermission):
+    """
+    Permission class: Verifica si el usuario puede acceder al contenido de un curso
+    """
+    
+    def has_object_permission(self, request, view, obj):
+        return can_access_course_content(request.user, obj)
+
+
+class CanViewEnrollment(permissions.BasePermission):
+    """
+    Permission class: Verifica si el usuario puede ver un enrollment específico
+    """
+    
+    def has_object_permission(self, request, view, obj):
+        return can_view_enrollment(request.user, obj)
+
+
+class CanViewCertificate(permissions.BasePermission):
+    """
+    Permission class: Verifica si el usuario puede ver un certificado específico
+    """
+    
+    def has_object_permission(self, request, view, obj):
+        return can_view_certificate(request.user, obj)
+
+
+# ============================================
+# UTILIDADES PARA GRUPOS DE DJANGO
+# ============================================
+
+def ensure_groups_exist():
+    """
+    Asegura que los grupos de roles existan en la base de datos.
+    Se puede llamar desde una migración o signal.
+    """
+    groups_data = [
+        (GROUP_ADMIN, ROLE_ADMIN),
+        (GROUP_INSTRUCTOR, ROLE_INSTRUCTOR),
+        (GROUP_STUDENT, ROLE_STUDENT),
+        (GROUP_GUEST, ROLE_GUEST),
+    ]
+    
+    for group_name, role in groups_data:
+        Group.objects.get_or_create(name=group_name)
+
+
+def assign_user_to_group(user, role):
+    """
+    Asigna un usuario a un grupo de Django según su rol.
+    
+    Args:
+        user: Usuario de Django
+        role: Rol del usuario ('admin', 'instructor', 'student', 'guest')
+    """
+    # Asegurar que los grupos existan
+    ensure_groups_exist()
+    
+    # Mapeo de roles a grupos
+    role_to_group = {
+        ROLE_ADMIN: GROUP_ADMIN,
+        ROLE_INSTRUCTOR: GROUP_INSTRUCTOR,
+        ROLE_STUDENT: GROUP_STUDENT,
+        ROLE_GUEST: GROUP_GUEST,
+    }
+    
+    group_name = role_to_group.get(role)
+    if group_name:
+        group = Group.objects.get(name=group_name)
+        user.groups.add(group)
+

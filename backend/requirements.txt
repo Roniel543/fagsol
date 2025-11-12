@@ -12,9 +12,12 @@ psycopg2-binary==2.9.10
 
 # ==================================
 # AUTHENTICATION & SECURITY
-# ==================================clear
-djangorestframework-simplejwt==5.3.1
+# ==================================
+djangorestframework-simplejwt[blacklist]==5.3.1
 PyJWT==2.8.0
+django-ratelimit==4.1.0
+argon2-cffi==23.1.0
+django-axes==6.5.2
 
 # ==================================
 # PAYMENTS
@@ -68,6 +71,8 @@ faker==21.0.0
 black==23.12.1
 flake8==6.1.0
 isort==5.13.2
+bandit==1.7.5
+safety==3.2.5
 
 # ==================================
 # PRODUCTION
@@ -75,4 +80,10 @@ isort==5.13.2
 gunicorn==21.2.0
 whitenoise==6.6.0
 dj-database-url==2.1.0
+boto3==1.34.0  # Para S3 (certificados y archivos)
+
+# ==================================
+# API DOCUMENTATION
+# ==================================
+drf-yasg==1.21.7
 
