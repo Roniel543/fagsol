@@ -11,12 +11,49 @@ from apps.users.models import Enrollment
 from apps.courses.models import Course
 from apps.users.permissions import (
     IsAdminOrInstructor, CanViewEnrollment,
-    can_view_enrollment
+    can_view_enrollment, has_perm
 )
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 logger = logging.getLogger('apps')
 
 
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista los enrollments (inscripciones) del usuario autenticado. Los administradores e instructores pueden ver todos los enrollments, mientras que los estudiantes solo ven los suyos.',
+    responses={
+        200: openapi.Response(
+            description='Lista de enrollments',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': [
+                        {
+                            'id': 1,
+                            'course': {
+                                'id': 'course-1',
+                                'title': 'Curso de Ejemplo',
+                                'slug': 'curso-de-ejemplo',
+                                'thumbnail_url': 'https://example.com/image.jpg'
+                            },
+                            'status': 'active',
+                            'completed': False,
+                            'completion_percentage': 0.0,
+                            'enrolled_at': '2025-01-12T10:00:00Z',
+                            'completed_at': None
+                        }
+                    ],
+                    'count': 1
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Inscripciones']
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def list_enrollments(request):
@@ -25,20 +62,22 @@ def list_enrollments(request):
     GET /api/v1/enrollments/
     
     Permisos:
-    - Estudiantes: Solo sus propios enrollments
-    - Admin/Instructores: Todos los enrollments
+    - Estudiantes: Solo sus propios enrollments (users.view_own_enrollment)
+    - Admin/Instructores: Todos los enrollments (users.view_enrollment)
     """
     try:
-        from apps.users.permissions import get_user_role, ROLE_ADMIN, ROLE_INSTRUCTOR
-        
-        user_role = get_user_role(request.user)
-        
-        # Admin e instructores pueden ver todos los enrollments
-        if user_role in [ROLE_ADMIN, ROLE_INSTRUCTOR]:
+        # Verificar permisos usando Django permissions
+        if has_perm(request.user, 'users.view_enrollment'):
+            # Admin e instructores pueden ver todos los enrollments
             enrollments = Enrollment.objects.all().order_by('-enrolled_at')
-        else:
+        elif has_perm(request.user, 'users.view_own_enrollment'):
             # Estudiantes solo sus propios enrollments
             enrollments = Enrollment.objects.filter(user=request.user).order_by('-enrolled_at')
+        else:
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para ver enrollments'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         data = []
         for enrollment in enrollments:
@@ -71,6 +110,50 @@ def list_enrollments(request):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene los detalles de un enrollment específico. Los estudiantes solo pueden ver sus propios enrollments, mientras que administradores e instructores pueden ver cualquier enrollment.',
+    manual_parameters=[
+        openapi.Parameter(
+            'enrollment_id',
+            openapi.IN_PATH,
+            description='ID del enrollment',
+            type=openapi.TYPE_INTEGER,
+            required=True
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            description='Detalles del enrollment',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': {
+                        'id': 1,
+                        'course': {
+                            'id': 'course-1',
+                            'title': 'Curso de Ejemplo',
+                            'slug': 'curso-de-ejemplo',
+                            'description': 'Descripción del curso',
+                            'thumbnail_url': 'https://example.com/image.jpg'
+                        },
+                        'status': 'active',
+                        'completed': False,
+                        'completion_percentage': 0.0,
+                        'enrolled_at': '2025-01-12T10:00:00Z',
+                        'completed_at': None,
+                        'expires_at': None
+                    }
+                }
+            }
+        ),
+        403: openapi.Response(description='No tienes permiso para ver este enrollment'),
+        404: openapi.Response(description='Enrollment no encontrado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Inscripciones']
+)
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_enrollment(request, enrollment_id):
@@ -79,8 +162,8 @@ def get_enrollment(request, enrollment_id):
     GET /api/v1/enrollments/{enrollment_id}/
     
     Permisos:
-    - Estudiantes: Solo sus propios enrollments
-    - Admin/Instructores: Cualquier enrollment
+    - Estudiantes: Solo sus propios enrollments (users.view_own_enrollment)
+    - Admin/Instructores: Cualquier enrollment (users.view_enrollment)
     """
     try:
         enrollment = Enrollment.objects.get(id=enrollment_id)

@@ -1,22 +1,26 @@
 'use client';
 
-import { Button, Card, LoadingSpinner } from '@/shared/components';
+import { Button, Card, ProtectedRoute } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
 
-export function DashboardContent() {
+function DashboardContentInner() {
     const { user, logout } = useAuth();
-    const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    useEffect(() => {
-        if (!user) {
-            router.push('/auth/login');
-            return;
-        }
-        setLoading(false);
-    }, [user, router]);
+    // SEGURIDAD CRÍTICA: ProtectedRoute garantiza que user no es null antes de renderizar este componente
+    // Si user es null aquí, ProtectedRoute ya redirigió a login y este código nunca se ejecuta
+    // Este check es una validación de seguridad adicional + type guard para TypeScript
+    if (!user) {
+        // Este código NUNCA debería ejecutarse en producción
+        // Si se ejecuta, es un bug crítico de seguridad que debe ser reportado inmediatamente
+        console.error('CRITICAL SECURITY ERROR: DashboardContentInner rendered without user - ProtectedRoute validation failed');
+        // Redirigir inmediatamente como medida de seguridad
+        router.push('/auth/login');
+        return null;
+    }
+
+    // TypeScript ahora sabe que user no es null gracias al type guard arriba
 
     const getRoleDisplayName = (role: string) => {
         switch (role) {
@@ -26,21 +30,6 @@ export function DashboardContent() {
             default: return role;
         }
     };
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="text-center">
-                    <LoadingSpinner size="lg" />
-                    <p className="mt-4 text-gray-600">Caragando...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (!user) {
-        return null; // Se redirigirá al login
-    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -114,17 +103,34 @@ export function DashboardContent() {
 
                             {/* Action Buttons */}
                             <div className="mt-8 space-x-4">
-                                <Button variant="primary">
+                                <Button 
+                                    variant="primary"
+                                    onClick={() => router.push('/academy/catalog')}
+                                >
                                     Ver Cursos
                                 </Button>
-                                <Button variant="success">
-                                    Mi Perfil
-                                </Button>
+                                {(user.role === 'admin' || user.role === 'instructor') && (
+                                    <Button 
+                                        variant="success"
+                                        onClick={() => router.push('/admin/courses')}
+                                    >
+                                        Administrar Cursos
+                                    </Button>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             </main>
         </div>
+    );
+}
+
+// Componente principal que envuelve con ProtectedRoute
+export function DashboardContent() {
+    return (
+        <ProtectedRoute>
+            <DashboardContentInner />
+        </ProtectedRoute>
     );
 }

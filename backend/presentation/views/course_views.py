@@ -11,8 +11,10 @@ from django.shortcuts import get_object_or_404
 from apps.courses.models import Course, Module, Lesson
 from apps.users.models import Enrollment
 from apps.users.permissions import (
-    can_view_course, can_access_course_content
+    can_view_course, can_access_course_content, IsAdminOrInstructor
 )
+from infrastructure.services.course_service import CourseService
+from decimal import Decimal
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -453,6 +455,350 @@ def get_course_content(request, course_id):
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger.error(f"Error en get_course_content: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Crea un nuevo curso. Requiere rol admin o instructor',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['title', 'description', 'price'],
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING, description='Título del curso'),
+            'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción completa'),
+            'short_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción corta'),
+            'price': openapi.Schema(type=openapi.TYPE_NUMBER, description='Precio del curso'),
+            'currency': openapi.Schema(type=openapi.TYPE_STRING, description='Moneda (PEN por defecto)'),
+            'status': openapi.Schema(type=openapi.TYPE_STRING, enum=['draft', 'published', 'archived'], description='Estado del curso'),
+            'category': openapi.Schema(type=openapi.TYPE_STRING, description='Categoría'),
+            'level': openapi.Schema(type=openapi.TYPE_STRING, enum=['beginner', 'intermediate', 'advanced'], description='Nivel'),
+            'thumbnail_url': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI, description='URL de miniatura'),
+            'banner_url': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI, description='URL de banner'),
+            'discount_price': openapi.Schema(type=openapi.TYPE_NUMBER, description='Precio con descuento'),
+            'hours': openapi.Schema(type=openapi.TYPE_INTEGER, description='Horas totales'),
+            'instructor': openapi.Schema(type=openapi.TYPE_OBJECT, description='Información del instructor (JSON)'),
+            'tags': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Tags del curso'),
+        }
+    ),
+    responses={
+        201: openapi.Response(description='Curso creado exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        403: openapi.Response(description='No tienes permiso para crear cursos'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Cursos']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
+def create_course(request):
+    """
+    Crea un nuevo curso
+    POST /api/v1/courses/
+    
+    Requiere autenticación y rol admin o instructor
+    """
+    try:
+        # 1. Validar datos requeridos
+        title = request.data.get('title')
+        description = request.data.get('description')
+        price = request.data.get('price')
+        
+        if not title or not description or price is None:
+            return Response({
+                'success': False,
+                'message': 'Título, descripción y precio son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 2. Convertir price a Decimal
+        try:
+            price_decimal = Decimal(str(price))
+        except (ValueError, TypeError):
+            return Response({
+                'success': False,
+                'message': 'Precio inválido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 3. Preparar kwargs
+        kwargs = {}
+        if 'short_description' in request.data:
+            kwargs['short_description'] = request.data['short_description']
+        if 'currency' in request.data:
+            kwargs['currency'] = request.data['currency']
+        if 'status' in request.data:
+            kwargs['status'] = request.data['status']
+        if 'category' in request.data:
+            kwargs['category'] = request.data['category']
+        if 'level' in request.data:
+            kwargs['level'] = request.data['level']
+        if 'thumbnail_url' in request.data:
+            kwargs['thumbnail_url'] = request.data['thumbnail_url']
+        if 'banner_url' in request.data:
+            kwargs['banner_url'] = request.data['banner_url']
+        if 'discount_price' in request.data:
+            try:
+                kwargs['discount_price'] = Decimal(str(request.data['discount_price']))
+            except (ValueError, TypeError):
+                pass
+        if 'hours' in request.data:
+            try:
+                kwargs['hours'] = int(request.data['hours'])
+            except (ValueError, TypeError):
+                pass
+        if 'instructor' in request.data:
+            kwargs['instructor'] = request.data['instructor']
+        if 'tags' in request.data:
+            kwargs['tags'] = request.data['tags']
+        if 'provider' in request.data:
+            kwargs['provider'] = request.data['provider']
+        
+        # 4. Usar servicio para crear curso
+        course_service = CourseService()
+        success, course, error_message = course_service.create_course(
+            user=request.user,
+            title=title,
+            description=description,
+            price=price_decimal,
+            **kwargs
+        )
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_400_BAD_REQUEST if 'requerido' in error_message.lower() or 'inválido' in error_message.lower() else status.HTTP_403_FORBIDDEN)
+        
+        # 5. Serializar respuesta
+        return Response({
+            'success': True,
+            'data': {
+                'id': course.id,
+                'title': course.title,
+                'slug': course.slug,
+                'description': course.description,
+                'short_description': course.short_description,
+                'price': float(course.price),
+                'currency': course.currency,
+                'status': course.status,
+                'category': course.category,
+                'level': course.level,
+                'created_at': course.created_at.isoformat(),
+            },
+            'message': 'Curso creado exitosamente'
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Error en create_course: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='put',
+    operation_description='Actualiza un curso existente. Requiere rol admin o instructor',
+    manual_parameters=[
+        openapi.Parameter(
+            'course_id',
+            openapi.IN_PATH,
+            description='ID del curso',
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING, description='Título del curso'),
+            'description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción completa'),
+            'short_description': openapi.Schema(type=openapi.TYPE_STRING, description='Descripción corta'),
+            'price': openapi.Schema(type=openapi.TYPE_NUMBER, description='Precio del curso'),
+            'currency': openapi.Schema(type=openapi.TYPE_STRING, description='Moneda'),
+            'status': openapi.Schema(type=openapi.TYPE_STRING, enum=['draft', 'published', 'archived'], description='Estado del curso'),
+            'category': openapi.Schema(type=openapi.TYPE_STRING, description='Categoría'),
+            'level': openapi.Schema(type=openapi.TYPE_STRING, enum=['beginner', 'intermediate', 'advanced'], description='Nivel'),
+            'thumbnail_url': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI, description='URL de miniatura'),
+            'banner_url': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI, description='URL de banner'),
+            'discount_price': openapi.Schema(type=openapi.TYPE_NUMBER, description='Precio con descuento'),
+            'hours': openapi.Schema(type=openapi.TYPE_INTEGER, description='Horas totales'),
+            'instructor': openapi.Schema(type=openapi.TYPE_OBJECT, description='Información del instructor (JSON)'),
+            'tags': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description='Tags del curso'),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Curso actualizado exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        403: openapi.Response(description='No tienes permiso para editar este curso'),
+        404: openapi.Response(description='Curso no encontrado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Cursos']
+)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
+def update_course(request, course_id):
+    """
+    Actualiza un curso existente
+    PUT /api/v1/courses/{course_id}/
+    
+    Requiere autenticación y permiso para editar el curso
+    """
+    try:
+        # 1. Preparar kwargs con solo los campos que se envían
+        kwargs = {}
+        
+        if 'title' in request.data:
+            kwargs['title'] = request.data['title']
+        if 'description' in request.data:
+            kwargs['description'] = request.data['description']
+        if 'short_description' in request.data:
+            kwargs['short_description'] = request.data['short_description']
+        if 'price' in request.data:
+            try:
+                kwargs['price'] = Decimal(str(request.data['price']))
+            except (ValueError, TypeError):
+                return Response({
+                    'success': False,
+                    'message': 'Precio inválido'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        if 'currency' in request.data:
+            kwargs['currency'] = request.data['currency']
+        if 'status' in request.data:
+            kwargs['status'] = request.data['status']
+        if 'category' in request.data:
+            kwargs['category'] = request.data['category']
+        if 'level' in request.data:
+            kwargs['level'] = request.data['level']
+        if 'thumbnail_url' in request.data:
+            kwargs['thumbnail_url'] = request.data['thumbnail_url']
+        if 'banner_url' in request.data:
+            kwargs['banner_url'] = request.data['banner_url']
+        if 'discount_price' in request.data:
+            try:
+                kwargs['discount_price'] = Decimal(str(request.data['discount_price']))
+            except (ValueError, TypeError):
+                pass
+        if 'hours' in request.data:
+            try:
+                kwargs['hours'] = int(request.data['hours'])
+            except (ValueError, TypeError):
+                pass
+        if 'instructor' in request.data:
+            kwargs['instructor'] = request.data['instructor']
+        if 'tags' in request.data:
+            kwargs['tags'] = request.data['tags']
+        
+        # 2. Validar que al menos un campo se está actualizando
+        if not kwargs:
+            return Response({
+                'success': False,
+                'message': 'Debes enviar al menos un campo para actualizar'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 3. Usar servicio para actualizar curso
+        course_service = CourseService()
+        success, course, error_message = course_service.update_course(
+            user=request.user,
+            course_id=course_id,
+            **kwargs
+        )
+        
+        if not success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no encontrado' in error_message.lower() else (
+                status.HTTP_403_FORBIDDEN if 'permiso' in error_message.lower() else status.HTTP_400_BAD_REQUEST
+            )
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status_code)
+        
+        # 4. Serializar respuesta
+        return Response({
+            'success': True,
+            'data': {
+                'id': course.id,
+                'title': course.title,
+                'slug': course.slug,
+                'description': course.description,
+                'short_description': course.short_description,
+                'price': float(course.price),
+                'discount_price': float(course.discount_price) if course.discount_price else None,
+                'currency': course.currency,
+                'status': course.status,
+                'category': course.category,
+                'level': course.level,
+                'updated_at': course.updated_at.isoformat(),
+            },
+            'message': 'Curso actualizado exitosamente'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en update_course: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description='Elimina (archiva) un curso. Solo administradores pueden eliminar cursos',
+    manual_parameters=[
+        openapi.Parameter(
+            'course_id',
+            openapi.IN_PATH,
+            description='ID del curso',
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Curso eliminado exitosamente'),
+        403: openapi.Response(description='Solo los administradores pueden eliminar cursos'),
+        404: openapi.Response(description='Curso no encontrado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Cursos']
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_course(request, course_id):
+    """
+    Elimina (archiva) un curso (soft delete)
+    DELETE /api/v1/courses/{course_id}/
+    
+    Solo administradores pueden eliminar cursos
+    """
+    try:
+        # 1. Usar servicio para eliminar curso
+        course_service = CourseService()
+        success, error_message = course_service.delete_course(
+            user=request.user,
+            course_id=course_id
+        )
+        
+        if not success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no encontrado' in error_message.lower() else status.HTTP_403_FORBIDDEN
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status_code)
+        
+        # 2. Retornar respuesta
+        return Response({
+            'success': True,
+            'message': 'Curso eliminado exitosamente'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en delete_course: {str(e)}")
         return Response({
             'success': False,
             'message': 'Error interno del servidor'

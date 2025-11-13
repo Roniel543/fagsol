@@ -29,25 +29,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     useEffect(() => {
-        // Migrar tokens de localStorage a sessionStorage (compatibilidad)
-        migrateTokensFromLocalStorage();
+        // Función para verificar y restaurar sesión
+        const verifyAndRestoreSession = async () => {
+            // Migrar tokens de localStorage a sessionStorage (compatibilidad)
+            migrateTokensFromLocalStorage();
 
-        // Verificar si hay usuario en sessionStorage
-        const userData = getUserData();
-        const accessToken = typeof window !== 'undefined'
-            ? sessionStorage.getItem('access_token')
-            : null;
+            // Verificar si hay tokens en sessionStorage
+            const accessToken = typeof window !== 'undefined'
+                ? sessionStorage.getItem('access_token')
+                : null;
 
-        if (userData && accessToken) {
-            try {
-                setUser(userData);
-            } catch (error) {
-                console.error('Error parsing user data:', error);
-                clearTokens();
+            if (!accessToken) {
+                setLoading(false);
+                return;
             }
-        }
 
-        setLoading(false);
+            // Validar token con el backend
+            try {
+                const response = await authAPI.getCurrentUser();
+                
+                if (response.success && response.user) {
+                    // Token válido, restaurar usuario
+                    setUserData(response.user); // Actualizar datos del usuario
+                    setUser(response.user);
+                } else {
+                    // Token inválido, limpiar
+                    clearTokens();
+                    setUser(null);
+                }
+            } catch (error) {
+                // Error al validar token (token expirado, inválido, etc.)
+                console.error('Error validating token:', error);
+                clearTokens();
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        verifyAndRestoreSession();
     }, []);
 
     const login = async (credentials: LoginRequest): Promise<AuthResponse> => {

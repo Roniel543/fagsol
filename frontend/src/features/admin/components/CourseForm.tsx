@@ -1,0 +1,449 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Button, Input, Select, Card, LoadingSpinner } from '@/shared/components';
+import { CreateCourseRequest, UpdateCourseRequest, getCourseById } from '@/shared/services/courses';
+
+interface CourseFormProps {
+    courseId?: string; // Si existe, es edición; si no, es creación
+    onSuccess?: () => void;
+    onCancel?: () => void;
+}
+
+export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
+    const [formData, setFormData] = useState<CreateCourseRequest>({
+        title: '',
+        description: '',
+        short_description: '',
+        price: 0,
+        currency: 'PEN',
+        status: 'draft',
+        category: 'General',
+        level: 'beginner',
+        thumbnail_url: '',
+        banner_url: '',
+        discount_price: undefined,
+        hours: 0,
+        instructor: {
+            id: 'i-001',
+            name: 'Equipo Fagsol',
+        },
+        tags: [],
+        provider: 'fagsol',
+    });
+
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    const [loading, setLoading] = useState(false);
+    const [loadingCourse, setLoadingCourse] = useState(!!courseId);
+    const [error, setError] = useState<string | null>(null);
+
+    // Cargar curso si es edición
+    useEffect(() => {
+        if (courseId) {
+            loadCourse();
+        }
+    }, [courseId]);
+
+    const loadCourse = async () => {
+        try {
+            setLoadingCourse(true);
+            const response = await getCourseById(courseId!);
+            if (response.success && response.data) {
+                const course = response.data;
+                setFormData({
+                    title: course.title || '',
+                    description: course.description || '',
+                    short_description: course.short_description || '',
+                    price: course.price || 0,
+                    currency: course.currency || 'PEN',
+                    status: (course.status as any) || 'draft',
+                    category: (course as any).category || 'General',
+                    level: ((course as any).level || 'beginner') as 'beginner' | 'intermediate' | 'advanced',
+                    thumbnail_url: course.thumbnail_url || '',
+                    banner_url: course.banner_url || '',
+                    discount_price: (course as any).discount_price || undefined,
+                    hours: (course as any).hours || 0,
+                    instructor: (course as any).instructor || {
+                        id: 'i-001',
+                        name: 'Equipo Fagsol',
+                    },
+                    tags: Array.isArray((course as any).tags) ? (course as any).tags : [],
+                    provider: (course as any).provider || 'fagsol',
+                });
+            }
+        } catch (err: any) {
+            setError(err.message || 'Error al cargar el curso');
+        } finally {
+            setLoadingCourse(false);
+        }
+    };
+
+    const validateField = (name: string, value: any): string => {
+        switch (name) {
+            case 'title':
+                if (!value || value.trim().length < 3) {
+                    return 'El título debe tener al menos 3 caracteres';
+                }
+                if (value.length > 200) {
+                    return 'El título no puede exceder 200 caracteres';
+                }
+                return '';
+            case 'description':
+                if (!value || value.trim().length < 10) {
+                    return 'La descripción debe tener al menos 10 caracteres';
+                }
+                return '';
+            case 'price':
+                if (value === '' || value === null || value === undefined) {
+                    return 'El precio es requerido';
+                }
+                const priceNum = parseFloat(value);
+                if (isNaN(priceNum) || priceNum < 0) {
+                    return 'El precio debe ser un número mayor o igual a 0';
+                }
+                return '';
+            case 'discount_price':
+                if (value && value !== '') {
+                    const discountNum = parseFloat(value);
+                    if (isNaN(discountNum) || discountNum < 0) {
+                        return 'El precio con descuento debe ser un número mayor o igual a 0';
+                    }
+                    if (discountNum >= formData.price) {
+                        return 'El precio con descuento debe ser menor al precio normal';
+                    }
+                }
+                return '';
+            case 'hours':
+                if (value && value !== '') {
+                    const hoursNum = parseInt(value);
+                    if (isNaN(hoursNum) || hoursNum < 0) {
+                        return 'Las horas deben ser un número mayor o igual a 0';
+                    }
+                }
+                return '';
+            case 'thumbnail_url':
+            case 'banner_url':
+                if (value && value.trim() !== '') {
+                    try {
+                        new URL(value);
+                    } catch {
+                        return 'Debe ser una URL válida';
+                    }
+                }
+                return '';
+            default:
+                return '';
+        }
+    };
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name, value } = e.target;
+        
+        // Convertir valores numéricos
+        let processedValue: any = value;
+        if (name === 'price' || name === 'discount_price') {
+            processedValue = value === '' ? undefined : parseFloat(value);
+            if (isNaN(processedValue)) processedValue = value;
+        } else if (name === 'hours') {
+            processedValue = value === '' ? undefined : parseInt(value);
+            if (isNaN(processedValue)) processedValue = value;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            [name]: processedValue,
+        }));
+
+        // Validar en tiempo real
+        const error = validateField(name, processedValue);
+        setErrors(prev => ({
+            ...prev,
+            [name]: error,
+        }));
+    };
+
+    const handleTagsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        const tags = value.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+        setFormData(prev => ({
+            ...prev,
+            tags,
+        }));
+    };
+
+    const validateForm = (): boolean => {
+        const newErrors: Record<string, string> = {};
+        
+        Object.keys(formData).forEach(key => {
+            if (key === 'title' || key === 'description' || key === 'price') {
+                const error = validateField(key, (formData as any)[key]);
+                if (error) {
+                    newErrors[key] = error;
+                }
+            }
+        });
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+
+        if (!validateForm()) {
+            setError('Por favor, corrige los errores en el formulario');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            const { createCourse, updateCourse } = await import('@/shared/services/courses');
+            
+            let response;
+            if (courseId) {
+                // Actualizar curso
+                const updateData: UpdateCourseRequest = { ...formData };
+                response = await updateCourse(courseId, updateData);
+            } else {
+                // Crear curso
+                response = await createCourse(formData);
+            }
+
+            if (response.success) {
+                if (onSuccess) {
+                    onSuccess();
+                } else {
+                    // Redirigir a la lista de cursos
+                    window.location.href = '/admin/courses';
+                }
+            } else {
+                setError((response as any).message || 'Error al guardar el curso');
+            }
+        } catch (err: any) {
+            setError(err.message || 'Error de conexión con el servidor');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    if (loadingCourse) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <LoadingSpinner size="lg" />
+                <p className="ml-4 text-gray-600">Cargando curso...</p>
+            </div>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                    {error}
+                </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Título */}
+                <div className="md:col-span-2">
+                    <Input
+                        label="Título del Curso"
+                        name="title"
+                        value={formData.title}
+                        onChange={handleChange}
+                        placeholder="Ej: Introducción a Python"
+                        required
+                        error={errors.title}
+                    />
+                </div>
+
+                {/* Descripción Corta */}
+                <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Descripción Corta
+                    </label>
+                    <textarea
+                        name="short_description"
+                        value={formData.short_description}
+                        onChange={handleChange}
+                        placeholder="Breve descripción que aparecerá en el catálogo (máx. 500 caracteres)"
+                        rows={2}
+                        maxLength={500}
+                        className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                        {formData.short_description?.length || 0}/500 caracteres
+                    </p>
+                </div>
+
+                {/* Descripción Completa */}
+                <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Descripción Completa <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                        name="description"
+                        value={formData.description}
+                        onChange={handleChange}
+                        placeholder="Descripción detallada del curso..."
+                        rows={6}
+                        required
+                        className={`block w-full px-4 py-3 border ${errors.description ? 'border-red-300' : 'border-gray-300'
+                            } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`}
+                    />
+                    {errors.description && (
+                        <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                    )}
+                </div>
+
+                {/* Precio */}
+                <div>
+                    <Input
+                        label="Precio (PEN)"
+                        type="number"
+                        name="price"
+                        value={formData.price ? String(formData.price) : ''}
+                        onChange={handleChange}
+                        placeholder="0.00"
+                        required
+                        error={errors.price}
+                    />
+                </div>
+
+                {/* Precio con Descuento */}
+                <div>
+                    <Input
+                        label="Precio con Descuento (PEN)"
+                        type="number"
+                        name="discount_price"
+                        value={formData.discount_price ? String(formData.discount_price) : ''}
+                        onChange={handleChange}
+                        placeholder="Opcional"
+                        error={errors.discount_price}
+                    />
+                </div>
+
+                {/* Estado */}
+                <div>
+                    <Select
+                        label="Estado"
+                        name="status"
+                        value={formData.status || 'draft'}
+                        onChange={handleChange}
+                        options={[
+                            { value: 'draft', label: 'Borrador' },
+                            { value: 'published', label: 'Publicado' },
+                            { value: 'archived', label: 'Archivado' },
+                        ]}
+                    />
+                </div>
+
+                {/* Categoría */}
+                <div>
+                    <Input
+                        label="Categoría"
+                        name="category"
+                        value={formData.category || ''}
+                        onChange={handleChange}
+                        placeholder="Ej: Programación"
+                    />
+                </div>
+
+                {/* Nivel */}
+                <div>
+                    <Select
+                        label="Nivel"
+                        name="level"
+                        value={formData.level || 'beginner'}
+                        onChange={handleChange}
+                        options={[
+                            { value: 'beginner', label: 'Principiante' },
+                            { value: 'intermediate', label: 'Intermedio' },
+                            { value: 'advanced', label: 'Avanzado' },
+                        ]}
+                    />
+                </div>
+
+                {/* Horas */}
+                <div>
+                    <Input
+                        label="Horas Totales"
+                        type="number"
+                        name="hours"
+                        value={formData.hours ? String(formData.hours) : ''}
+                        onChange={handleChange}
+                        placeholder="0"
+                        error={errors.hours}
+                    />
+                </div>
+
+                {/* URL Miniatura */}
+                <div className="md:col-span-2">
+                    <Input
+                        label="URL de Miniatura"
+                        type="url"
+                        name="thumbnail_url"
+                        value={formData.thumbnail_url || ''}
+                        onChange={handleChange}
+                        placeholder="https://ejemplo.com/imagen.jpg"
+                        error={errors.thumbnail_url}
+                    />
+                </div>
+
+                {/* URL Banner */}
+                <div className="md:col-span-2">
+                    <Input
+                        label="URL de Banner"
+                        type="url"
+                        name="banner_url"
+                        value={formData.banner_url || ''}
+                        onChange={handleChange}
+                        placeholder="https://ejemplo.com/banner.jpg"
+                        error={errors.banner_url}
+                    />
+                </div>
+
+                {/* Tags */}
+                <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Tags (separados por comas)
+                    </label>
+                    <input
+                        type="text"
+                        value={formData.tags?.join(', ') || ''}
+                        onChange={handleTagsChange}
+                        placeholder="python, programación, web"
+                        className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                        {formData.tags?.length || 0} tags
+                    </p>
+                </div>
+            </div>
+
+            {/* Botones */}
+            <div className="flex justify-end space-x-4 pt-6 border-t">
+                {onCancel && (
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        onClick={onCancel}
+                        disabled={loading}
+                    >
+                        Cancelar
+                    </Button>
+                )}
+                <Button
+                    type="submit"
+                    loading={loading}
+                    disabled={loading}
+                >
+                    {courseId ? 'Actualizar Curso' : 'Crear Curso'}
+                </Button>
+            </div>
+        </form>
+    );
+}
+

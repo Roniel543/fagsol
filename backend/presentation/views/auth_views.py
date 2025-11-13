@@ -257,3 +257,74 @@ def logout(request):
             'success': True,
             'message': 'Logout exitoso'
         }, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene la información del usuario autenticado actual. Útil para verificar si el token es válido.',
+    responses={
+        200: openapi.Response(
+            description='Usuario autenticado',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'user': {
+                        'id': 1,
+                        'email': 'user@example.com',
+                        'first_name': 'Juan',
+                        'last_name': 'Pérez',
+                        'role': 'admin',
+                        'is_active': True
+                    }
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado o token inválido')
+    },
+    security=[{'Bearer': []}],
+    tags=['Autenticación']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_current_user(request):
+    """
+    Obtiene la información del usuario autenticado actual
+    GET /api/v1/auth/me/
+    
+    Requiere autenticación. Útil para verificar si el token es válido y obtener datos del usuario.
+    """
+    import logging
+    logger = logging.getLogger('apps')
+    
+    try:
+        from apps.core.models import UserProfile
+        
+        user = request.user
+        
+        # Obtener perfil del usuario
+        try:
+            profile = user.profile
+            role = profile.role
+        except UserProfile.DoesNotExist:
+            # Si no tiene perfil, crear uno con rol por defecto
+            profile = UserProfile.objects.create(user=user, role='student')
+            role = 'student'
+        
+        return Response({
+            'success': True,
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': role,
+                'is_active': user.is_active
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en get_current_user: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error al obtener información del usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

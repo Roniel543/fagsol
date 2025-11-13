@@ -1,8 +1,7 @@
 "use client";
 
-import { Footer, Input, useToast } from '@/shared/components';
+import { Footer, Input, ProtectedRoute, useToast } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
-import { useAuth } from '@/shared/hooks/useAuth';
 import { createPaymentIntent, PaymentIntent, processPayment } from '@/shared/services/payments';
 import { AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
@@ -12,9 +11,8 @@ import { useEffect, useState } from 'react';
 import { AcademyHeader } from '../../academy/components/AcademyHeader';
 import { MercadoPagoCardForm } from '../components/payments/MercadoPagoCardForm';
 
-export default function CheckoutPage() {
+function CheckoutPageContent() {
 	const { cartItems, cartItemsWithDetails, itemCount, clearCart } = useCart();
-	const { isAuthenticated } = useAuth();
 	const router = useRouter();
 	const { showToast } = useToast();
 
@@ -45,11 +43,6 @@ export default function CheckoutPage() {
 			return;
 		}
 
-		if (!isAuthenticated) {
-			router.push('/auth/login?redirect=/academy/checkout');
-			return;
-		}
-
 		// Crear payment intent con el backend
 		const createIntent = async () => {
 			setLoadingIntent(true);
@@ -75,7 +68,7 @@ export default function CheckoutPage() {
 		};
 
 		createIntent();
-	}, [cartItems, itemCount, isAuthenticated, router, showToast]);
+	}, [cartItems, itemCount, router, showToast]);
 
 	// Procesar pago cuando se obtiene el token
 	useEffect(() => {
@@ -280,5 +273,14 @@ export default function CheckoutPage() {
 			</main>
 			<Footer />
 		</>
+	);
+}
+
+// Componente principal que envuelve con ProtectedRoute
+export default function CheckoutPage() {
+	return (
+		<ProtectedRoute redirectTo="/auth/login?redirect=/academy/checkout">
+			<CheckoutPageContent />
+		</ProtectedRoute>
 	);
 }

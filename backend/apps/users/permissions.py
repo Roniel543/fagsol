@@ -428,3 +428,89 @@ def assign_user_to_group(user, role):
         group = Group.objects.get(name=group_name)
         user.groups.add(group)
 
+
+# ============================================
+# FUNCIONES PARA VERIFICAR PERMISOS DE DJANGO
+# ============================================
+
+def has_perm(user, perm_codename):
+    """
+    Verifica si el usuario tiene un permiso específico de Django.
+    Combina verificación de permisos directos, de grupos y de roles.
+    
+    Args:
+        user: Usuario de Django
+        perm_codename: Código del permiso (ej: 'courses.add_course')
+        
+    Returns:
+        bool: True si el usuario tiene el permiso
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    # Verificar permiso directo
+    if user.has_perm(perm_codename):
+        return True
+    
+    # Verificar por rol (compatibilidad con sistema actual)
+    user_role = get_user_role(user)
+    app_label, codename = perm_codename.split('.', 1)
+    
+    # Admin tiene todos los permisos
+    if user_role == ROLE_ADMIN:
+        return True
+    
+    # Verificar permisos específicos por rol
+    if user_role == ROLE_INSTRUCTOR:
+        # Instructores pueden crear/editar cursos
+        if codename in ['add_course', 'change_course', 'view_course', 
+                       'add_module', 'change_module', 'delete_module',
+                       'add_lesson', 'change_lesson', 'delete_lesson',
+                       'view_enrollment']:
+            return True
+    
+    if user_role == ROLE_STUDENT:
+        # Estudiantes pueden ver cursos y procesar pagos
+        if codename in ['view_course', 'view_module', 'view_lesson',
+                       'view_own_enrollment', 'process_payment', 'view_own_payment']:
+            return True
+    
+    if user_role == ROLE_GUEST:
+        # Invitados solo pueden ver cursos publicados
+        if codename == 'view_course':
+            return True
+    
+    return False
+
+
+def has_any_perm(user, perm_codenames):
+    """
+    Verifica si el usuario tiene alguno de los permisos especificados.
+    
+    Args:
+        user: Usuario de Django
+        perm_codenames: Lista de códigos de permisos
+        
+    Returns:
+        bool: True si el usuario tiene al menos uno de los permisos
+    """
+    return any(has_perm(user, perm) for perm in perm_codenames)
+
+
+def require_perm(perm_codename):
+    """
+    Decorador para verificar permisos en vistas.
+    
+    Uso:
+        @require_perm('courses.add_course')
+        def my_view(request):
+            ...
+    """
+    def decorator(view_func):
+        def wrapper(request, *args, **kwargs):
+            if not has_perm(request.user, perm_codename):
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied(f"No tienes permiso para: {perm_codename}")
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator

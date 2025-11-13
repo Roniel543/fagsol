@@ -4,10 +4,17 @@ const nextConfig = {
 
   // Configuración de imágenes
   images: {
+    // En desarrollo, desactivar optimización para permitir cualquier dominio
+    // En producción, usar remotePatterns con dominios específicos
+    ...(process.env.NODE_ENV === 'development' ? {
+      unoptimized: true, // Desactiva optimización pero permite cualquier dominio
+    } : {}),
     domains: [
       'localhost',
+      '127.0.0.1',
       'fagsol.com',
       'backend',
+      'example.com', // Para desarrollo/testing
       // Agregar dominios de imágenes externas (ej: AWS S3, Cloudinary)
     ],
     // Para Vercel, puedes usar remotePatterns (más seguro)
@@ -19,6 +26,30 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: '**.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.cloudinary.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'example.com', // Para desarrollo/testing
+      },
+      {
+        protocol: 'https',
+        hostname: '**.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.pexels.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
       },
     ],
   },

@@ -17,10 +17,11 @@ export const API_CONFIG = {
     BASE_URL: baseUrl,
     JWT_BASE_URL: baseUrl.replace('/api', ''),
     ENDPOINTS: {
-        LOGIN: '/login/',
-        REGISTER: '/register/',
-        HEALTH: '/health/',
-        LOGOUT: '/logout/',
+        LOGIN: '/auth/login/',
+        REGISTER: '/auth/register/',
+        HEALTH: '/auth/health/',
+        LOGOUT: '/auth/logout/',
+        ME: '/auth/me/', // Obtener usuario actual
         REFRESH: '/api/token/refresh/', // Endpoint de Simple JWT
         // Payments endpoints (requieren backend)
         PAYMENT_INTENT: '/payments/intent/',
@@ -205,5 +206,9 @@ export const authAPI = {
 
     healthCheck: async () => {
         return apiRequest(API_CONFIG.ENDPOINTS.HEALTH);
+    },
+
+    getCurrentUser: async (): Promise<AuthResponse> => {
+        return apiRequest<AuthResponse>(API_CONFIG.ENDPOINTS.ME) as Promise<AuthResponse>;
     },
 };

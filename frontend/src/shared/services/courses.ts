@@ -178,3 +178,68 @@ export function adaptBackendCourseDetailToFrontend(backendDetail: BackendCourseD
     };
 }
 
+/**
+ * Interfaz para crear un curso
+ */
+export interface CreateCourseRequest {
+    title: string;
+    description: string;
+    short_description?: string;
+    price: number;
+    currency?: string;
+    status?: 'draft' | 'published' | 'archived';
+    category?: string;
+    level?: 'beginner' | 'intermediate' | 'advanced';
+    thumbnail_url?: string;
+    banner_url?: string;
+    discount_price?: number;
+    hours?: number;
+    instructor?: {
+        id: string;
+        name: string;
+        title?: string;
+    };
+    tags?: string[];
+    provider?: string;
+}
+
+/**
+ * Interfaz para actualizar un curso
+ */
+export interface UpdateCourseRequest extends Partial<CreateCourseRequest> {}
+
+/**
+ * Crea un nuevo curso
+ * Requiere autenticación y rol admin o instructor
+ */
+export async function createCourse(data: CreateCourseRequest): Promise<CourseDetailResponse> {
+    const response = await apiRequest<CourseDetailResponse>('/courses/create/', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return response as unknown as CourseDetailResponse;
+}
+
+/**
+ * Actualiza un curso existente
+ * Requiere autenticación y permiso para editar el curso
+ */
+export async function updateCourse(courseId: string, data: UpdateCourseRequest): Promise<CourseDetailResponse> {
+    const response = await apiRequest<CourseDetailResponse>(`/courses/${courseId}/update/`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    });
+    return response as unknown as CourseDetailResponse;
+}
+
+/**
+ * Elimina (archiva) un curso
+ * Solo administradores pueden eliminar cursos
+ */
+export async function deleteCourse(courseId: string): Promise<{ success: boolean; message: string }> {
+    const response = await apiRequest<{ success: boolean; message: string }>(`/courses/${courseId}/delete/`, {
+        method: 'DELETE',
+    });
+    return response as unknown as { success: boolean; message: string };
+}
+
