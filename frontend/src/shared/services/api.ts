@@ -4,14 +4,30 @@ import { clearTokens, getAccessToken, getRefreshToken, isTokenExpiringSoon, setT
 // Configuración de la API
 // NEXT_PUBLIC_API_URL se carga automáticamente desde .env en Next.js
 // OBLIGATORIO: Debe estar definida en .env
-const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
-if (!baseUrl) {
-    throw new Error(
-        'NEXT_PUBLIC_API_URL no está definida. ' +
-        'Por favor, agrega NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 en tu archivo .env'
-    );
+/**
+ * Obtiene la URL base de la API de forma segura
+ * Evita errores durante SSR si la variable no está disponible
+ */
+function getBaseUrl(): string {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL;
+
+    if (!baseUrl) {
+        // En desarrollo, mostrar error más claro
+        if (process.env.NODE_ENV === 'development') {
+            console.error(
+                'NEXT_PUBLIC_API_URL no está definida.\n' +
+                'Por favor, agrega NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1 en tu archivo .env'
+            );
+        }
+        // Valor por defecto para evitar errores en SSR
+        return 'http://localhost:8000/api/v1';
+    }
+
+    return baseUrl;
 }
+
+const baseUrl = getBaseUrl();
 
 export const API_CONFIG = {
     BASE_URL: baseUrl,
@@ -98,15 +114,23 @@ export const apiRequest = async <T = any>(
     // Asegurar que el endpoint comience con /
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${API_CONFIG.BASE_URL}${normalizedEndpoint}`;
-    
+
     // Debug: mostrar URL en desarrollo
     if (process.env.NODE_ENV === 'development') {
         console.log('🔗 API Request:', url);
     }
 
     // Verificar si el token está próximo a expirar y refrescarlo preventivamente
-    if (isTokenExpiringSoon()) {
-        await refreshAccessToken();
+    // Solo intentar refresh si hay un token actual (evita errores en login/register)
+    const currentToken = getAccessToken();
+    if (currentToken && isTokenExpiringSoon()) {
+        try {
+            await refreshAccessToken();
+        } catch (error) {
+            // Si falla el refresh preventivo, continuar con el request original
+            // El request fallará con 401 y se manejará después
+            console.warn('Preventive token refresh failed, continuing with original request');
+        }
     }
 
     const defaultOptions: RequestInit = {
@@ -153,27 +177,54 @@ export const apiRequest = async <T = any>(
         }
 
         if (!response.ok) {
+            // Intentar obtener el mensaje de error del backend
+            let errorMessage = `HTTP error! status: ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.message) {
+                    errorMessage = errorData.message;
+                } else if (errorData.error) {
+                    errorMessage = errorData.error;
+                } else if (typeof errorData === 'string') {
+                    errorMessage = errorData;
+                }
+            } catch (e) {
+                // Si no se puede parsear JSON, usar el mensaje por defecto
+                console.warn('Could not parse error response:', e);
+            }
+
             // Si sigue siendo 401 después del refresh, limpiar tokens
             if (response.status === 401) {
                 clearTokens();
             }
-            throw new Error(`HTTP error! status: ${response.status}`);
+
+            // Crear un error con el mensaje del backend
+            const error = new Error(errorMessage);
+            (error as any).status = response.status;
+            (error as any).response = response;
+            throw error;
         }
 
         return await response.json();
     } catch (error) {
         console.error('API Request Error:', error);
-        throw error;
+        // Si el error ya tiene un mensaje, mantenerlo
+        if (error instanceof Error && error.message) {
+            throw error;
+        }
+        // Si es un error de red u otro tipo, lanzar error genérico
+        throw new Error('Error de conexión con el servidor');
     }
 };
 
 // Funciones específicas para diferentes módulos
 export const authAPI = {
     login: async (email: string, password: string): Promise<AuthResponse> => {
-        return apiRequest<AuthResponse>(API_CONFIG.ENDPOINTS.LOGIN, {
+        const response = await apiRequest<AuthResponse>(API_CONFIG.ENDPOINTS.LOGIN, {
             method: 'POST',
             body: JSON.stringify({ email, password }),
-        }) as Promise<AuthResponse>;
+        });
+        return response as unknown as AuthResponse;
     },
 
     register: async (userData: {

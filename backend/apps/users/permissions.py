@@ -140,6 +140,35 @@ def can_view_course(user, course):
     return False
 
 
+def can_create_course(user):
+    """
+    Verifica si el usuario puede crear cursos
+    
+    Reglas:
+    - Admin: Siempre puede crear cursos
+    - Instructor: Solo si está aprobado (FASE 1)
+    - Otros: No pueden crear cursos
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin siempre puede crear
+    if user_role == ROLE_ADMIN:
+        return True
+    
+    # Instructor solo si está aprobado
+    if user_role == ROLE_INSTRUCTOR:
+        try:
+            profile = user.profile
+            return profile.is_instructor_approved()
+        except UserProfile.DoesNotExist:
+            return False
+    
+    return False
+
+
 def can_edit_course(user, course):
     """
     Policy: Verifica si el usuario puede editar un curso.

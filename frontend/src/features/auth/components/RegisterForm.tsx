@@ -1,8 +1,10 @@
 'use client';
 
-import { Button, Input, Select } from '@/shared/components';
+import { AuthBackground, Button, Input, Select } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { RegisterRequest } from '@/shared/types';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
@@ -26,6 +28,8 @@ export function RegisterForm() {
             ...formData,
             [e.target.name]: e.target.value
         });
+        // Limpiar error cuando el usuario empiece a escribir
+        if (error) setError('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -53,18 +57,29 @@ export function RegisterForm() {
 
     const roleOptions = [
         { value: 'student', label: 'Estudiante' },
-        { value: 'teacher', label: 'Docente' },
-        { value: 'admin', label: 'Administrador' },
+        { value: 'instructor', label: 'Instructor' },
     ];
 
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="max-w-md w-full text-center">
-                    <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
-                        <h2 className="text-xl font-bold mb-2">¡Registro Exitoso!</h2>
-                        <p>Tu cuenta ha sido creada correctamente.</p>
-                        <p className="text-sm mt-2">Redirigiendo al dashboard...</p>
+            <div className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
+                {/* Fondo con imagen y overlay */}
+                <AuthBackground variant="academy" />
+
+                <div className="relative z-10 w-full max-w-md">
+                    <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-950/95 to-black/95 backdrop-blur-xl rounded-2xl p-8 sm:p-10 border border-status-success/30 shadow-2xl shadow-status-success/10 animate-fade-in">
+                        <div className="text-center">
+                            <div className="mb-4">
+                                <div className="inline-flex items-center justify-center w-16 h-16 bg-status-success/20 rounded-full">
+                                    <svg className="w-8 h-8 text-status-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <h2 className="text-2xl font-bold text-primary-white mb-2">¡Registro Exitoso!</h2>
+                            <p className="text-gray-400 mb-4">Tu cuenta ha sido creada correctamente.</p>
+                            <p className="text-sm text-gray-500">Redirigiendo al dashboard...</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -72,92 +87,137 @@ export function RegisterForm() {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-md w-full space-y-8">
-                <div>
-                    <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-                        Crear Cuenta
-                    </h2>
-                    <p className="mt-2 text-center text-sm text-gray-600">
-                        FagSol Escuela Virtual
-                    </p>
-                </div>
+        <div className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
+            {/* Fondo con imagen y overlay */}
+            <AuthBackground variant="academy" />
 
-                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-                    <div className="space-y-4">
-                        <Input
-                            label="Nombre"
-                            type="text"
-                            name="first_name"
-                            value={formData.first_name}
-                            onChange={handleChange}
-                            placeholder="Tu nombre"
-                            required
-                        />
-
-                        <Input
-                            label="Apellido"
-                            type="text"
-                            name="last_name"
-                            value={formData.last_name}
-                            onChange={handleChange}
-                            placeholder="Tu apellido"
-                            required
-                        />
-
-                        <Input
-                            label="Email"
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            placeholder="tu@email.com"
-                            required
-                        />
-
-                        <Input
-                            label="Contraseña"
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            placeholder="Mínimo 8 caracteres"
-                            required
-                        />
-
-                        <Select
-                            label="Tipo de Usuario"
-                            name="role"
-                            value={formData.role}
-                            onChange={handleChange}
-                            options={roleOptions}
-                            required
-                        />
-                    </div>
-
-                    {error && (
-                        <div className="text-red-600 text-sm text-center">
-                            {error}
+            {/* Contenido */}
+            <div className="relative z-10 w-full max-w-md">
+                <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-950/95 to-black/95 backdrop-blur-xl rounded-2xl p-8 sm:p-10 border border-primary-orange/20 shadow-2xl shadow-primary-orange/10 animate-fade-in">
+                    {/* Logo y Header */}
+                    <div className="text-center mb-8 animate-slide-down">
+                        <div className="flex justify-center mb-4">
+                            <Image
+                                src="/assets/logo_school.png"
+                                alt="FagSol Logo"
+                                width={80}
+                                height={80}
+                                className="object-contain"
+                            />
                         </div>
-                    )}
-
-                    <Button
-                        type="submit"
-                        loading={loading}
-                        className="w-full"
-                    >
-                        Crear Cuenta
-                    </Button>
-
-                    <div className="text-center">
-                        <p className="text-sm text-gray-600">
-                            ¿Ya tienes cuenta?{' '}
-                            <a href="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500">
-                                Inicia sesión aquí
-                            </a>
+                        <h2 className="text-3xl sm:text-4xl font-bold mb-2">
+                            <span className="text-primary-white">Crear </span>
+                            <span className="bg-gradient-to-r from-primary-orange via-amber-500 to-primary-orange bg-clip-text text-transparent">
+                                Cuenta
+                            </span>
+                        </h2>
+                        <p className="text-sm text-gray-400 mt-2">
+                            FagSol Escuela Virtual
                         </p>
                     </div>
-                </form>
+
+                    {/* Formulario */}
+                    <form className="space-y-6 animate-fade-in" style={{ animationDelay: '0.2s' }} onSubmit={handleSubmit}>
+                        <div className="space-y-5">
+                            <div>
+                                <Input
+                                    label="Nombre"
+                                    type="text"
+                                    name="first_name"
+                                    value={formData.first_name}
+                                    onChange={handleChange}
+                                    placeholder="Tu nombre"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <Input
+                                    label="Apellido"
+                                    type="text"
+                                    name="last_name"
+                                    value={formData.last_name}
+                                    onChange={handleChange}
+                                    placeholder="Tu apellido"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <Input
+                                    label="Email"
+                                    type="email"
+                                    name="email"
+                                    value={formData.email}
+                                    onChange={handleChange}
+                                    placeholder="tu@email.com"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <Input
+                                    label="Contraseña"
+                                    type="password"
+                                    name="password"
+                                    value={formData.password}
+                                    onChange={handleChange}
+                                    placeholder="Mínimo 8 caracteres"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <Select
+                                    label="Tipo de Usuario"
+                                    name="role"
+                                    value={formData.role}
+                                    onChange={handleChange}
+                                    options={roleOptions}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        {/* Mensaje de error */}
+                        {error && (
+                            <div className="bg-status-error/10 border border-status-error/30 text-status-error px-4 py-3 rounded-lg text-sm text-center animate-slide-down">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Botón de submit */}
+                        <Button
+                            type="submit"
+                            loading={loading}
+                            disabled={loading}
+                            className="w-full"
+                            variant="primary"
+                        >
+                            {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+                        </Button>
+
+                        {/* Link de login */}
+                        <div className="text-center pt-4 border-t border-gray-800">
+                            <p className="text-sm text-gray-400">
+                                ¿Ya tienes cuenta?{' '}
+                                <Link
+                                    href="/auth/login"
+                                    className="font-medium text-primary-orange hover:text-amber-500 transition-colors duration-200"
+                                >
+                                    Inicia sesión aquí
+                                </Link>
+                            </p>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Footer adicional */}
+                <div className="mt-6 text-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
+                    <p className="text-xs text-gray-500">
+                        © 2025 FagSol Escuela Virtual. Todos los derechos reservados.
+                    </p>
+                </div>
             </div>
         </div>
     );

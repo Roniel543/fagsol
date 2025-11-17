@@ -71,6 +71,7 @@ urlpatterns = [
     # API Routes - Arquitectura Limpia
     path('api/v1/auth/', include('presentation.api.v1.auth_urls')),
     path('api/v1/admin/', include('presentation.api.v1.admin_urls')),
+    path('api/v1/dashboard/', include('presentation.api.v1.dashboard.urls')),
     path('api/v1/payments/', include('presentation.api.v1.payments.urls')),
     path('api/v1/courses/', include('presentation.api.v1.courses.urls')),
     path('api/v1/enrollments/', include('presentation.api.v1.enrollments.urls')),

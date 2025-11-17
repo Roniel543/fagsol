@@ -4,7 +4,6 @@ import { authAPI } from '@/shared/services/api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '@/shared/types';
 import {
     clearTokens,
-    getUserData,
     migrateTokensFromLocalStorage,
     setTokens,
     setUserData
@@ -47,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Validar token con el backend
             try {
                 const response = await authAPI.getCurrentUser();
-                
+
                 if (response.success && response.user) {
                     // Token válido, restaurar usuario
                     setUserData(response.user); // Actualizar datos del usuario
@@ -84,9 +83,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return response;
         } catch (error) {
             console.error('Login error:', error);
+
+            // Extraer el mensaje de error si está disponible
+            let errorMessage = 'Error de conexión con el servidor';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+
             return {
                 success: false,
-                message: 'Error de conexión con el servidor'
+                message: errorMessage
             };
         }
     };

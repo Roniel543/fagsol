@@ -82,9 +82,17 @@ class AuthService:
     def register(self, email: str, password: str, first_name: str, last_name: str, role: str = 'student') -> dict:
         """
         Registra un nuevo usuario
+        Nota: No permite registrar usuarios con rol 'admin' por seguridad
         """
         try:
             from django.contrib.auth.models import User
+            
+            # Validar que no se intente registrar como admin (seguridad adicional)
+            if role == 'admin':
+                return {
+                    'success': False,
+                    'message': 'No se puede registrar como administrador. Los administradores deben ser creados por otros administradores.'
+                }
             
             # Verificar si el usuario ya existe
             if User.objects.filter(email=email).exists():
@@ -107,6 +115,11 @@ class AuthService:
                 user=user,
                 role=role
             )
+            
+            # Si es instructor, establecer estado pendiente de aprobación (FASE 1)
+            if role == 'instructor':
+                profile.instructor_status = 'pending_approval'
+                profile.save()
             
             # Generar tokens JWT
             refresh = RefreshToken.for_user(user)

@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from apps.courses.models import Course, Module, Lesson
 from apps.users.models import Enrollment
 from apps.users.permissions import (
-    can_view_course, can_access_course_content, IsAdminOrInstructor
+    can_view_course, can_access_course_content, IsAdminOrInstructor, IsAdmin
 )
 from infrastructure.services.course_service import CourseService
 from decimal import Decimal
@@ -768,7 +768,7 @@ def update_course(request, course_id):
     tags=['Cursos']
 )
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdmin])
 def delete_course(request, course_id):
     """
     Elimina (archiva) un curso (soft delete)

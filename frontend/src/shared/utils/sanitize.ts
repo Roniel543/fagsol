@@ -1,16 +1,14 @@
 /**
- * Utilidades de sanitización HTML para prevenir XSS
- * Usa DOMPurify para limpiar contenido HTML dinámico
+ * Sanitización segura para Next.js 14 (App Router + Turbopack)
+ * Funciona tanto en servidor como en cliente
  */
 
-// @ts-ignore - isomorphic-dompurify no tiene tipos, pero funciona correctamente
-import DOMPurify from 'isomorphic-dompurify';
+import type { Config } from "dompurify";
 
 /**
- * Configuración segura de DOMPurify
- * Permite solo etiquetas y atributos seguros
+ * Config compartida
  */
-const SAFE_CONFIG = {
+const SAFE_CONFIG: Config = {
     ALLOWED_TAGS: [
         'p', 'br', 'strong', 'em', 'u', 's', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
         'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'img',
@@ -19,64 +17,81 @@ const SAFE_CONFIG = {
     ],
     ALLOWED_ATTR: [
         'href', 'title', 'alt', 'src', 'width', 'height', 'class',
-        'target', 'rel' // Para enlaces seguros
+        'target', 'rel'
     ],
     ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     KEEP_CONTENT: true,
     RETURN_DOM: false,
     RETURN_DOM_FRAGMENT: false,
     RETURN_TRUSTED_TYPE: false,
-    S: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button'],
     FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur']
 };
 
 /**
- * Sanitiza HTML eliminando código malicioso
- * @param dirty - HTML sin sanitizar
- * @returns HTML sanitizado y seguro
+ * Obtiene una instancia de DOMPurify válida para SSR o Client
  */
-export function sanitizeHTML(dirty: string | null | undefined): string {
-    if (!dirty) return '';
+async function getPurifier() {
+    // Cliente: usa DOMPurify directamente
+    if (typeof window !== "undefined") {
+        const DOMPurify = (await import("dompurify")).default;
+        return DOMPurify;
+    }
 
+    // Servidor: necesita JSDOM (solo se ejecuta en el servidor)
+    // Usar import dinámico para evitar que se empaquete para el cliente
     try {
-        return DOMPurify.sanitize(dirty, SAFE_CONFIG);
+        const jsdomModule = await import("jsdom");
+        const { JSDOM } = jsdomModule;
+        const createDOMPurify = (await import("dompurify")).default;
+
+        const jsdomWindow = new JSDOM("").window;
+        return createDOMPurify(jsdomWindow);
     } catch (error) {
-        console.error('Error sanitizing HTML:', error);
-        // En caso de error, devolver string vacío para máxima seguridad
-        return '';
+        // Si jsdom no está disponible (no debería pasar en el servidor),
+        // devolver una función que solo limpia el HTML básico
+        console.error("Error loading jsdom:", error);
+        return {
+            sanitize: (dirty: string, _config?: Config) => {
+                // Fallback básico: eliminar tags peligrosos
+                return dirty.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+            }
+        } as any; // Type assertion para compatibilidad con DOMPurify
     }
 }
 
 /**
- * Sanitiza texto plano (elimina todo HTML)
- * Útil para campos de texto que no deben contener HTML
+ * Sanitiza HTML
  */
-export function sanitizeText(text: string | null | undefined): string {
-    if (!text) return '';
-
+export async function sanitizeHTML(dirty: string | null | undefined): Promise<string> {
+    if (!dirty) return "";
     try {
-        // Remover todo HTML y devolver solo texto
-        return DOMPurify.sanitize(text, { ALLOWED_TAGS: [] });
-    } catch (error) {
-        console.error('Error sanitizing text:', error);
-        return '';
+        const purifier = await getPurifier();
+        return purifier.sanitize(dirty, SAFE_CONFIG);
+    } catch (e) {
+        console.error("SanitizeHTML error:", e);
+        return "";
     }
 }
 
 /**
- * Sanitiza URLs para prevenir javascript: y data: maliciosos
+ * Sanitiza texto plano
+ */
+export async function sanitizeText(text: string | null | undefined): Promise<string> {
+    if (!text) return "";
+    try {
+        const purifier = await getPurifier();
+        return purifier.sanitize(text, { ALLOWED_TAGS: [] });
+    } catch (e) {
+        console.error("SanitizeText error:", e);
+        return "";
+    }
+}
+
+/**
+ * Sanitiza URLs
  */
 export function sanitizeURL(url: string | null | undefined): string {
-    if (!url) return '';
-
-    // Solo permitir http, https, mailto, tel
+    if (!url) return "";
     const safeURLPattern = /^(https?|mailto|tel):/i;
-
-    if (safeURLPattern.test(url)) {
-        return url;
-    }
-
-    // Si no es una URL segura, devolver vacío
-    return '';
+    return safeURLPattern.test(url) ? url : "";
 }
-

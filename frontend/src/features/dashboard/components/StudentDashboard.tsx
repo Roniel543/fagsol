@@ -1,0 +1,157 @@
+'use client';
+
+import { Button, LoadingSpinner } from '@/shared/components';
+import { useDashboard } from '@/shared/hooks/useDashboard';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+export function StudentDashboard() {
+    const router = useRouter();
+    const { studentStats, isLoading, isError } = useDashboard();
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <LoadingSpinner size="lg" />
+                <p className="ml-4 text-gray-600">Cargando estadísticas...</p>
+            </div>
+        );
+    }
+
+    if (isError || !studentStats) {
+        return (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                Error al cargar las estadísticas
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Estadísticas principales */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="bg-white shadow rounded-lg p-6">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Cursos Inscritos</h3>
+                    <p className="text-3xl font-bold text-gray-900">{studentStats.enrollments.total}</p>
+                    <div className="mt-2 text-sm text-gray-600">
+                        {studentStats.enrollments.active} activos • {studentStats.enrollments.completed} completados
+                    </div>
+                </div>
+
+                <div className="bg-white shadow rounded-lg p-6">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">En Progreso</h3>
+                    <p className="text-3xl font-bold text-gray-900">{studentStats.enrollments.in_progress}</p>
+                    <div className="mt-2 text-sm text-gray-600">
+                        Cursos con progreso
+                    </div>
+                </div>
+
+                <div className="bg-white shadow rounded-lg p-6">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Progreso Promedio</h3>
+                    <p className="text-3xl font-bold text-gray-900">{studentStats.progress.average.toFixed(1)}%</p>
+                    <div className="mt-2 text-sm text-gray-600">
+                        De todos tus cursos
+                    </div>
+                </div>
+
+                <div className="bg-white shadow rounded-lg p-6">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Certificados</h3>
+                    <p className="text-3xl font-bold text-gray-900">{studentStats.certificates.total}</p>
+                    <div className="mt-2 text-sm text-gray-600">
+                        Certificados obtenidos
+                    </div>
+                </div>
+            </div>
+
+            {/* Acciones rápidas */}
+            <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-xl font-bold text-gray-900 mb-4">Acciones Rápidas</h2>
+                <div className="flex flex-wrap gap-4">
+                    <Button variant="primary" onClick={() => router.push('/academy/catalog')}>
+                        Explorar Cursos
+                    </Button>
+                    {studentStats.enrollments.active > 0 && (
+                        <Button variant="secondary" onClick={() => router.push('/academy/my-courses')}>
+                            Ver Mis Cursos
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {/* Cursos recientes */}
+            {studentStats.recent_courses.length > 0 && (
+                <div className="bg-white shadow rounded-lg p-6">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Cursos Recientes</h2>
+                    <div className="space-y-3">
+                        {studentStats.recent_courses.map((course) => (
+                            <div key={course.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                                <div className="flex items-center space-x-4 flex-1">
+                                    {course.thumbnail_url && (
+                                        <img
+                                            src={course.thumbnail_url}
+                                            alt={course.title}
+                                            className="h-12 w-12 object-cover rounded"
+                                        />
+                                    )}
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900">{course.title}</p>
+                                        <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                            <span>Progreso: {course.progress.toFixed(0)}%</span>
+                                            <span>•</span>
+                                            <span>{course.status === 'active' ? 'Activo' : 'Completado'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Link href={`/academy/course/${course.slug}`}>
+                                    <Button variant="primary" size="sm">
+                                        Continuar
+                                    </Button>
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Cursos completados */}
+            {studentStats.completed_courses.length > 0 && (
+                <div className="bg-white shadow rounded-lg p-6">
+                    <h2 className="text-xl font-bold text-gray-900 mb-4">Cursos Completados</h2>
+                    <div className="space-y-3">
+                        {studentStats.completed_courses.map((course) => (
+                            <div key={course.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                                <div className="flex items-center space-x-4 flex-1">
+                                    {course.thumbnail_url && (
+                                        <img
+                                            src={course.thumbnail_url}
+                                            alt={course.title}
+                                            className="h-12 w-12 object-cover rounded"
+                                        />
+                                    )}
+                                    <div className="flex-1">
+                                        <p className="font-medium text-gray-900">{course.title}</p>
+                                        <div className="mt-1 flex items-center space-x-4 text-sm text-gray-600">
+                                            <span className="text-green-600">✓ Completado</span>
+                                            {course.has_certificate && (
+                                                <>
+                                                    <span>•</span>
+                                                    <span className="text-blue-600">Certificado disponible</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <Link href={`/academy/course/${course.slug}`}>
+                                    <Button variant="secondary" size="sm">
+                                        Ver
+                                    </Button>
+                                </Link>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+

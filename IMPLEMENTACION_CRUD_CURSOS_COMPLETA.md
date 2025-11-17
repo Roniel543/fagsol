@@ -1,6 +1,7 @@
 # ✅ Implementación CRUD de Cursos - COMPLETA
 
 **Fecha:** 2025-01-12  
+**Última actualización:** 2025-01-12 (Permisos corregidos)  
 **Estado:** ✅ **COMPLETADO**
 
 ---
@@ -22,7 +23,9 @@ Se ha implementado un CRUD completo de cursos con backend seguro y frontend robu
 - ✅ `delete_course()` - Soft delete (archiva curso)
 
 **Seguridad:**
-- ✅ Validación de permisos (solo admin/instructor)
+- ✅ Validación de permisos por operación:
+  - Crear/Editar: Admin o Instructor
+  - Eliminar: Solo Admin
 - ✅ Sanitización de inputs
 - ✅ Validación de URLs (previene SSRF)
 - ✅ Validación de tipos de datos
@@ -33,19 +36,21 @@ Se ha implementado un CRUD completo de cursos con backend seguro y frontend robu
 **Archivo:** `backend/presentation/views/course_views.py`
 
 **Endpoints implementados:**
-- ✅ `POST /api/v1/courses/create/` - Crear curso
-  - Requiere: Autenticación + Rol admin o instructor
+- ✅ `POST /api/v1/courses/create/` o `POST /api/v1/courses/` - Crear curso
+  - Requiere: Autenticación + Rol **admin** o **instructor**
   - Validaciones: Título, descripción, precio requeridos
   - Documentado en Swagger
   
 - ✅ `PUT /api/v1/courses/{id}/update/` - Actualizar curso
-  - Requiere: Autenticación + Permiso para editar
+  - Requiere: Autenticación + Rol **admin** o **instructor**
   - Validaciones: Al menos un campo para actualizar
+  - El servicio valida permisos específicos para editar el curso
   - Documentado en Swagger
   
 - ✅ `DELETE /api/v1/courses/{id}/delete/` - Eliminar curso
-  - Requiere: Autenticación + Rol admin (solo admin)
-  - Soft delete: Cambia status a 'archived' y desactiva
+  - Requiere: Autenticación + Rol **admin** (SOLO administradores)
+  - Soft delete: Cambia status a 'archived' y desactiva el curso
+  - Los instructores NO pueden eliminar cursos
   - Documentado en Swagger
 
 ### **3. URLs Configuradas** ✅
@@ -120,7 +125,9 @@ Se ha implementado un CRUD completo de cursos con backend seguro y frontend robu
 ## 🔒 **SEGURIDAD IMPLEMENTADA**
 
 ### **Backend:**
-- ✅ Validación de permisos en cada endpoint
+- ✅ Validación de permisos en cada endpoint:
+  - **CREATE/UPDATE**: `IsAdminOrInstructor` (admin o instructor)
+  - **DELETE**: `IsAdmin` (solo admin) + validación adicional en servicio
 - ✅ Sanitización de inputs
 - ✅ Validación de URLs (previene SSRF)
 - ✅ Validación de tipos de datos
@@ -128,7 +135,9 @@ Se ha implementado un CRUD completo de cursos con backend seguro y frontend robu
 - ✅ Logging de operaciones
 
 ### **Frontend:**
-- ✅ Protección de rutas (solo admin/instructor)
+- ✅ Protección de rutas:
+  - **Crear/Editar**: Solo admin o instructor
+  - **Eliminar**: Solo admin (botón solo visible para admin)
 - ✅ Validación de permisos antes de mostrar acciones
 - ✅ Confirmación antes de eliminar
 - ✅ Manejo de errores
@@ -164,11 +173,13 @@ Se ha implementado un CRUD completo de cursos con backend seguro y frontend robu
 
 ### **Backend (Swagger):**
 1. Ir a `http://localhost:8000/swagger/`
-2. Autenticarse como admin o instructor
+2. Autenticarse:
+   - Para CREATE/UPDATE: como admin o instructor
+   - Para DELETE: como admin (solo admin puede eliminar)
 3. Probar endpoints:
-   - `POST /api/v1/courses/create/`
+   - `POST /api/v1/courses/create/` o `POST /api/v1/courses/`
    - `PUT /api/v1/courses/{id}/update/`
-   - `DELETE /api/v1/courses/{id}/delete/`
+   - `DELETE /api/v1/courses/{id}/delete/` (solo admin)
 
 ### **Frontend:**
 1. Login como admin o instructor
@@ -183,6 +194,7 @@ Se ha implementado un CRUD completo de cursos con backend seguro y frontend robu
 ### **Backend:**
 - ✅ `backend/infrastructure/services/course_service.py` (NUEVO)
 - ✅ `backend/presentation/views/course_views.py` (MODIFICADO)
+  - Endpoint DELETE ahora usa `IsAdmin` permission class (solo admin)
 - ✅ `backend/presentation/api/v1/courses/urls.py` (MODIFICADO)
 
 ### **Frontend:**

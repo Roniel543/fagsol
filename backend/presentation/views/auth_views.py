@@ -99,9 +99,9 @@ def login(request):
             'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Apellido del usuario'),
             'role': openapi.Schema(
                 type=openapi.TYPE_STRING,
-                enum=['admin', 'instructor', 'student', 'guest'],
+                enum=['instructor', 'student'],
                 default='student',
-                description='Rol del usuario (por defecto: student)'
+                description='Rol del usuario (por defecto: student). Nota: No se permite registrar como admin desde este endpoint.'
             ),
         }
     ),
@@ -134,11 +134,18 @@ def register(request):
                 'message': 'Todos los campos son requeridos'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 3. Usar el servicio de autenticación
+        # 3. Validar que no se intente registrar como admin (seguridad)
+        if role == 'admin':
+            return Response({
+                'success': False,
+                'message': 'No se puede registrar como administrador. Los administradores deben ser creados por otros administradores.'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # 4. Usar el servicio de autenticación
         auth_service = AuthService()
         result = auth_service.register(email, password, first_name, last_name, role)
         
-        # 4. Retornar respuesta según el resultado
+        # 5. Retornar respuesta según el resultado
         if result['success']:
             return Response(result, status=status.HTTP_201_CREATED)
         else:
@@ -305,10 +312,18 @@ def get_current_user(request):
         try:
             profile = user.profile
             role = profile.role
+            
+            # Si es superuser pero el perfil no tiene rol admin, actualizarlo
+            if user.is_superuser and role != 'admin':
+                profile.role = 'admin'
+                profile.save()
+                role = 'admin'
         except UserProfile.DoesNotExist:
-            # Si no tiene perfil, crear uno con rol por defecto
-            profile = UserProfile.objects.create(user=user, role='student')
-            role = 'student'
+            # Si no tiene perfil, crear uno
+            # Si es superuser, asignar rol admin; si no, rol student
+            default_role = 'admin' if user.is_superuser else 'student'
+            profile = UserProfile.objects.create(user=user, role=default_role)
+            role = default_role
         
         return Response({
             'success': True,

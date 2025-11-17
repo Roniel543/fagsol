@@ -11,6 +11,10 @@ from presentation.views.admin_views import (
     remove_permission_from_user,
     assign_user_to_group,
     remove_user_from_group,
+    list_pending_instructors,
+    list_all_instructors,
+    approve_instructor,
+    reject_instructor,
 )
 
 urlpatterns = [
@@ -28,5 +32,11 @@ urlpatterns = [
     # Grupos de usuarios
     path('users/<int:user_id>/groups/assign/', assign_user_to_group, name='admin_assign_user_to_group'),
     path('users/<int:user_id>/groups/<int:group_id>/', remove_user_from_group, name='admin_remove_user_from_group'),
+    
+    # Aprobación de instructores
+    path('instructors/pending/', list_pending_instructors, name='admin_list_pending_instructors'),
+    path('instructors/', list_all_instructors, name='admin_list_all_instructors'),
+    path('instructors/<int:instructor_id>/approve/', approve_instructor, name='admin_approve_instructor'),
+    path('instructors/<int:instructor_id>/reject/', reject_instructor, name='admin_reject_instructor'),
 ]
 

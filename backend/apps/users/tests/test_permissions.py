@@ -10,6 +10,7 @@ from apps.users.permissions import (
     is_admin, is_instructor, is_student, is_guest,
     can_view_course, can_edit_course, can_access_course_content,
     can_view_enrollment, can_view_certificate, can_process_payment,
+    can_create_course,
     ROLE_ADMIN, ROLE_INSTRUCTOR, ROLE_STUDENT, ROLE_GUEST
 )
 from apps.courses.models import Course
@@ -250,4 +251,40 @@ class PermissionsTestCase(TestCase):
         self.assertFalse(can_process_payment(self.admin_user))
         self.assertFalse(can_process_payment(self.instructor_user))
         self.assertFalse(can_process_payment(self.guest_user))
+    
+    def test_can_create_course_admin(self):
+        """Test: Admin puede crear cursos"""
+        self.assertTrue(can_create_course(self.admin_user))
+    
+    def test_can_create_course_instructor_approved(self):
+        """Test: Instructor aprobado puede crear cursos"""
+        # Aprobar instructor
+        self.instructor_user.profile.instructor_status = 'approved'
+        self.instructor_user.profile.save()
+        
+        self.assertTrue(can_create_course(self.instructor_user))
+    
+    def test_can_create_course_instructor_pending(self):
+        """Test: Instructor pendiente NO puede crear cursos"""
+        # Asegurar que está pendiente
+        self.instructor_user.profile.instructor_status = 'pending_approval'
+        self.instructor_user.profile.save()
+        
+        self.assertFalse(can_create_course(self.instructor_user))
+    
+    def test_can_create_course_instructor_rejected(self):
+        """Test: Instructor rechazado NO puede crear cursos"""
+        # Rechazar instructor
+        self.instructor_user.profile.instructor_status = 'rejected'
+        self.instructor_user.profile.save()
+        
+        self.assertFalse(can_create_course(self.instructor_user))
+    
+    def test_can_create_course_student(self):
+        """Test: Estudiante NO puede crear cursos"""
+        self.assertFalse(can_create_course(self.student_user))
+    
+    def test_can_create_course_guest(self):
+        """Test: Invitado NO puede crear cursos"""
+        self.assertFalse(can_create_course(self.guest_user))
 

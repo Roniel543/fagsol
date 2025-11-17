@@ -65,6 +65,44 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
 
+  // Configuración de webpack para excluir jsdom del bundle del cliente
+  webpack: (config, { isServer }) => {
+    // Excluir jsdom y sus dependencias del bundle del cliente
+    // jsdom solo debe ejecutarse en el servidor
+    if (!isServer) {
+      // Configurar fallbacks para módulos de Node.js que no existen en el navegador
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        path: false,
+        crypto: false,
+        stream: false,
+        util: false,
+        url: false,
+        zlib: false,
+        http: false,
+        https: false,
+        assert: false,
+        os: false,
+        buffer: false,
+      };
+
+      // Excluir jsdom y sus dependencias del bundle del cliente
+      // Usar IgnorePlugin para evitar que webpack intente empaquetar jsdom
+      const webpack = require('webpack');
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^jsdom$/,
+        })
+      );
+    }
+
+    return config;
+  },
+
   // Headers de seguridad
   async headers() {
     return [
@@ -77,7 +115,7 @@ const nextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // 'unsafe-eval' necesario para Next.js en desarrollo
               "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' necesario para Tailwind
-              "img-src 'self' data: https: blob:",
+              "img-src 'self' data: https: blob: https://images.unsplash.com https://*.unsplash.com",
               "font-src 'self' data:",
               "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.mercadopago.com https://*.mercadopago.com",
               "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com",

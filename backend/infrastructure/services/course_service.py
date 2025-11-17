@@ -46,10 +46,10 @@ class CourseService:
             Tuple[success, course, error_message]
         """
         try:
-            # 1. Validar permisos (usando Django permissions)
-            from apps.users.permissions import has_perm
-            if not has_perm(user, 'courses.add_course'):
-                return False, None, "No tienes permiso para crear cursos"
+            # 1. Validar permisos 
+            from apps.users.permissions import can_create_course
+            if not can_create_course(user):
+                return False, None, "No tienes permiso para crear cursos. Los instructores deben estar aprobados por un administrador."
             
             # 2. Validar campos requeridos
             if not title or not title.strip():
