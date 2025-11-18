@@ -6,6 +6,17 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
+import uuid
+
+
+def generate_module_id():
+    """Genera un ID único para Module"""
+    return f"m_{uuid.uuid4().hex[:16]}"
+
+
+def generate_lesson_id():
+    """Genera un ID único para Lesson"""
+    return f"l_{uuid.uuid4().hex[:16]}"
 
 
 class Course(models.Model):
@@ -14,6 +25,8 @@ class Course(models.Model):
     """
     STATUS_CHOICES = [
         ('draft', 'Borrador'),
+        ('pending_review', 'Pendiente de Revisión'),
+        ('needs_revision', 'Requiere Cambios'),
         ('published', 'Publicado'),
         ('archived', 'Archivado'),
     ]
@@ -92,6 +105,32 @@ class Course(models.Model):
         help_text="JSON con id, name, title del instructor"
     )
     
+    # Campos de moderación y revisión 
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_courses',
+        verbose_name="Revisado por",
+        help_text="Administrador que revisó el curso"
+    )
+    
+    reviewed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Revisión",
+        help_text="Fecha y hora en que se realizó la revisión"
+    )
+    
+    review_comments = models.TextField(
+        blank=True,
+        null=True,
+        max_length=2000,
+        verbose_name="Comentarios de Revisión",
+        help_text="Comentarios del administrador sobre la revisión (máximo 2000 caracteres)"
+    )
+    
     class Meta:
         db_table = 'courses'
         verbose_name = 'Curso'
@@ -108,6 +147,18 @@ class Course(models.Model):
     @property
     def is_published(self):
         return self.status == 'published' and self.is_active
+    
+    def is_pending_review(self):
+        """Verifica si el curso está pendiente de revisión"""
+        return self.status == 'pending_review'
+    
+    def is_needs_revision(self):
+        """Verifica si el curso requiere cambios"""
+        return self.status == 'needs_revision'
+    
+    def can_request_review(self):
+        """Verifica si el curso puede solicitar revisión (debe estar en draft o needs_revision)"""
+        return self.status in ['draft', 'needs_revision'] and self.is_active
 
 
 class Module(models.Model):
@@ -115,7 +166,7 @@ class Module(models.Model):
     Modelo de Módulo (dentro de un curso)
     """
     # Identificación
-    id = models.CharField(max_length=50, primary_key=True, unique=True, help_text="ID único del módulo (ej: m-001)")
+    id = models.CharField(max_length=50, primary_key=True, unique=True, default=generate_module_id, help_text="ID único del módulo (ej: m-001)")
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='modules', verbose_name="Curso")
     title = models.CharField(max_length=200, verbose_name="Título")
     description = models.TextField(blank=True, verbose_name="Descripción")
@@ -164,7 +215,7 @@ class Lesson(models.Model):
     ]
     
     # Identificación
-    id = models.CharField(max_length=50, primary_key=True, unique=True, help_text="ID único de la lección")
+    id = models.CharField(max_length=50, primary_key=True, unique=True, default=generate_lesson_id, help_text="ID único de la lección")
     module = models.ForeignKey(Module, on_delete=models.CASCADE, related_name='lessons', verbose_name="Módulo")
     title = models.CharField(max_length=200, verbose_name="Título")
     description = models.TextField(blank=True, verbose_name="Descripción")

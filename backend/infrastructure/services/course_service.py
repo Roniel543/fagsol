@@ -11,7 +11,7 @@ from django.utils.text import slugify
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from apps.courses.models import Course, Module, Lesson
-from apps.users.permissions import can_edit_course
+from apps.users.permissions import can_edit_course, is_admin
 
 logger = logging.getLogger('apps')
 
@@ -78,8 +78,13 @@ class CourseService:
             course_id = self._generate_course_id()
             
             # 6. Validar y sanitizar campos opcionales
+            # Instructores solo pueden crear cursos en draft
+            # Solo admin puede establecer otros estados directamente
             status = kwargs.get('status', 'draft')
-            if status not in ['draft', 'published', 'archived']:
+            # Si es instructor, forzar draft (no puede publicar directamente)
+            if not is_admin(user):
+                status = 'draft'
+            elif status not in ['draft', 'pending_review', 'needs_revision', 'published', 'archived']:
                 status = 'draft'
             
             category = kwargs.get('category', 'General').strip()[:100]
@@ -208,8 +213,13 @@ class CourseService:
             
             if 'status' in kwargs:
                 status = kwargs['status']
-                if status not in ['draft', 'published', 'archived']:
+                # Validar nuevos estados
+                valid_statuses = ['draft', 'pending_review', 'needs_revision', 'published', 'archived']
+                if status not in valid_statuses:
                     return False, None, "Estado inválido"
+                # Instructores no pueden cambiar a published directamente
+                if status == 'published' and not is_admin(user):
+                    return False, None, "Los instructores no pueden publicar cursos directamente. Deben solicitar revisión."
                 course.status = status
             
             if 'thumbnail_url' in kwargs:

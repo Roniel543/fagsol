@@ -1,8 +1,8 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
-import { Course } from '@/shared/types';
 import { useCourses } from '@/shared/hooks/useCourses';
+import { Course } from '@/shared/types';
+import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 export interface CartItem {
     id: string;
@@ -29,7 +29,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 export function CartProvider({ children }: { children: ReactNode }) {
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
     const [isLoaded, setIsLoaded] = useState(false);
-    
+
     // Obtener todos los cursos del backend para poder buscar detalles
     const { courses, isLoading: coursesLoading } = useCourses({ status: 'published' });
 
@@ -83,7 +83,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (coursesLoading || !isLoaded) {
             return [];
         }
-        
+
         return cartItems
             .map((item) => {
                 const course = courses.find((c) => c.id === item.id);
@@ -96,6 +96,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
             .filter((item): item is CartItemWithDetails => item !== null);
     }, [cartItems, courses, coursesLoading, isLoaded]);
 
+    // Limpiar items inválidos del carrito cuando se detecten
+    useEffect(() => {
+        if (!isLoaded || coursesLoading) return;
+
+        const validItemIds = cartItemsWithDetails.map(item => item.id);
+        const invalidItems = cartItems.filter(item => !validItemIds.includes(item.id));
+
+        if (invalidItems.length > 0) {
+            console.log(`🧹 Removing ${invalidItems.length} invalid items from cart`);
+            setCartItems(validItemIds.map(id => cartItems.find(item => item.id === id)!));
+        }
+    }, [cartItemsWithDetails, cartItems, isLoaded, coursesLoading]);
+
     // Calcular total (MEMOIZADO)
     const total = useMemo(() => {
         return cartItemsWithDetails.reduce((sum, item) => {
@@ -105,9 +118,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }, [cartItemsWithDetails]);
 
     // Calcular cantidad de items (MEMOIZADO)
+    // Usa cartItemsWithDetails para solo contar items válidos que existen en el backend
     const itemCount = useMemo(() => {
-        return cartItems.length;
-    }, [cartItems]);
+        return cartItemsWithDetails.length;
+    }, [cartItemsWithDetails]);
 
     const value = {
         cartItems,

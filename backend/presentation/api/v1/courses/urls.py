@@ -10,7 +10,8 @@ from presentation.views.course_views import (
     get_course_content,
     create_course,
     update_course,
-    delete_course
+    delete_course,
+    request_course_review
 )
 
 urlpatterns = [
@@ -27,5 +28,6 @@ urlpatterns = [
     path('<str:course_id>/update/', update_course, name='update_course'),  # PUT /api/v1/courses/{id}/update/
     path('<str:course_id>/delete/', delete_course, name='delete_course'),  # DELETE /api/v1/courses/{id}/delete/
     path('<str:course_id>/content/', get_course_content, name='get_course_content'),
+    path('<str:course_id>/request-review/', request_course_review, name='request_course_review'),  # POST /api/v1/courses/{id}/request-review/ (FASE 2)
 ]
 

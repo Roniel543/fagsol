@@ -17,6 +17,7 @@ from django.contrib.contenttypes.models import ContentType
 from apps.core.models import UserProfile
 from apps.users.permissions import IsAdmin, has_perm, get_user_role, ROLE_ADMIN
 from infrastructure.services.instructor_approval_service import InstructorApprovalService
+from infrastructure.services.course_approval_service import CourseApprovalService
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
@@ -743,5 +744,263 @@ def reject_instructor(request, instructor_id):
         return Response({
             'success': False,
             'message': 'Error interno al rechazar instructor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ENDPOINTS DE APROBACIÓN DE CURSOS (FASE 2)
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todos los cursos pendientes de revisión. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(
+            description='Lista de cursos pendientes',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': [
+                        {
+                            'id': 'c-001',
+                            'title': 'Curso de Ejemplo',
+                            'status': 'pending_review',
+                            'created_at': '2025-01-12T10:00:00Z'
+                        }
+                    ],
+                    'count': 1
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Cursos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_pending_courses(request):
+    """
+    Lista todos los cursos pendientes de revisión.
+    GET /api/v1/admin/courses/pending/
+    """
+    try:
+        service = CourseApprovalService()
+        success, data, error_message = service.get_pending_courses()
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({
+            'success': True,
+            'data': data,
+            'count': len(data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing pending courses: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar cursos pendientes'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todos los cursos con filtro opcional por estado. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter(
+            'status',
+            openapi.IN_QUERY,
+            description='Filtro por estado (pending_review, needs_revision, published, draft, archived)',
+            type=openapi.TYPE_STRING,
+            enum=['pending_review', 'needs_revision', 'published', 'draft', 'archived'],
+            required=False
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Lista de cursos'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Cursos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_all_courses_admin(request):
+    """
+    Lista todos los cursos con filtro opcional por estado.
+    GET /api/v1/admin/courses/?status=pending_review
+    """
+    try:
+        status_filter = request.query_params.get('status', None)
+        
+        service = CourseApprovalService()
+        success, data, error_message = service.get_all_courses(status_filter=status_filter)
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({
+            'success': True,
+            'data': data,
+            'count': len(data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing courses: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar cursos'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Aprueba un curso pendiente de revisión. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter('course_id', openapi.IN_PATH, description='ID del curso', type=openapi.TYPE_STRING),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'notes': openapi.Schema(type=openapi.TYPE_STRING, description='Notas opcionales sobre la aprobación'),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Curso aprobado exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+        404: openapi.Response(description='Curso no encontrado'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Cursos']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def approve_course(request, course_id):
+    """
+    Aprueba un curso pendiente de revisión.
+    POST /api/v1/admin/courses/{course_id}/approve/
+    Body (opcional): { "notes": "Notas sobre la aprobación" }
+    """
+    try:
+        notes = request.data.get('notes', None)
+        
+        service = CourseApprovalService()
+        success, data, error_message = service.approve_course(
+            admin_user=request.user,
+            course_id=course_id,
+            notes=notes
+        )
+        
+        if not success:
+            # Determinar código de estado apropiado
+            if 'no encontrado' in error_message.lower():
+                status_code = status.HTTP_404_NOT_FOUND
+            elif 'ya está' in error_message.lower() or 'no está en estado' in error_message.lower():
+                status_code = status.HTTP_400_BAD_REQUEST
+            else:
+                status_code = status.HTTP_400_BAD_REQUEST
+            
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status_code)
+        
+        return Response({
+            'success': True,
+            'data': data,
+            'message': 'Curso aprobado exitosamente'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error approving course {course_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error interno al aprobar curso'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Rechaza un curso pendiente de revisión (requiere cambios). Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter('course_id', openapi.IN_PATH, description='ID del curso', type=openapi.TYPE_STRING),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['rejection_reason'],
+        properties={
+            'rejection_reason': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Razón del rechazo (requerida, máximo 2000 caracteres)'
+            ),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Curso rechazado exitosamente'),
+        400: openapi.Response(description='Datos inválidos o razón de rechazo faltante'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+        404: openapi.Response(description='Curso no encontrado'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Cursos']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def reject_course(request, course_id):
+    """
+    Rechaza un curso pendiente de revisión (requiere cambios).
+    POST /api/v1/admin/courses/{course_id}/reject/
+    Body: { "rejection_reason": "Razón del rechazo" }
+    """
+    try:
+        rejection_reason = request.data.get('rejection_reason', None)
+        
+        if not rejection_reason or not rejection_reason.strip():
+            return Response({
+                'success': False,
+                'message': 'La razón de rechazo es requerida'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        service = CourseApprovalService()
+        success, data, error_message = service.reject_course(
+            admin_user=request.user,
+            course_id=course_id,
+            rejection_reason=rejection_reason
+        )
+        
+        if not success:
+            # Determinar código de estado apropiado
+            if 'no encontrado' in error_message.lower():
+                status_code = status.HTTP_404_NOT_FOUND
+            elif 'ya está' in error_message.lower() or 'no está en estado' in error_message.lower():
+                status_code = status.HTTP_400_BAD_REQUEST
+            else:
+                status_code = status.HTTP_400_BAD_REQUEST
+            
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status_code)
+        
+        return Response({
+            'success': True,
+            'data': data,
+            'message': 'Curso rechazado exitosamente. El instructor debe realizar cambios.'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error rejecting course {course_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error interno al rechazar curso'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

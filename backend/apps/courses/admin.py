@@ -51,6 +51,13 @@ class ModuleAdmin(admin.ModelAdmin):
     ordering = ['course', 'order']
     inlines = [LessonInline]
     
+    def save_model(self, request, obj, form, change):
+        """Asegura que el ID se genere si no existe"""
+        if not obj.id:
+            from .models import generate_module_id
+            obj.id = generate_module_id()
+        super().save_model(request, obj, form, change)
+    
     fieldsets = (
         ('Información Básica', {
             'fields': ('id', 'course', 'title', 'description')
@@ -75,6 +82,13 @@ class LessonAdmin(admin.ModelAdmin):
     search_fields = ['id', 'title', 'description']
     readonly_fields = ['id', 'created_at', 'updated_at']
     ordering = ['module', 'order']
+    
+    def save_model(self, request, obj, form, change):
+        """Asegura que el ID se genere si no existe"""
+        if not obj.id:
+            from .models import generate_lesson_id
+            obj.id = generate_lesson_id()
+        super().save_model(request, obj, form, change)
     
     fieldsets = (
         ('Información Básica', {

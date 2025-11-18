@@ -42,22 +42,50 @@ export function MercadoPagoCardForm({
 
     // Cargar script de Mercado Pago
     useEffect(() => {
-        if (scriptLoaded.current || !publicKey) return;
+        if (scriptLoaded.current || !publicKey) {
+            // Si ya está cargado o no hay public key, verificar si el SDK está disponible
+            if (typeof window !== 'undefined' && (window as any).MercadoPago) {
+                setIsInitialized(true);
+            }
+            return;
+        }
+
+        // Verificar si el script ya existe
+        const existingScript = document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]');
+        if (existingScript) {
+            scriptLoaded.current = true;
+            // Esperar un momento para que el SDK se inicialice
+            setTimeout(() => {
+                if (typeof window !== 'undefined' && (window as any).MercadoPago) {
+                    setIsInitialized(true);
+                }
+            }, 100);
+            return;
+        }
 
         const script = document.createElement('script');
         script.src = 'https://sdk.mercadopago.com/js/v2';
         script.async = true;
+        script.crossOrigin = 'anonymous';
         script.onload = () => {
             scriptLoaded.current = true;
-            setIsInitialized(true);
+            // Esperar un momento para que el SDK se inicialice completamente
+            setTimeout(() => {
+                if (typeof window !== 'undefined' && (window as any).MercadoPago) {
+                    setIsInitialized(true);
+                } else {
+                    onError('SDK de Mercado Pago cargado pero no disponible');
+                }
+            }, 200);
         };
-        script.onerror = () => {
-            onError('Error al cargar el SDK de Mercado Pago');
+        script.onerror = (error) => {
+            console.error('Error al cargar SDK de Mercado Pago:', error);
+            onError('Error al cargar el SDK de Mercado Pago. Verifica tu conexión a internet.');
         };
-        document.body.appendChild(script);
+        document.head.appendChild(script);
 
         return () => {
-            // Cleanup si es necesario
+            // No remover el script ya que puede ser usado por otros componentes
         };
     }, [publicKey, onError]);
 
@@ -76,50 +104,46 @@ export function MercadoPagoCardForm({
                 throw new Error('Por favor completa todos los campos de la tarjeta');
             }
 
-            // Usar Mercado Pago SDK para tokenizar
-            // NOTA: En producción, esto debe hacerse con Bricks/Elements
-            if (typeof window !== 'undefined' && (window as any).MercadoPago) {
-                const mp = new (window as any).MercadoPago(publicKey, {
-                    locale: 'es-PE'
-                });
+            // Tokenizar tarjeta usando el endpoint del backend
+            // Esto evita problemas de CORS y mantiene los datos de tarjeta seguros
+            const cardNumber = cardData.cardNumber.replace(/\s/g, '');
+            const [expMonth, expYear] = cardData.expirationDate.split('/');
 
-                // Limpiar número de tarjeta
-                const cardNumber = cardData.cardNumber.replace(/\s/g, '');
-                const [expMonth, expYear] = cardData.expirationDate.split('/');
+            // Obtener token de autenticación
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                throw new Error('No estás autenticado. Por favor, inicia sesión.');
+            }
 
-                // Crear token (esto es un ejemplo - en producción usar Bricks)
-                const tokenResponse = await fetch('https://api.mercadopago.com/v1/card_tokens', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${publicKey}`,
-                    },
-                    body: JSON.stringify({
-                        card_number: cardNumber,
-                        cardholder: {
-                            name: cardData.cardholderName,
-                        },
-                        card_expiration_month: expMonth,
-                        card_expiration_year: '20' + expYear,
-                        security_code: cardData.securityCode,
-                        identification_type: 'DNI',
-                        identification_number: '12345678', // En producción, obtener del usuario
-                    }),
-                });
+            // Llamar al endpoint del backend para tokenizar
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const tokenizeResponse = await fetch(`${apiUrl}/api/v1/payments/tokenize/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    card_number: cardNumber,
+                    cardholder_name: cardData.cardholderName,
+                    expiration_month: expMonth,
+                    expiration_year: expYear,
+                    security_code: cardData.securityCode,
+                    identification_type: 'DNI',
+                    identification_number: '12345678', // TODO: Obtener del perfil del usuario
+                }),
+            });
 
-                if (!tokenResponse.ok) {
-                    const errorData = await tokenResponse.json();
-                    throw new Error(errorData.message || 'Error al tokenizar la tarjeta');
-                }
+            if (!tokenizeResponse.ok) {
+                const errorData = await tokenizeResponse.json();
+                throw new Error(errorData.message || 'Error al tokenizar la tarjeta');
+            }
 
-                const tokenData = await tokenResponse.json();
-                if (tokenData.id) {
-                    onTokenReady(tokenData.id);
-                } else {
-                    throw new Error('No se pudo generar el token');
-                }
+            const tokenizeData = await tokenizeResponse.json();
+            if (tokenizeData.success && tokenizeData.data?.token) {
+                onTokenReady(tokenizeData.data.token);
             } else {
-                throw new Error('SDK de Mercado Pago no disponible. Recarga la página.');
+                throw new Error('No se pudo generar el token');
             }
         } catch (err: any) {
             console.error('Error tokenizing card:', err);

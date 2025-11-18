@@ -113,12 +113,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // 'unsafe-eval' necesario para Next.js en desarrollo
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://sdk.mercadopago.com https://*.mercadopago.com", // 'unsafe-eval' necesario para Next.js en desarrollo, Mercado Pago SDK
               "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' necesario para Tailwind
               "img-src 'self' data: https: blob: https://images.unsplash.com https://*.unsplash.com",
               "font-src 'self' data:",
-              "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.mercadopago.com https://*.mercadopago.com",
-              "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com",
+              "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com",
+              "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

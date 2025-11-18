@@ -15,6 +15,10 @@ from presentation.views.admin_views import (
     list_all_instructors,
     approve_instructor,
     reject_instructor,
+    list_pending_courses,
+    list_all_courses_admin,
+    approve_course,
+    reject_course,
 )
 
 urlpatterns = [
@@ -33,10 +37,16 @@ urlpatterns = [
     path('users/<int:user_id>/groups/assign/', assign_user_to_group, name='admin_assign_user_to_group'),
     path('users/<int:user_id>/groups/<int:group_id>/', remove_user_from_group, name='admin_remove_user_from_group'),
     
-    # Aprobación de instructores
+    # Aprobación de instructores 
     path('instructors/pending/', list_pending_instructors, name='admin_list_pending_instructors'),
     path('instructors/', list_all_instructors, name='admin_list_all_instructors'),
     path('instructors/<int:instructor_id>/approve/', approve_instructor, name='admin_approve_instructor'),
     path('instructors/<int:instructor_id>/reject/', reject_instructor, name='admin_reject_instructor'),
+    
+    # Aprobación de cursos
+    path('courses/pending/', list_pending_courses, name='admin_list_pending_courses'),
+    path('courses/', list_all_courses_admin, name='admin_list_all_courses'),
+    path('courses/<str:course_id>/approve/', approve_course, name='admin_approve_course'),
+    path('courses/<str:course_id>/reject/', reject_course, name='admin_reject_course'),
 ]
 

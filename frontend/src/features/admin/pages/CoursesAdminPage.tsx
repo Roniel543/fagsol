@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Button, Card, LoadingSpinner, ProtectedRoute } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useCourses } from '@/shared/hooks/useCourses';
 import { deleteCourse } from '@/shared/services/courses';
-import { Button, Card, LoadingSpinner, ProtectedRoute } from '@/shared/components';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 function CoursesAdminPageContent() {
     const router = useRouter();
@@ -43,12 +43,21 @@ function CoursesAdminPageContent() {
         const status = (course as any).status || 'draft';
         const colors = {
             published: 'bg-green-100 text-green-800',
-            draft: 'bg-yellow-100 text-yellow-800',
-            archived: 'bg-gray-100 text-gray-800',
+            draft: 'bg-gray-100 text-gray-800',
+            pending_review: 'bg-yellow-100 text-yellow-800',
+            needs_revision: 'bg-orange-100 text-orange-800',
+            archived: 'bg-red-100 text-red-800',
+        };
+        const labels = {
+            published: 'Publicado',
+            draft: 'Borrador',
+            pending_review: 'Pendiente de Revisión',
+            needs_revision: 'Requiere Cambios',
+            archived: 'Archivado',
         };
         return (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status as keyof typeof colors] || colors.draft}`}>
-                {status === 'published' ? 'Publicado' : status === 'draft' ? 'Borrador' : 'Archivado'}
+                {labels[status as keyof typeof labels] || status}
             </span>
         );
     };
@@ -67,6 +76,13 @@ function CoursesAdminPageContent() {
                             <p className="text-gray-600">Gestiona los cursos de la plataforma</p>
                         </div>
                         <div className="flex items-center space-x-4">
+                            {user?.role === 'admin' && (
+                                <Link href="/admin/courses/pending">
+                                    <Button variant="secondary" size="sm">
+                                        Cursos Pendientes
+                                    </Button>
+                                </Link>
+                            )}
                             <Link href="/dashboard">
                                 <Button variant="secondary" size="sm">
                                     Volver al Dashboard

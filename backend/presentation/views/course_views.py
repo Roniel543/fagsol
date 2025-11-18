@@ -14,6 +14,7 @@ from apps.users.permissions import (
     can_view_course, can_access_course_content, IsAdminOrInstructor, IsAdmin
 )
 from infrastructure.services.course_service import CourseService
+from infrastructure.services.course_approval_service import CourseApprovalService
 from decimal import Decimal
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -429,23 +430,33 @@ def get_course_content(request, course_id):
                 'order': module.order
             })
         
+        # Preparar datos de respuesta
+        response_data = {
+            'course': {
+                'id': course.id,
+                'title': course.title,
+                'description': course.description,
+                'slug': course.slug,
+            },
+            'modules': modules
+        }
+        
+        # Incluir enrollment solo si existe
+        if enrollment:
+            response_data['enrollment'] = {
+                'id': enrollment.id,
+                'status': enrollment.status,
+                'completed': enrollment.completed,
+                'completion_percentage': float(enrollment.completion_percentage),
+                'enrolled_at': enrollment.enrolled_at.isoformat()
+            }
+        else:
+            # Si es admin/instructor sin enrollment, indicar acceso especial
+            response_data['access_type'] = 'admin_or_instructor'
+        
         return Response({
             'success': True,
-            'data': {
-                'course': {
-                    'id': course.id,
-                    'title': course.title,
-                    'description': course.description,
-                },
-                'enrollment': {
-                    'id': enrollment.id,
-                    'status': enrollment.status,
-                    'completed': enrollment.completed,
-                    'completion_percentage': float(enrollment.completion_percentage),
-                    'enrolled_at': enrollment.enrolled_at.isoformat()
-                },
-                'modules': modules
-            }
+            'data': response_data
         }, status=status.HTTP_200_OK)
         
     except Course.DoesNotExist:
@@ -799,6 +810,74 @@ def delete_course(request, course_id):
         
     except Exception as e:
         logger.error(f"Error en delete_course: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Solicita revisión de un curso. Solo instructores pueden solicitar revisión de sus cursos.',
+    manual_parameters=[
+        openapi.Parameter(
+            'course_id',
+            openapi.IN_PATH,
+            description='ID del curso',
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Revisión solicitada exitosamente'),
+        400: openapi.Response(description='El curso no puede solicitar revisión'),
+        403: openapi.Response(description='No tienes permiso para solicitar revisión de este curso'),
+        404: openapi.Response(description='Curso no encontrado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Cursos']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
+def request_course_review(request, course_id):
+    """
+    Solicita revisión de un curso (instructor)
+    POST /api/v1/courses/{course_id}/request-review/
+    
+    Requiere autenticación y rol instructor
+    """
+    try:
+        service = CourseApprovalService()
+        success, data, error_message = service.request_review(
+            instructor_user=request.user,
+            course_id=course_id
+        )
+        
+        if not success:
+            # Determinar código de estado apropiado
+            if 'no encontrado' in error_message.lower():
+                status_code = status.HTTP_404_NOT_FOUND
+            elif 'permiso' in error_message.lower():
+                status_code = status.HTTP_403_FORBIDDEN
+            elif 'no puede solicitar' in error_message.lower():
+                status_code = status.HTTP_400_BAD_REQUEST
+            else:
+                status_code = status.HTTP_400_BAD_REQUEST
+            
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status_code)
+        
+        return Response({
+            'success': True,
+            'data': data,
+            'message': 'Revisión solicitada exitosamente. El administrador revisará tu curso.'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en request_course_review: {str(e)}")
         return Response({
             'success': False,
             'message': 'Error interno del servidor'

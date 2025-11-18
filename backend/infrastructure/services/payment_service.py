@@ -93,6 +93,74 @@ class PaymentService:
             logger.error(f"Error al crear payment intent: {str(e)}")
             return False, None, f"Error al crear payment intent: {str(e)}"
     
+    def tokenize_card(
+        self,
+        card_number: str,
+        cardholder_name: str,
+        expiration_month: str,
+        expiration_year: str,
+        security_code: str,
+        identification_type: str = 'DNI',
+        identification_number: str = '12345678'
+    ) -> Tuple[bool, Optional[str], str]:
+        """
+        Tokeniza una tarjeta usando Mercado Pago API
+        
+        IMPORTANTE: Este método debe usarse SOLO desde el backend.
+        El frontend NO debe enviar datos de tarjeta directamente.
+        
+        Args:
+            card_number: Número de tarjeta (sin espacios)
+            cardholder_name: Nombre del titular
+            expiration_month: Mes de expiración (MM)
+            expiration_year: Año de expiración (YY)
+            security_code: CVV
+            identification_type: Tipo de identificación (DNI, etc.)
+            identification_number: Número de identificación
+        
+        Returns:
+            Tuple[success, token, error_message]
+        """
+        try:
+            if not self.mp:
+                return False, None, "Mercado Pago no está configurado"
+            
+            # Limpiar número de tarjeta
+            card_number = card_number.replace(' ', '').replace('-', '')
+            
+            # Preparar datos para tokenización
+            card_data = {
+                "card_number": card_number,
+                "cardholder": {
+                    "name": cardholder_name,
+                },
+                "card_expiration_month": expiration_month.zfill(2),
+                "card_expiration_year": f"20{expiration_year}" if len(expiration_year) == 2 else expiration_year,
+                "security_code": security_code,
+                "identification_type": identification_type,
+                "identification_number": identification_number,
+            }
+            
+            # Tokenizar usando el SDK de Mercado Pago
+            # El SDK maneja la llamada a la API con el access token
+            token_result = self.mp.card_token().create(card_data)
+            
+            if token_result.get("status") == 201:
+                token_id = token_result.get("response", {}).get("id")
+                if token_id:
+                    logger.info(f"Tarjeta tokenizada exitosamente")
+                    return True, token_id, ""
+                else:
+                    return False, None, "No se pudo obtener el token de la respuesta"
+            else:
+                error_message = token_result.get("message", "Error desconocido al tokenizar")
+                logger.error(f"Error al tokenizar tarjeta: {error_message}")
+                return False, None, f"Error al tokenizar la tarjeta: {error_message}"
+                
+        except Exception as e:
+            logger.error(f"Error al tokenizar tarjeta: {str(e)}")
+            return False, None, f"Error al tokenizar la tarjeta: {str(e)}"
+    
     def process_payment(
         self,
         user,
@@ -375,4 +443,3 @@ class PaymentService:
         except Exception as e:
             logger.error(f"Error al procesar webhook: {str(e)}")
             return False, f"Error al procesar webhook: {str(e)}"
-

@@ -3,8 +3,8 @@
  * Conecta el frontend con el backend de Django
  */
 
-import { apiRequest } from './api';
 import { Course } from '@/shared/types';
+import { apiRequest } from './api';
 
 /**
  * Respuesta del backend para lista de cursos
@@ -75,18 +75,18 @@ export interface CourseDetailResponse {
  */
 export async function listCourses(params?: ListCoursesParams): Promise<ListCoursesResponse> {
     const queryParams = new URLSearchParams();
-    
+
     if (params?.status) {
         queryParams.append('status', params.status);
     }
-    
+
     if (params?.search) {
         queryParams.append('search', params.search);
     }
-    
+
     const queryString = queryParams.toString();
     const endpoint = `/courses/${queryString ? `?${queryString}` : ''}`;
-    
+
     const response = await apiRequest<ListCoursesResponse>(endpoint);
     // El backend retorna directamente ListCoursesResponse (con success, data, count)
     return response as unknown as ListCoursesResponse;
@@ -121,7 +121,7 @@ export function adaptBackendCourseToFrontend(backendCourse: BackendCourse): Cour
     // Extraer campos del backend (ahora vienen directamente)
     const extendedCourse = backendCourse as any;
     const tags = Array.isArray(extendedCourse.tags) ? extendedCourse.tags : [];
-    
+
     // Calcular número de lecciones desde módulos si está disponible
     let lessonsCount = 0;
     if (extendedCourse.modules && Array.isArray(extendedCourse.modules)) {
@@ -129,7 +129,7 @@ export function adaptBackendCourseToFrontend(backendCourse: BackendCourse): Cour
             return total + (module.lessons?.length || 0);
         }, 0);
     }
-    
+
     // Mapear campos básicos
     return {
         id: backendCourse.id,
@@ -170,7 +170,7 @@ export function adaptBackendCourseDetailToFrontend(backendDetail: BackendCourseD
     is_enrolled?: boolean;
 } {
     const baseCourse = adaptBackendCourseToFrontend(backendDetail);
-    
+
     return {
         ...baseCourse,
         modules: backendDetail.modules,
@@ -206,7 +206,7 @@ export interface CreateCourseRequest {
 /**
  * Interfaz para actualizar un curso
  */
-export interface UpdateCourseRequest extends Partial<CreateCourseRequest> {}
+export interface UpdateCourseRequest extends Partial<CreateCourseRequest> { }
 
 /**
  * Crea un nuevo curso
@@ -241,5 +241,220 @@ export async function deleteCourse(courseId: string): Promise<{ success: boolean
         method: 'DELETE',
     });
     return response as unknown as { success: boolean; message: string };
+}
+
+
+/**
+ * Interfaz para curso con información de revisión
+ */
+export interface CourseWithReview extends BackendCourse {
+    reviewed_by?: {
+        id: number;
+        email: string;
+    };
+    reviewed_at?: string;
+    review_comments?: string;
+    created_by?: {
+        id: number;
+        email: string;
+        username: string;
+    };
+    instructor?: {
+        id: string;
+        name: string;
+        title?: string;
+    };
+}
+
+/**
+ * Respuesta de lista de cursos con revisión
+ */
+export interface CoursesWithReviewResponse {
+    success: boolean;
+    data: CourseWithReview[];
+    count: number;
+}
+
+/**
+ * Solicita revisión de un curso (Instructor)
+ */
+export async function requestCourseReview(courseId: string): Promise<{
+    success: boolean;
+    data: {
+        course: {
+            id: string;
+            title: string;
+            status: string;
+            requested_at: string;
+        };
+    };
+    message?: string;
+}> {
+    const response = await apiRequest<{
+        success: boolean;
+        data: {
+            course: {
+                id: string;
+                title: string;
+                status: string;
+                requested_at: string;
+            };
+        };
+        message?: string;
+    }>(`/courses/${courseId}/request-review/`, {
+        method: 'POST',
+    });
+    return response as unknown as {
+        success: boolean;
+        data: {
+            course: {
+                id: string;
+                title: string;
+                status: string;
+                requested_at: string;
+            };
+        };
+        message?: string;
+    };
+}
+
+/**
+ * Obtiene la lista de cursos pendientes de revisión (Admin)
+ */
+export async function getPendingCourses(): Promise<CoursesWithReviewResponse> {
+    const response = await apiRequest<CoursesWithReviewResponse>('/admin/courses/pending/', {
+        method: 'GET',
+    });
+    return response as unknown as CoursesWithReviewResponse;
+}
+
+/**
+ * Obtiene todos los cursos con filtro opcional por estado (Admin)
+ */
+export async function getAllCoursesAdmin(
+    status?: 'pending_review' | 'needs_revision' | 'published' | 'draft' | 'archived'
+): Promise<CoursesWithReviewResponse> {
+    const url = status ? `/admin/courses/?status=${status}` : '/admin/courses/';
+    const response = await apiRequest<CoursesWithReviewResponse>(url, {
+        method: 'GET',
+    });
+    return response as unknown as CoursesWithReviewResponse;
+}
+
+/**
+ * Interfaz para aprobar curso
+ */
+export interface ApproveCourseRequest {
+    notes?: string;
+}
+
+/**
+ * Interfaz para rechazar curso
+ */
+export interface RejectCourseRequest {
+    rejection_reason: string;
+}
+
+/**
+ * Respuesta de acción de aprobación/rechazo
+ */
+export interface CourseActionResponse {
+    success: boolean;
+    data: {
+        course: CourseWithReview;
+    };
+    message?: string;
+}
+
+/**
+ * Aprueba un curso pendiente de revisión (Admin)
+ */
+export async function approveCourse(
+    courseId: string,
+    data?: ApproveCourseRequest
+): Promise<CourseActionResponse> {
+    const response = await apiRequest<CourseActionResponse>(`/admin/courses/${courseId}/approve/`, {
+        method: 'POST',
+        body: JSON.stringify(data || {}),
+    });
+    return response as unknown as CourseActionResponse;
+}
+
+/**
+ * Rechaza un curso pendiente de revisión (Admin)
+ */
+export async function rejectCourse(
+    courseId: string,
+    data: RejectCourseRequest
+): Promise<CourseActionResponse> {
+    const response = await apiRequest<CourseActionResponse>(`/admin/courses/${courseId}/reject/`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+    return response as unknown as CourseActionResponse;
+}
+
+//  VISUALIZACIÓN DE CONTENIDO 
+
+/**
+ * Lección con contenido completo
+ */
+export interface LessonWithContent {
+    id: string;
+    title: string;
+    description?: string;
+    lesson_type: 'video' | 'document' | 'quiz' | 'text';
+    duration_minutes: number;
+    order: number;
+    content_url?: string;
+    content_text?: string;
+}
+
+/**
+ * Módulo con lecciones completas
+ */
+export interface ModuleWithContent {
+    id: string;
+    title: string;
+    description?: string;
+    order: number;
+    lessons: LessonWithContent[];
+}
+
+/**
+ * Enrollment del curso
+ */
+export interface CourseEnrollment {
+    id: string;
+    status: 'active' | 'completed' | 'expired' | 'cancelled';
+    completed: boolean;
+    completion_percentage: number;
+    enrolled_at: string;
+}
+
+/**
+ * Respuesta del contenido completo del curso
+ */
+export interface CourseContentResponse {
+    success: boolean;
+    data: {
+        course: {
+            id: string;
+            title: string;
+            description?: string;
+            slug: string;
+        };
+        enrollment?: CourseEnrollment;
+        access_type?: 'admin_or_instructor';
+        modules: ModuleWithContent[];
+    };
+}
+
+/**
+ * Obtiene el contenido completo de un curso (requiere estar inscrito o ser admin/instructor)
+ */
+export async function getCourseContent(courseId: string): Promise<CourseContentResponse> {
+    const response = await apiRequest<CourseContentResponse>(`/courses/${courseId}/content/`);
+    return response as unknown as CourseContentResponse;
 }
 

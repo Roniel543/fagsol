@@ -69,7 +69,7 @@ export async function createPaymentIntent(
     }
 
     try {
-        const response = await apiRequest<{ data: PaymentIntent }>(
+        const response = await apiRequest<PaymentIntent>(
             '/payments/intent/',
             {
                 method: 'POST',
@@ -79,10 +79,11 @@ export async function createPaymentIntent(
             }
         );
 
-        // apiRequest retorna ApiResponse<T>, necesitamos extraer el contenido
+        // apiRequest retorna ApiResponse<T>, donde T es PaymentIntent
+        // El backend retorna: { success: true, data: PaymentIntent }
         return {
-            success: response.success,
-            data: response.data?.data,
+            success: response.success || false,
+            data: response.data, // PaymentIntent viene en response.data
             message: response.message,
             errors: response.errors,
         };
@@ -117,7 +118,7 @@ export async function processPayment(
     }
 
     try {
-        const response = await apiRequest<{ data: ProcessPaymentResponse['data'] }>(
+        const response = await apiRequest<ProcessPaymentResponse['data']>(
             '/payments/process/',
             {
                 method: 'POST',
@@ -128,10 +129,10 @@ export async function processPayment(
             }
         );
 
-        // apiRequest retorna ApiResponse<T>, necesitamos extraer el contenido
+        // apiRequest retorna ApiResponse<T>, donde T es ProcessPaymentResponse['data']
         return {
-            success: response.success,
-            data: response.data?.data,
+            success: response.success || false,
+            data: response.data, // Los datos vienen directamente en response.data
             message: response.message,
             errors: response.errors,
         };

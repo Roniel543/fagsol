@@ -169,6 +169,66 @@ def can_create_course(user):
     return False
 
 
+def can_publish_course(user, course):
+    """
+    Verifica si el usuario puede publicar un curso
+    
+    Reglas:
+    - Admin: Siempre puede publicar
+    - Instructor: NO puede publicar directamente, debe solicitar revisión
+    
+    Args:
+        user: Usuario de Django
+        course: Instancia de Course
+        
+    Returns:
+        bool: True si el usuario puede publicar el curso
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin siempre puede publicar
+    if user_role == ROLE_ADMIN:
+        return True
+    
+    # Instructores NO pueden publicar directamente
+    # Deben solicitar revisión primero
+    return False
+
+
+def can_request_review(user, course):
+    """
+    Verifica si el usuario puede solicitar revisión de un curso
+    
+    Reglas:
+    - Admin: Puede solicitar revisión (aunque normalmente publica directamente)
+    - Instructor: Solo si puede editar el curso y el curso está en draft o needs_revision
+    
+    Args:
+        user: Usuario de Django
+        course: Instancia de Course
+        
+    Returns:
+        bool: True si el usuario puede solicitar revisión
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin puede solicitar revisión
+    if user_role == ROLE_ADMIN:
+        return course.can_request_review()
+    
+    # Instructor solo si puede editar y el curso puede solicitar revisión
+    if user_role == ROLE_INSTRUCTOR:
+        return can_edit_course(user, course) and course.can_request_review()
+    
+    return False
+
+
 def can_edit_course(user, course):
     """
     Policy: Verifica si el usuario puede editar un curso.
@@ -270,6 +330,51 @@ def can_view_enrollment(user, enrollment):
     # Estudiantes solo pueden ver sus propios enrollments
     if user_role == ROLE_STUDENT:
         return enrollment.user == user
+    
+    return False
+
+
+def can_update_lesson_progress(user, lesson, enrollment):
+    """
+    Policy: Verifica si el usuario puede actualizar el progreso de una lección.
+    
+    Reglas:
+    - Admin e instructores pueden actualizar cualquier progreso
+    - Estudiantes solo pueden actualizar su propio progreso
+    - Debe tener un enrollment activo en el curso
+    
+    Args:
+        user: Usuario de Django
+        lesson: Instancia de Lesson
+        enrollment: Instancia de Enrollment
+        
+    Returns:
+        bool: True si el usuario puede actualizar el progreso
+    """
+    if not user or not user.is_authenticated:
+        return False
+    
+    user_role = get_user_role(user)
+    
+    # Admin e instructores pueden actualizar cualquier progreso
+    if user_role in [ROLE_ADMIN, ROLE_INSTRUCTOR]:
+        return True
+    
+    # Estudiantes solo pueden actualizar su propio progreso
+    if user_role == ROLE_STUDENT:
+        # Verificar que el enrollment pertenece al usuario
+        if enrollment.user != user:
+            return False
+        
+        # Verificar que el enrollment está activo
+        if enrollment.status != 'active':
+            return False
+        
+        # Verificar que la lección pertenece al curso del enrollment
+        if lesson.module.course != enrollment.course:
+            return False
+        
+        return True
     
     return False
 

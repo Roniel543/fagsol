@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button, Input, Select, Card, LoadingSpinner } from '@/shared/components';
+import { Button, Input, LoadingSpinner, Select } from '@/shared/components';
+import { useToast } from '@/shared/components/Toast';
+import { useAuth } from '@/shared/hooks/useAuth';
+import { useRequestCourseReview } from '@/shared/hooks/useCourses';
 import { CreateCourseRequest, UpdateCourseRequest, getCourseById } from '@/shared/services/courses';
+import { useEffect, useState } from 'react';
 
 interface CourseFormProps {
     courseId?: string; // Si existe, es edición; si no, es creación
@@ -36,6 +39,12 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
     const [loading, setLoading] = useState(false);
     const [loadingCourse, setLoadingCourse] = useState(!!courseId);
     const [error, setError] = useState<string | null>(null);
+    const [currentStatus, setCurrentStatus] = useState<string>('draft');
+
+    // Hooks para solicitar revisión (FASE 2)
+    const { user } = useAuth();
+    const { requestReview, isRequesting } = useRequestCourseReview();
+    const { showToast } = useToast();
 
     // Cargar curso si es edición
     useEffect(() => {
@@ -50,13 +59,14 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
             const response = await getCourseById(courseId!);
             if (response.success && response.data) {
                 const course = response.data;
+                const courseStatus = (course.status as any) || 'draft';
                 setFormData({
                     title: course.title || '',
                     description: course.description || '',
                     short_description: course.short_description || '',
                     price: course.price || 0,
                     currency: course.currency || 'PEN',
-                    status: (course.status as any) || 'draft',
+                    status: courseStatus,
                     category: (course as any).category || 'General',
                     level: ((course as any).level || 'beginner') as 'beginner' | 'intermediate' | 'advanced',
                     thumbnail_url: course.thumbnail_url || '',
@@ -70,6 +80,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                     tags: Array.isArray((course as any).tags) ? (course as any).tags : [],
                     provider: (course as any).provider || 'fagsol',
                 });
+                setCurrentStatus(courseStatus);
             }
         } catch (err: any) {
             setError(err.message || 'Error al cargar el curso');
@@ -138,7 +149,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        
+
         // Convertir valores numéricos
         let processedValue: any = value;
         if (name === 'price' || name === 'discount_price') {
@@ -173,7 +184,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
 
     const validateForm = (): boolean => {
         const newErrors: Record<string, string> = {};
-        
+
         Object.keys(formData).forEach(key => {
             if (key === 'title' || key === 'description' || key === 'price') {
                 const error = validateField(key, (formData as any)[key]);
@@ -200,7 +211,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
 
         try {
             const { createCourse, updateCourse } = await import('@/shared/services/courses');
-            
+
             let response;
             if (courseId) {
                 // Actualizar curso
@@ -325,20 +336,24 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                     />
                 </div>
 
-                {/* Estado */}
-                <div>
-                    <Select
-                        label="Estado"
-                        name="status"
-                        value={formData.status || 'draft'}
-                        onChange={handleChange}
-                        options={[
-                            { value: 'draft', label: 'Borrador' },
-                            { value: 'published', label: 'Publicado' },
-                            { value: 'archived', label: 'Archivado' },
-                        ]}
-                    />
-                </div>
+                {/* Estado (solo para admin) */}
+                {user?.role === 'admin' && (
+                    <div>
+                        <Select
+                            label="Estado"
+                            name="status"
+                            value={formData.status || 'draft'}
+                            onChange={handleChange}
+                            options={[
+                                { value: 'draft', label: 'Borrador' },
+                                { value: 'pending_review', label: 'Pendiente de Revisión' },
+                                { value: 'needs_revision', label: 'Requiere Cambios' },
+                                { value: 'published', label: 'Publicado' },
+                                { value: 'archived', label: 'Archivado' },
+                            ]}
+                        />
+                    </div>
+                )}
 
                 {/* Categoría */}
                 <div>
@@ -424,24 +439,73 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
             </div>
 
             {/* Botones */}
-            <div className="flex justify-end space-x-4 pt-6 border-t">
-                {onCancel && (
+            <div className="flex justify-between items-center pt-6 border-t">
+                {/* Botón de solicitar revisión (solo para instructores con cursos en draft o needs_revision) */}
+                {courseId && user?.role === 'instructor' && (currentStatus === 'draft' || currentStatus === 'needs_revision') && (
                     <Button
                         type="button"
-                        variant="secondary"
-                        onClick={onCancel}
-                        disabled={loading}
+                        variant="primary"
+                        onClick={async () => {
+                            if (!confirm('¿Estás seguro de que deseas solicitar revisión de este curso? El administrador lo revisará antes de publicarlo.')) {
+                                return;
+                            }
+                            try {
+                                const result = await requestReview(courseId);
+                                if (result.success) {
+                                    showToast('Revisión solicitada exitosamente. El administrador revisará tu curso.', 'success');
+                                    // Recargar el curso para actualizar el estado
+                                    loadCourse();
+                                } else {
+                                    showToast(result.message || 'Error al solicitar revisión', 'error');
+                                }
+                            } catch (err: any) {
+                                showToast(err.message || 'Error al solicitar revisión', 'error');
+                            }
+                        }}
+                        disabled={isRequesting || loading}
                     >
-                        Cancelar
+                        {isRequesting ? 'Solicitando...' : 'Solicitar Revisión'}
                     </Button>
                 )}
-                <Button
-                    type="submit"
-                    loading={loading}
-                    disabled={loading}
-                >
-                    {courseId ? 'Actualizar Curso' : 'Crear Curso'}
-                </Button>
+
+                {/* Estado del curso (solo para instructores) */}
+                {courseId && user?.role === 'instructor' && (
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">Estado actual:</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${currentStatus === 'draft' ? 'bg-gray-100 text-gray-800' :
+                            currentStatus === 'pending_review' ? 'bg-yellow-100 text-yellow-800' :
+                                currentStatus === 'needs_revision' ? 'bg-orange-100 text-orange-800' :
+                                    currentStatus === 'published' ? 'bg-green-100 text-green-800' :
+                                        'bg-gray-100 text-gray-800'
+                            }`}>
+                            {currentStatus === 'draft' ? 'Borrador' :
+                                currentStatus === 'pending_review' ? 'Pendiente de Revisión' :
+                                    currentStatus === 'needs_revision' ? 'Requiere Cambios' :
+                                        currentStatus === 'published' ? 'Publicado' :
+                                            currentStatus}
+                        </span>
+                    </div>
+                )}
+
+                <div className="flex space-x-4">
+                    {onCancel && (
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={onCancel}
+                            disabled={loading}
+                        >
+                            Cancelar
+                        </Button>
+                    )}
+                    <Button
+                        type="submit"
+                        loading={loading}
+                        disabled={loading || isRequesting}
+                    >
+                        {courseId ? 'Actualizar Curso' : 'Crear Curso'}
+                    </Button>
+                </div>
             </div>
         </form>
     );

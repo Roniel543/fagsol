@@ -2,21 +2,26 @@
 
 import { Footer, SafeHTML, useToast } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
-import { notFound, useParams } from 'next/navigation';
+import { useAuth } from '@/shared/hooks/useAuth';
+import { useCourseBySlug, useCourses } from '@/shared/hooks/useCourses';
+import { useEnrollments } from '@/shared/hooks/useEnrollments';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { AcademyHeader } from '../components/AcademyHeader';
 import { CourseCard } from '../components/CourseCard';
-import { useCourseBySlug, useCourses } from '@/shared/hooks/useCourses';
 
 export default function CourseDetailPage() {
     const params = useParams<{ slug: string }>();
     const slug = params?.slug as string;
+    const router = useRouter();
     const { showToast } = useToast();
     const { addToCart, cartItems } = useCart();
+    const { user, isAuthenticated } = useAuth();
+    const { enrollments } = useEnrollments();
 
     // Obtener curso del backend usando SWR
     const { course: detail, isLoading, isError } = useCourseBySlug(slug);
-    
+
     // Obtener otros cursos para recomendaciones
     const { courses: allCourses } = useCourses({ status: 'published' });
 
@@ -25,6 +30,19 @@ export default function CourseDetailPage() {
         if (!detail) return false;
         return cartItems.some((item) => item.id === detail.id);
     }, [cartItems, detail]);
+
+    // Verificar si el usuario está inscrito
+    const isEnrolled = useMemo(() => {
+        if (!detail || !isAuthenticated || !enrollments.length) return false;
+        return enrollments.some(
+            (enrollment) => enrollment.course.id === detail.id && enrollment.status === 'active'
+        );
+    }, [detail, enrollments, isAuthenticated]);
+
+    // Verificar si es admin o instructor
+    const isAdminOrInstructor = useMemo(() => {
+        return user?.role === 'admin' || user?.role === 'instructor';
+    }, [user]);
 
     // Loading state
     if (isLoading) {
@@ -61,6 +79,10 @@ export default function CourseDetailPage() {
         showToast('¡Curso agregado al carrito!', 'cart');
     };
 
+    const handleAccessCourse = () => {
+        router.push(`/academy/course/${slug}/learn`);
+    };
+
     const priceBlock = (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 sticky top-6">
             <div className="flex items-end justify-between">
@@ -69,17 +91,30 @@ export default function CourseDetailPage() {
                     <div className="text-sm text-gray-400 line-through">S/ {detail.price}</div>
                 )}
             </div>
-            <button
-                onClick={handleAddToCart}
-                disabled={isInCart}
-                className={`mt-4 w-full rounded-lg font-semibold py-3 transition-all ${isInCart
-                    ? 'bg-zinc-700 text-gray-400 cursor-not-allowed'
-                    : 'bg-primary-orange text-primary-black hover:opacity-90 hover:scale-105'
-                    }`}
-            >
-                {isInCart ? '✓ Ya está en el carrito' : 'Agregar al carrito'}
-            </button>
-            <div className="mt-3 text-xs text-gray-400">Acceso de por vida • Certificado • Actualizaciones incluidas</div>
+
+            {/* Botón "Acceder al Curso" si está inscrito o es admin/instructor */}
+            {(isEnrolled || isAdminOrInstructor) ? (
+                <button
+                    onClick={handleAccessCourse}
+                    className="mt-4 w-full rounded-lg font-semibold py-3 bg-primary-orange text-primary-black hover:opacity-90 hover:scale-105 transition-all"
+                >
+                    Acceder al Curso
+                </button>
+            ) : (
+                <>
+                    <button
+                        onClick={handleAddToCart}
+                        disabled={isInCart}
+                        className={`mt-4 w-full rounded-lg font-semibold py-3 transition-all ${isInCart
+                            ? 'bg-zinc-700 text-gray-400 cursor-not-allowed'
+                            : 'bg-primary-orange text-primary-black hover:opacity-90 hover:scale-105'
+                            }`}
+                    >
+                        {isInCart ? '✓ Ya está en el carrito' : 'Agregar al carrito'}
+                    </button>
+                    <div className="mt-3 text-xs text-gray-400">Acceso de por vida • Certificado • Actualizaciones incluidas</div>
+                </>
+            )}
         </div>
     );
 

@@ -160,6 +160,174 @@ def create_payment_intent(request):
 
 @swagger_auto_schema(
     method='post',
+    operation_description='Tokeniza una tarjeta usando Mercado Pago. Solo estudiantes pueden tokenizar tarjetas. IMPORTANTE: Este endpoint debe usarse desde el backend, nunca desde el frontend directamente.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['card_number', 'cardholder_name', 'expiration_month', 'expiration_year', 'security_code'],
+        properties={
+            'card_number': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Número de tarjeta (sin espacios)',
+                example='5031755734530604'
+            ),
+            'cardholder_name': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Nombre del titular de la tarjeta',
+                example='JUAN PEREZ'
+            ),
+            'expiration_month': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Mes de expiración (MM)',
+                example='12'
+            ),
+            'expiration_year': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Año de expiración (YY)',
+                example='25'
+            ),
+            'security_code': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='CVV de la tarjeta',
+                example='123'
+            ),
+            'identification_type': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Tipo de identificación (DNI, etc.)',
+                example='DNI'
+            ),
+            'identification_number': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Número de identificación',
+                example='12345678'
+            ),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description='Tarjeta tokenizada exitosamente',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': {
+                        'token': 'token_mercadopago_123'
+                    }
+                }
+            }
+        ),
+        400: openapi.Response(description='Datos inválidos o error en la tokenización'),
+        403: openapi.Response(description='Solo estudiantes pueden tokenizar tarjetas'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Pagos']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def tokenize_card(request):
+    """
+    Tokeniza una tarjeta usando Mercado Pago
+    POST /api/v1/payments/tokenize/
+    
+    Body:
+    {
+        "card_number": "5031755734530604",
+        "cardholder_name": "JUAN PEREZ",
+        "expiration_month": "12",
+        "expiration_year": "25",
+        "security_code": "123",
+        "identification_type": "DNI",
+        "identification_number": "12345678"
+    }
+    
+    Permisos:
+    - Solo estudiantes pueden tokenizar tarjetas
+    
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "token": "token_mercadopago_123"
+        }
+    }
+    """
+    try:
+        # Verificar que el usuario sea estudiante
+        if not can_process_payment(request.user):
+            return Response({
+                'success': False,
+                'message': 'Solo los estudiantes pueden tokenizar tarjetas'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # 1. Validar datos de entrada
+        card_number = request.data.get('card_number', '').strip()
+        cardholder_name = request.data.get('cardholder_name', '').strip()
+        expiration_month = request.data.get('expiration_month', '').strip()
+        expiration_year = request.data.get('expiration_year', '').strip()
+        security_code = request.data.get('security_code', '').strip()
+        identification_type = request.data.get('identification_type', 'DNI').strip()
+        identification_number = request.data.get('identification_number', '12345678').strip()
+        
+        # Validaciones básicas
+        if not card_number:
+            return Response({
+                'success': False,
+                'message': 'card_number es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not cardholder_name:
+            return Response({
+                'success': False,
+                'message': 'cardholder_name es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not expiration_month or not expiration_year:
+            return Response({
+                'success': False,
+                'message': 'expiration_month y expiration_year son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not security_code:
+            return Response({
+                'success': False,
+                'message': 'security_code es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 2. Tokenizar tarjeta usando el servicio
+        payment_service = PaymentService()
+        success, token, error_message = payment_service.tokenize_card(
+            card_number=card_number,
+            cardholder_name=cardholder_name,
+            expiration_month=expiration_month,
+            expiration_year=expiration_year,
+            security_code=security_code,
+            identification_type=identification_type,
+            identification_number=identification_number
+        )
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 3. Retornar token (NO retornar datos de tarjeta)
+        return Response({
+            'success': True,
+            'data': {
+                'token': token
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en tokenize_card: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
     operation_description='Procesa un pago con Mercado Pago usando tokenización. Solo estudiantes pueden procesar pagos.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
