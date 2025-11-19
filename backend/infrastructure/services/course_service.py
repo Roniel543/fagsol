@@ -166,8 +166,15 @@ class CourseService:
         """
         try:
             # 1. Obtener curso
+            # Los administradores pueden actualizar cualquier curso (incluso archivados)
+            # Los instructores solo pueden actualizar cursos activos
             try:
-                course = Course.objects.get(id=course_id, is_active=True)
+                if is_admin(user):
+                    # Admin puede actualizar cualquier curso
+                    course = Course.objects.get(id=course_id)
+                else:
+                    # Instructor solo puede actualizar cursos activos
+                    course = Course.objects.get(id=course_id, is_active=True)
             except Course.DoesNotExist:
                 return False, None, "Curso no encontrado"
             
@@ -220,6 +227,11 @@ class CourseService:
                 # Instructores no pueden cambiar a published directamente
                 if status == 'published' and not is_admin(user):
                     return False, None, "Los instructores no pueden publicar cursos directamente. Deben solicitar revisión."
+                
+                # Si el curso estaba archivado y se cambia a otro estado, reactivarlo automáticamente
+                if course.status == 'archived' and status != 'archived':
+                    course.is_active = True
+                
                 course.status = status
             
             if 'thumbnail_url' in kwargs:
