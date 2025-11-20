@@ -281,9 +281,14 @@ class CourseApprovalService:
         """
         try:
             # Query base
-            queryset = Course.objects.filter(
-                is_active=True
-            ).select_related('created_by', 'reviewed_by')
+            # Si el filtro es 'archived', no filtrar por is_active (los archivados pueden estar inactivos)
+            # Para otros estados, solo mostrar cursos activos
+            if status_filter == 'archived':
+                queryset = Course.objects.all().select_related('created_by', 'reviewed_by')
+            else:
+                queryset = Course.objects.filter(
+                    is_active=True
+                ).select_related('created_by', 'reviewed_by')
             
             # Aplicar filtro si existe
             if status_filter:
@@ -302,6 +307,7 @@ class CourseApprovalService:
                     'price': float(course.price),
                     'currency': course.currency,
                     'status': course.status,
+                    'is_active': course.is_active,
                     'category': course.category,
                     'level': course.level,
                     'created_at': course.created_at.isoformat(),
