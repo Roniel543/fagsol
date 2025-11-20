@@ -15,8 +15,10 @@ from apps.users.permissions import (
     IsStudent,
     can_process_payment, get_user_role, ROLE_ADMIN, ROLE_INSTRUCTOR
 )
+from presentation.serializers.payment_serializers import PaymentHistorySerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from rest_framework.pagination import PageNumberPagination
 
 logger = logging.getLogger('apps')
 
@@ -160,7 +162,7 @@ def create_payment_intent(request):
 
 @swagger_auto_schema(
     method='post',
-    operation_description='Tokeniza una tarjeta usando Mercado Pago. Solo estudiantes pueden tokenizar tarjetas. IMPORTANTE: Este endpoint debe usarse desde el backend, nunca desde el frontend directamente.',
+    operation_description='[DEPRECATED] Tokeniza una tarjeta usando Mercado Pago. Este endpoint está DEPRECADO. Usar CardPayment Brick en el frontend en su lugar. Solo estudiantes pueden tokenizar tarjetas.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         required=['card_number', 'cardholder_name', 'expiration_month', 'expiration_year', 'security_code'],
@@ -225,7 +227,12 @@ def create_payment_intent(request):
 @permission_classes([IsAuthenticated])
 def tokenize_card(request):
     """
-    Tokeniza una tarjeta usando Mercado Pago
+    [DEPRECATED] Tokeniza una tarjeta usando Mercado Pago
+    
+    ⚠️ DEPRECADO: Este endpoint está deprecado. 
+    El frontend ahora usa Mercado Pago CardPayment Brick para tokenización client-side.
+    Este endpoint se mantiene solo para compatibilidad con sistemas legacy.
+    
     POST /api/v1/payments/tokenize/
     
     Body:
@@ -294,7 +301,7 @@ def tokenize_card(request):
         
         # 2. Tokenizar tarjeta usando el servicio
         payment_service = PaymentService()
-        success, token, error_message = payment_service.tokenize_card(
+        success, token, payment_method_id, error_message = payment_service.tokenize_card(
             card_number=card_number,
             cardholder_name=cardholder_name,
             expiration_month=expiration_month,
@@ -310,11 +317,12 @@ def tokenize_card(request):
                 'message': error_message
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 3. Retornar token (NO retornar datos de tarjeta)
+        # 3. Retornar token y payment_method_id (necesario para procesar el pago)
         return Response({
             'success': True,
             'data': {
-                'token': token
+                'token': token,
+                'payment_method_id': payment_method_id  # Ej: "visa", "master", etc.
             }
         }, status=status.HTTP_200_OK)
         
@@ -328,34 +336,39 @@ def tokenize_card(request):
 
 @swagger_auto_schema(
     method='post',
-    operation_description='Procesa un pago con Mercado Pago usando tokenización. Solo estudiantes pueden procesar pagos.',
+    operation_description='Procesa un pago con Mercado Pago usando CardPayment Brick. Solo estudiantes pueden procesar pagos. IMPORTANTE: Solo acepta token, payment_method_id, installments, amount. NO acepta datos de tarjeta.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        required=['payment_intent_id', 'payment_token', 'expiration_month', 'expiration_year'],
+        required=['token', 'payment_method_id', 'installments', 'amount', 'payment_intent_id'],
         properties={
+            'token': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Token de Mercado Pago obtenido de CardPayment Brick',
+                example='token_mercadopago_123'
+            ),
+            'payment_method_id': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Payment method ID (ej: visa, master, amex)',
+                example='visa'
+            ),
+            'installments': openapi.Schema(
+                type=openapi.TYPE_INTEGER,
+                description='Número de cuotas',
+                example=1
+            ),
+            'amount': openapi.Schema(
+                type=openapi.TYPE_NUMBER,
+                description='Monto del pago (será validado contra payment_intent.total desde DB)',
+                example=150.0
+            ),
             'payment_intent_id': openapi.Schema(
                 type=openapi.TYPE_STRING,
                 description='ID del payment intent a procesar',
                 example='pi_abc123'
             ),
-            'payment_token': openapi.Schema(
-                type=openapi.TYPE_STRING,
-                description='Token de Mercado Pago (tokenizado, NO datos de tarjeta)',
-                example='token_mercadopago_123'
-            ),
-            'expiration_month': openapi.Schema(
-                type=openapi.TYPE_STRING,
-                description='Mes de expiración de la tarjeta (MM)',
-                example='12'
-            ),
-            'expiration_year': openapi.Schema(
-                type=openapi.TYPE_STRING,
-                description='Año de expiración de la tarjeta (YY o YYYY)',
-                example='25'
-            ),
             'idempotency_key': openapi.Schema(
                 type=openapi.TYPE_STRING,
-                description='Clave de idempotencia para evitar cobros duplicados (opcional)',
+                description='Clave de idempotencia para evitar cobros duplicados (opcional, se genera si no se proporciona)',
                 example='idemp_key_123'
             ),
         }
@@ -387,21 +400,26 @@ def tokenize_card(request):
 @permission_classes([IsAuthenticated])
 def process_payment(request):
     """
-    Procesa un pago con Mercado Pago
+    Procesa un pago con Mercado Pago usando CardPayment Brick
     POST /api/v1/payments/process/
     
     Body:
     {
+        "token": "token_de_mercadopago",
+        "payment_method_id": "visa",
+        "installments": 1,
+        "amount": 150.0,
         "payment_intent_id": "pi_...",
-        "payment_token": "token_de_mercadopago",
-        "expiration_month": "12",
-        "expiration_year": "25",
         "idempotency_key": "optional_key"  # Opcional
     }
+    
+    IMPORTANTE: Solo acepta token, payment_method_id, installments, amount.
+    NO acepta datos de tarjeta (card_number, expiration_month, expiration_year, security_code).
     
     Permisos:
     - Solo estudiantes pueden procesar pagos
     - El payment intent debe pertenecer al usuario
+    - El amount será validado contra payment_intent.total desde DB
     
     Returns:
     {
@@ -409,7 +427,9 @@ def process_payment(request):
         "data": {
             "payment_id": "pay_...",
             "status": "approved",
-            "enrollment_ids": ["enr_1", "enr_2"]
+            "enrollment_ids": ["enr_1", "enr_2"],
+            "amount": 150.0,
+            "currency": "PEN"
         }
     }
     """
@@ -420,37 +440,34 @@ def process_payment(request):
                 'success': False,
                 'message': 'Solo los estudiantes pueden procesar pagos'
             }, status=status.HTTP_403_FORBIDDEN)
-        # 1. Validar datos de entrada
-        payment_intent_id = request.data.get('payment_intent_id')
-        payment_token = request.data.get('payment_token')
-        expiration_month = request.data.get('expiration_month')
-        expiration_year = request.data.get('expiration_year')
         
-        if not payment_intent_id or not payment_token:
+        # 1. Validar datos con serializer
+        from presentation.serializers.payment_serializers import ProcessPaymentSerializer
+        serializer = ProcessPaymentSerializer(data=request.data)
+        
+        if not serializer.is_valid():
             return Response({
                 'success': False,
-                'message': 'payment_intent_id y payment_token son requeridos'
+                'message': 'Datos inválidos',
+                'errors': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        if not expiration_month or not expiration_year:
-            return Response({
-                'success': False,
-                'message': 'expiration_month y expiration_year son requeridos'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        validated_data = serializer.validated_data
         
-        # 2. Generar idempotency key si no se proporciona
-        idempotency_key = request.data.get('idempotency_key')
+        # 2. Obtener idempotency key del header o del body
+        idempotency_key = request.META.get('HTTP_X_IDEMPOTENCY_KEY') or validated_data.get('idempotency_key')
         if not idempotency_key:
-            idempotency_key = f"{payment_intent_id}_{uuid.uuid4().hex[:16]}"
+            idempotency_key = f"{validated_data['payment_intent_id']}_{uuid.uuid4().hex[:16]}"
         
         # 3. Procesar pago
         payment_service = PaymentService()
         success, payment, error_message = payment_service.process_payment(
             user=request.user,
-            payment_intent_id=payment_intent_id,
-            payment_token=payment_token,
-            expiration_month=expiration_month,
-            expiration_year=expiration_year,
+            payment_intent_id=validated_data['payment_intent_id'],
+            payment_token=validated_data['token'],
+            payment_method_id=validated_data['payment_method_id'],
+            installments=validated_data['installments'],
+            amount=validated_data['amount'],
             idempotency_key=idempotency_key
         )
         
@@ -578,5 +595,154 @@ def payment_webhook(request):
         return Response({
             'success': False,
             'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class PaymentHistoryPagination(PageNumberPagination):
+    """Paginación para historial de pagos"""
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene el historial de pagos del usuario autenticado. Solo el usuario puede ver sus propios pagos, excepto los administradores que pueden ver todos.',
+    manual_parameters=[
+        openapi.Parameter('page', openapi.IN_QUERY, description="Número de página", type=openapi.TYPE_INTEGER),
+        openapi.Parameter('page_size', openapi.IN_QUERY, description="Tamaño de página (máx 100)", type=openapi.TYPE_INTEGER),
+        openapi.Parameter('status', openapi.IN_QUERY, description="Filtrar por estado (approved, rejected, pending, refunded, cancelled)", type=openapi.TYPE_STRING),
+    ],
+    responses={
+        200: openapi.Response(
+            description='Historial de pagos obtenido exitosamente',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': {
+                        'count': 10,
+                        'next': 'http://example.com/api/v1/payments/history/?page=2',
+                        'previous': None,
+                        'results': [
+                            {
+                                'id': 'pay_abc123',
+                                'payment_intent_id': 'pi_abc123',
+                                'amount': 150.00,
+                                'currency': 'PEN',
+                                'status': 'approved',
+                                'installments': 1,
+                                'course_names': ['Curso 1', 'Curso 2'],
+                                'course_ids': ['c-001', 'c-002'],
+                                'created_at': '2024-01-01T12:00:00Z'
+                            }
+                        ]
+                    }
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='Sin permisos'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Pagos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_history(request):
+    """
+    Obtiene el historial de pagos del usuario autenticado
+    GET /api/v1/payments/history/
+    
+    Query Parameters:
+    - page: Número de página (default: 1)
+    - page_size: Tamaño de página (default: 10, max: 100)
+    - status: Filtrar por estado (opcional)
+    
+    Permisos:
+    - Usuarios pueden ver solo sus propios pagos
+    - Administradores pueden ver todos los pagos (si se implementa)
+    
+    Returns:
+    {
+        "success": true,
+        "data": {
+            "count": 10,
+            "next": "...",
+            "previous": null,
+            "results": [...]
+        }
+    }
+    """
+    try:
+        user = request.user
+        user_role = get_user_role(user)
+        
+        # Obtener parámetros de paginación y filtros
+        status_filter = request.query_params.get('status', None)
+        
+        # Construir query
+        if user_role == ROLE_ADMIN:
+            # Admin puede ver todos los pagos (opcional, según requerimientos)
+            payments_query = Payment.objects.all()
+        else:
+            # Usuarios solo ven sus propios pagos (IDOR protection)
+            payments_query = Payment.objects.filter(user=user)
+        
+        # Aplicar filtro de estado si se proporciona
+        if status_filter:
+            payments_query = payments_query.filter(status=status_filter)
+        
+        # Ordenar por fecha de creación (más recientes primero)
+        payments_query = payments_query.order_by('-created_at')
+        
+        # Paginación manual (siguiendo el patrón del proyecto)
+        page = int(request.query_params.get('page', 1))
+        page_size = min(int(request.query_params.get('page_size', 10)), 100)
+        
+        total_count = payments_query.count()
+        start = (page - 1) * page_size
+        end = start + page_size
+        
+        paginated_payments = payments_query[start:end]
+        
+        # Serializar
+        serializer = PaymentHistorySerializer(paginated_payments, many=True)
+        
+        # Construir URLs de paginación
+        base_url = request.build_absolute_uri().split('?')[0]
+        next_url = None
+        previous_url = None
+        
+        if end < total_count:
+            next_url = f"{base_url}?page={page + 1}&page_size={page_size}"
+            if status_filter:
+                next_url += f"&status={status_filter}"
+        
+        if page > 1:
+            previous_url = f"{base_url}?page={page - 1}&page_size={page_size}"
+            if status_filter:
+                previous_url += f"&status={status_filter}"
+        
+        # Retornar respuesta
+        return Response({
+            'success': True,
+            'data': {
+                'count': total_count,
+                'next': next_url,
+                'previous': previous_url,
+                'page': page,
+                'page_size': page_size,
+                'results': serializer.data
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en payment_history: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return Response({
+            'success': False,
+            'message': 'Error al obtener el historial de pagos'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

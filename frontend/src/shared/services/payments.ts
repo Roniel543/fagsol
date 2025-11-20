@@ -3,6 +3,8 @@
  * 
  * IMPORTANTE: Este servicio NO calcula precios en el frontend.
  * El backend valida y calcula todos los precios desde la base de datos.
+ * 
+ * Usa Mercado Pago Bricks (CardPayment Brick) para tokenización client-side.
  */
 
 import { apiRequest } from './api';
@@ -35,11 +37,12 @@ export interface CreatePaymentIntentResponse {
 }
 
 export interface ProcessPaymentRequest {
-    payment_intent_id: string;
-    payment_token: string; // Token de Mercado Pago (tokenización client-side)
-    expiration_month: string; // Mes de expiración (MM) - requerido por Mercado Pago
-    expiration_year: string; // Año de expiración (YY o YYYY) - requerido por Mercado Pago
-    //  NO incluir: card_number, cvv, amount, price - solo token y datos de expiración
+    token: string; // Token de Mercado Pago (obtenido de CardPayment Brick)
+    payment_method_id: string; // Payment method ID (ej: "visa", "master")
+    installments: number; // Número de cuotas
+    amount: number; // Monto (validado por backend)
+    payment_intent_id: string; // ID del payment intent
+    idempotency_key?: string; // Clave de idempotencia (opcional, se genera si no se proporciona)
 }
 
 export interface ProcessPaymentResponse {
@@ -48,6 +51,8 @@ export interface ProcessPaymentResponse {
         payment_id: string;
         status: 'approved' | 'rejected' | 'pending';
         enrollment_ids?: string[];
+        amount?: number;
+        currency?: string;
     };
     message?: string;
     errors?: Record<string, string[]>;
@@ -99,22 +104,28 @@ export async function createPaymentIntent(
 }
 
 /**
- * Procesa el pago con Mercado Pago
+ * Procesa el pago con Mercado Pago usando token de CardPayment Brick
  * 
- * IMPORTANTE: Solo envía el token de Mercado Pago (tokenización client-side).
+ * IMPORTANTE: Solo envía el token de Mercado Pago (tokenización client-side con Bricks).
  * NUNCA envía datos de tarjeta directamente.
  * 
  * @param paymentIntentId - ID del payment intent creado
- * @param paymentToken - Token de Mercado Pago (obtenido client-side)
+ * @param token - Token de Mercado Pago (obtenido de CardPayment Brick)
+ * @param paymentMethodId - Payment method ID (ej: "visa", "master")
+ * @param installments - Número de cuotas
+ * @param amount - Monto (será validado por backend contra DB)
+ * @param idempotencyKey - Clave de idempotencia (opcional)
  * @returns Resultado del pago
  */
 export async function processPayment(
     paymentIntentId: string,
-    paymentToken: string,
-    expirationMonth: string,
-    expirationYear: string
+    token: string,
+    paymentMethodId: string,
+    installments: number,
+    amount: number,
+    idempotencyKey?: string
 ): Promise<ProcessPaymentResponse> {
-    if (!paymentIntentId || !paymentToken || !expirationMonth || !expirationYear) {
+    if (!paymentIntentId || !token || !paymentMethodId || !installments || !amount) {
         return {
             success: false,
             message: 'Datos de pago incompletos'
@@ -122,15 +133,23 @@ export async function processPayment(
     }
 
     try {
+        // Generar idempotency key si no se proporciona
+        const finalIdempotencyKey = idempotencyKey || `${paymentIntentId}_${Date.now()}`;
+
         const response = await apiRequest<ProcessPaymentResponse['data']>(
             '/payments/process/',
             {
                 method: 'POST',
+                headers: {
+                    'X-Idempotency-Key': finalIdempotencyKey,
+                },
                 body: JSON.stringify({
+                    token,
+                    payment_method_id: paymentMethodId,
+                    installments,
+                    amount,
                     payment_intent_id: paymentIntentId,
-                    payment_token: paymentToken,
-                    expiration_month: expirationMonth,
-                    expiration_year: expirationYear
+                    idempotency_key: finalIdempotencyKey,
                 } as ProcessPaymentRequest),
             }
         );
@@ -181,3 +200,75 @@ export async function getPaymentIntent(
     }
 }
 
+// Tipos para historial de pagos
+export interface PaymentHistoryItem {
+    id: string;
+    payment_intent_id: string;
+    amount: number | string; // DRF DecimalField se serializa como string
+    currency: string;
+    status: 'approved' | 'rejected' | 'pending' | 'refunded' | 'cancelled';
+    installments: number;
+    mercado_pago_payment_id: string | null;
+    created_at: string;
+    course_names: string[];
+    course_ids: string[];
+}
+
+export interface PaymentHistoryResponse {
+    success: boolean;
+    data?: {
+        count: number;
+        next: string | null;
+        previous: string | null;
+        page: number;
+        page_size: number;
+        results: PaymentHistoryItem[];
+    };
+    message?: string;
+    errors?: Record<string, string[]>;
+}
+
+/**
+ * Obtiene el historial de pagos del usuario autenticado
+ * 
+ * @param page - Número de página (default: 1)
+ * @param pageSize - Tamaño de página (default: 10, max: 100)
+ * @param status - Filtrar por estado (opcional)
+ * @returns Historial de pagos paginado
+ */
+export async function getPaymentHistory(
+    page: number = 1,
+    pageSize: number = 10,
+    status?: string
+): Promise<PaymentHistoryResponse> {
+    try {
+        const params = new URLSearchParams({
+            page: page.toString(),
+            page_size: Math.min(pageSize, 100).toString(),
+        });
+        
+        if (status) {
+            params.append('status', status);
+        }
+        
+        const response = await apiRequest<PaymentHistoryResponse['data']>(
+            `/payments/history/?${params.toString()}`,
+            {
+                method: 'GET',
+            }
+        );
+        
+        return {
+            success: response.success || false,
+            data: response.data,
+            message: response.message,
+            errors: response.errors,
+        };
+    } catch (error) {
+        console.error('Error getting payment history:', error);
+        return {
+            success: false,
+            message: 'Error al obtener el historial de pagos. Por favor, intenta nuevamente.'
+        };
+    }
+}

@@ -3,13 +3,35 @@
 import { Footer, Input, ProtectedRoute, useToast } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
 import { createPaymentIntent, PaymentIntent, processPayment } from '@/shared/services/payments';
+import { mapErrorToUserMessage, formatErrorForLogging } from '@/shared/utils/errorMapper';
 import { AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AcademyHeader } from '../../academy/components/AcademyHeader';
-import { MercadoPagoCardForm } from '../components/payments/MercadoPagoCardForm';
+
+// Generar UUID simple para idempotency
+function generateIdempotencyKey(): string {
+	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+		return crypto.randomUUID();
+	}
+	// Fallback para navegadores que no soportan crypto.randomUUID
+	return `${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+}
+
+// Tipos para Mercado Pago Bricks
+interface MercadoPagoBricks {
+    bricks: {
+        create: (brickType: string, containerId: string, settings: any) => any;
+    };
+}
+
+declare global {
+    interface Window {
+        MercadoPago: any;
+    }
+}
 
 function CheckoutPageContent() {
 	const { cartItems, cartItemsWithDetails, itemCount, clearCart } = useCart();
@@ -20,10 +42,13 @@ function CheckoutPageContent() {
 	const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null);
 	const [loadingIntent, setLoadingIntent] = useState(false);
 	const [processingPayment, setProcessingPayment] = useState(false);
-	const [paymentToken, setPaymentToken] = useState<string | null>(null);
-	const [expirationMonth, setExpirationMonth] = useState<string | null>(null);
-	const [expirationYear, setExpirationYear] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
+	const [brickInstance, setBrickInstance] = useState<any>(null);
+	const [isBrickReady, setIsBrickReady] = useState(false);
+
+	// Referencias
+	const brickContainerRef = useRef<HTMLDivElement>(null);
+	const scriptLoadedRef = useRef(false);
 
 	// Datos de contacto
 	const [form, setForm] = useState({
@@ -38,6 +63,151 @@ function CheckoutPageContent() {
 	// Obtener public key de Mercado Pago desde variables de entorno
 	const mercadoPagoPublicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || '';
 
+	// Cargar script de Mercado Pago Bricks
+	useEffect(() => {
+		if (scriptLoadedRef.current || !mercadoPagoPublicKey) {
+			return;
+		}
+
+		// Verificar si el script ya existe
+		const existingScript = document.querySelector('script[src*="mercadopago"]');
+		if (existingScript) {
+			scriptLoadedRef.current = true;
+			if (typeof window !== 'undefined' && window.MercadoPago) {
+				setIsBrickReady(true);
+			}
+			return;
+		}
+
+		// Cargar script de Mercado Pago Bricks
+		const script = document.createElement('script');
+		script.src = 'https://sdk.mercadopago.com/js/v2';
+		script.async = true;
+		script.crossOrigin = 'anonymous';
+		script.onload = () => {
+			scriptLoadedRef.current = true;
+			setTimeout(() => {
+				if (typeof window !== 'undefined' && window.MercadoPago) {
+					setIsBrickReady(true);
+				} else {
+					setError('Error al cargar el SDK de Mercado Pago');
+				}
+			}, 200);
+		};
+		script.onerror = () => {
+			setError('Error al cargar el SDK de Mercado Pago. Verifica tu conexión a internet.');
+		};
+		document.head.appendChild(script);
+	}, [mercadoPagoPublicKey]);
+
+	// Inicializar CardPayment Brick cuando esté listo
+	useEffect(() => {
+		if (!isBrickReady || !paymentIntent || !brickContainerRef.current || !mercadoPagoPublicKey) {
+			return;
+		}
+
+		try {
+			const mp = new window.MercadoPago(mercadoPagoPublicKey, {
+				locale: 'es-PE'
+			});
+
+			// Limpiar contenedor antes de crear el brick
+			if (brickContainerRef.current) {
+				brickContainerRef.current.innerHTML = '';
+			}
+
+			const cardPaymentBrickController = mp.bricks().create('cardPayment', 'paymentBrick_container', {
+				initialization: {
+					amount: paymentIntent.total,
+					payer: {
+						email: form.email || undefined,
+					},
+				},
+				callbacks: {
+					onReady: () => {
+						console.log('CardPayment Brick ready');
+						setBrickInstance(cardPaymentBrickController);
+					},
+					onError: (error: any) => {
+						console.error('CardPayment Brick error:', formatErrorForLogging(error, 'CardPayment'));
+						const errorMapping = mapErrorToUserMessage(error, 'payment');
+						setError(errorMapping.userMessage);
+						showToast(errorMapping.userMessage, 'error');
+					},
+					onSubmit: async (formData: any) => {
+						// Prevenir múltiples submits
+						if (processingPayment) {
+							return;
+						}
+
+						setProcessingPayment(true);
+						setError(null);
+
+						try {
+							// Obtener datos del formulario
+							const { token, payment_method_id, installments } = formData;
+
+							if (!token) {
+								throw new Error('No se pudo obtener el token de la tarjeta');
+							}
+
+							// Generar idempotency key
+							const idempotencyKey = generateIdempotencyKey();
+
+							// Procesar pago con el backend
+							const response = await processPayment(
+								paymentIntent.id,
+								token,
+								payment_method_id || 'visa',
+								installments || 1,
+								paymentIntent.total,
+								idempotencyKey
+							);
+
+							if (response.success && response.data) {
+								showToast('¡Pago procesado exitosamente!', 'success');
+								clearCart();
+								router.push('/academy/checkout/success');
+							} else {
+								const errorMapping = mapErrorToUserMessage(response, 'payment');
+								console.error('Payment processing error:', formatErrorForLogging(response, 'Payment'));
+								setError(errorMapping.userMessage);
+								showToast(errorMapping.userMessage, 'error');
+							}
+						} catch (err: any) {
+							console.error('Error processing payment:', formatErrorForLogging(err, 'Payment'));
+							const errorMapping = mapErrorToUserMessage(err, 'payment');
+							setError(errorMapping.userMessage);
+							showToast(errorMapping.userMessage, 'error');
+						} finally {
+							setProcessingPayment(false);
+						}
+					},
+				},
+				customization: {
+					visual: {
+						style: {
+							theme: 'dark',
+							customVariables: {
+								baseColor: '#FF6B35', // primary-orange
+							},
+						},
+					},
+				},
+			});
+
+			return () => {
+				// Cleanup: el brick se destruye automáticamente cuando se desmonta el componente
+			};
+				} catch (err: any) {
+					console.error('Error initializing CardPayment Brick:', formatErrorForLogging(err, 'BrickInit'));
+					const errorMapping = mapErrorToUserMessage(err, 'payment');
+					setError(errorMapping.userMessage);
+					showToast(errorMapping.userMessage, 'error');
+				}
+	}, [isBrickReady, paymentIntent, mercadoPagoPublicKey, form.email, processingPayment, clearCart, router, showToast]);
+
+	
 	// Crear payment intent al cargar (si hay items en el carrito)
 	useEffect(() => {
 		if (itemCount === 0) {
@@ -57,13 +227,16 @@ function CheckoutPageContent() {
 				if (response.success && response.data) {
 					setPaymentIntent(response.data);
 				} else {
-					setError(response.message || 'Error al crear la intención de pago');
-					showToast(response.message || 'Error al crear la intención de pago', 'error');
+					const errorMapping = mapErrorToUserMessage(response, 'payment');
+					console.error('Payment intent creation error:', formatErrorForLogging(response, 'PaymentIntent'));
+					setError(errorMapping.userMessage);
+					showToast(errorMapping.userMessage, 'error');
 				}
 			} catch (err) {
-				const errorMessage = 'Error de conexión con el servidor';
-				setError(errorMessage);
-				showToast(errorMessage, 'error');
+				console.error('Payment intent error:', formatErrorForLogging(err, 'PaymentIntent'));
+				const errorMapping = mapErrorToUserMessage(err, 'payment');
+				setError(errorMapping.userMessage);
+				showToast(errorMapping.userMessage, 'error');
 			} finally {
 				setLoadingIntent(false);
 			}
@@ -72,50 +245,20 @@ function CheckoutPageContent() {
 		createIntent();
 	}, [cartItems, itemCount, router, showToast]);
 
-	// Procesar pago cuando se obtiene el token
-	useEffect(() => {
-		if (!paymentToken || !paymentIntent || !expirationMonth || !expirationYear) return;
-
-		const process = async () => {
-			setProcessingPayment(true);
-			setError(null);
-
-			try {
-				const response = await processPayment(paymentIntent.id, paymentToken, expirationMonth, expirationYear);
-
-				if (response.success) {
-					showToast('¡Pago procesado exitosamente!', 'success');
-					clearCart();
-					router.push('/academy/checkout/success');
-				} else {
-					setError(response.message || 'Error al procesar el pago');
-					showToast(response.message || 'Error al procesar el pago', 'error');
-					setPaymentToken(null); // Reset para reintentar
-				}
-			} catch (err) {
-				const errorMessage = 'Error de conexión con el servidor';
-				setError(errorMessage);
-				showToast(errorMessage, 'error');
-				setPaymentToken(null);
-			} finally {
-				setProcessingPayment(false);
-			}
-		};
-
-		process();
-	}, [paymentToken, paymentIntent, expirationMonth, expirationYear, clearCart, router, showToast]);
-
-	// Handler cuando Mercado Pago tokeniza la tarjeta
-	const handleTokenReady = (token: string, expMonth: string, expYear: string) => {
-		setPaymentToken(token);
-		setExpirationMonth(expMonth);
-		setExpirationYear(expYear);
-	};
-
-	const handlePaymentError = (errorMessage: string) => {
-		setError(errorMessage);
-		showToast(errorMessage, 'error');
-	};
+	if (!mercadoPagoPublicKey) {
+		return (
+			<>
+				<AcademyHeader />
+				<main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
+					<div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+						<div className="rounded-xl border border-red-500/50 bg-red-500/10 p-6 text-red-400">
+							⚠️ Clave pública de Mercado Pago no configurada. Configura NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+						</div>
+					</div>
+				</main>
+			</>
+		);
+	}
 
 	return (
 		<>
@@ -186,20 +329,38 @@ function CheckoutPageContent() {
 										</div>
 									</div>
 								) : paymentIntent ? (
-									<MercadoPagoCardForm
-										publicKey={mercadoPagoPublicKey}
-										amount={paymentIntent.total}
-										onTokenReady={handleTokenReady}
-										onError={handlePaymentError}
-										disabled={!isValid || processingPayment}
-									/>
+									<div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
+										<h2 className="font-semibold mb-4">Pagar con Mercado Pago</h2>
+										{!isValid && (
+											<div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
+												Completa los datos de contacto primero
+											</div>
+										)}
+										{isValid && (
+											<div id="paymentBrick_container" ref={brickContainerRef} className="min-h-[400px]">
+												{!isBrickReady && (
+													<div className="flex items-center justify-center py-8">
+														<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-orange"></div>
+														<span className="ml-3 text-gray-300">Cargando formulario de pago...</span>
+													</div>
+												)}
+											</div>
+										)}
+										{processingPayment && (
+											<div className="mt-4 p-3 bg-primary-orange/10 border border-primary-orange/30 rounded-lg">
+												<div className="flex items-center gap-2 text-primary-orange text-sm">
+													<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-orange"></div>
+													<span>Procesando pago...</span>
+												</div>
+											</div>
+										)}
+									</div>
 								) : (
 									<div className="rounded-xl border border-red-500/50 bg-red-500/10 p-6 text-red-400">
 										No se pudo crear la intención de pago. Por favor, intenta nuevamente.
 									</div>
 								)}
 							</div>
-
 						</div>
 
 						{/* Columna derecha: resumen */}
@@ -248,15 +409,6 @@ function CheckoutPageContent() {
 												<span className="text-primary-orange">S/ {paymentIntent.total.toFixed(2)}</span>
 											</div>
 										</div>
-
-										{processingPayment && (
-											<div className="mt-4 p-3 bg-primary-orange/10 border border-primary-orange/30 rounded-lg">
-												<div className="flex items-center gap-2 text-primary-orange text-sm">
-													<div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary-orange"></div>
-													<span>Procesando pago...</span>
-												</div>
-											</div>
-										)}
 									</>
 								) : (
 									<div className="mt-4 text-sm text-gray-400">

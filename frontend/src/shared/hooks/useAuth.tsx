@@ -52,15 +52,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUserData(response.user); // Actualizar datos del usuario
                     setUser(response.user);
                 } else {
-                    // Token inválido, limpiar
-                    clearTokens();
-                    setUser(null);
+                    // Token inválido, intentar refrescar antes de limpiar
+                    console.log('🔄 Token inválido, intentando refrescar...');
+                    try {
+                        const { refreshAccessToken } = await import('@/shared/services/api');
+                        const newToken = await refreshAccessToken();
+                        
+                        if (newToken) {
+                            // Si se pudo refrescar, intentar obtener el usuario nuevamente
+                            const retryResponse = await authAPI.getCurrentUser();
+                            if (retryResponse.success && retryResponse.user) {
+                                setUserData(retryResponse.user);
+                                setUser(retryResponse.user);
+                            } else {
+                                clearTokens();
+                                setUser(null);
+                            }
+                        } else {
+                            // No se pudo refrescar, limpiar tokens
+                            clearTokens();
+                            setUser(null);
+                        }
+                    } catch (refreshError) {
+                        console.error('Error refreshing token:', refreshError);
+                        clearTokens();
+                        setUser(null);
+                    }
                 }
             } catch (error) {
                 // Error al validar token (token expirado, inválido, etc.)
                 console.error('Error validating token:', error);
-                clearTokens();
-                setUser(null);
+                
+                // Intentar refrescar antes de limpiar
+                try {
+                    const { refreshAccessToken } = await import('@/shared/services/api');
+                    const newToken = await refreshAccessToken();
+                    
+                    if (newToken) {
+                        // Si se pudo refrescar, intentar obtener el usuario nuevamente
+                        const retryResponse = await authAPI.getCurrentUser();
+                        if (retryResponse.success && retryResponse.user) {
+                            setUserData(retryResponse.user);
+                            setUser(retryResponse.user);
+                        } else {
+                            clearTokens();
+                            setUser(null);
+                        }
+                    } else {
+                        clearTokens();
+                        setUser(null);
+                    }
+                } catch (refreshError) {
+                    // Si el refresh también falla, limpiar tokens
+                    console.error('Error refreshing token during validation:', refreshError);
+                    clearTokens();
+                    setUser(null);
+                }
             } finally {
                 setLoading(false);
             }

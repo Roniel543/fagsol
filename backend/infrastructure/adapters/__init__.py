@@ -107,6 +107,32 @@ class EmailService(ABC):
         """
         pass
 
+    @abstractmethod
+    def send_payment_success_email(
+        self, 
+        user_email: str, 
+        user_name: str, 
+        payment_id: str, 
+        amount: float, 
+        currency: str, 
+        course_names: list[str]
+    ) -> bool:
+        """
+        Envía email de confirmación de pago exitoso
+        
+        Args:
+            user_email: Email del usuario
+            user_name: Nombre del usuario
+            payment_id: ID del pago
+            amount: Monto pagado
+            currency: Moneda del pago
+            course_names: Lista de nombres de cursos comprados
+            
+        Returns:
+            bool: True si el email fue enviado correctamente
+        """
+        pass
+
 
 class NotificationService(ABC):
     """

@@ -41,6 +41,36 @@ export function getRefreshToken(): string | null {
 }
 
 /**
+ * Decodifica un JWT sin verificar la firma (solo para obtener el payload)
+ * NO usa esto para validar el token, solo para leer datos como exp
+ */
+function decodeJWT(token: string): any | null {
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        
+        // Decodificar el payload (segunda parte)
+        const payload = parts[1];
+        const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        return JSON.parse(decoded);
+    } catch (error) {
+        console.error('Error decoding JWT:', error);
+        return null;
+    }
+}
+
+/**
+ * Obtiene el tiempo de expiración del token JWT
+ */
+function getTokenExpiry(token: string): number | null {
+    const decoded = decodeJWT(token);
+    if (!decoded || !decoded.exp) return null;
+    
+    // exp está en segundos, convertir a milisegundos
+    return decoded.exp * 1000;
+}
+
+/**
  * Guarda tokens de forma segura en sessionStorage
  */
 export function setTokens(accessToken: string, refreshToken: string): void {
@@ -50,10 +80,18 @@ export function setTokens(accessToken: string, refreshToken: string): void {
         sessionStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, accessToken);
         sessionStorage.setItem(TOKEN_KEYS.REFRESH_TOKEN, refreshToken);
 
-        // Calcular expiración (típicamente JWT expira en 15 minutos)
-        // Guardamos timestamp de expiración para verificar después
-        const expiryTime = Date.now() + (15 * 60 * 1000); // 15 minutos
-        sessionStorage.setItem(TOKEN_KEYS.TOKEN_EXPIRY, expiryTime.toString());
+        // Obtener expiración real del token JWT
+        const expiryTime = getTokenExpiry(accessToken);
+        
+        if (expiryTime) {
+            // Guardar timestamp de expiración real del token
+            sessionStorage.setItem(TOKEN_KEYS.TOKEN_EXPIRY, expiryTime.toString());
+        } else {
+            // Fallback: si no se puede decodificar, usar 60 minutos (configuración del backend)
+            const fallbackExpiry = Date.now() + (60 * 60 * 1000); // 60 minutos
+            sessionStorage.setItem(TOKEN_KEYS.TOKEN_EXPIRY, fallbackExpiry.toString());
+            console.warn('No se pudo decodificar el token, usando expiración por defecto de 60 minutos');
+        }
     } catch (error) {
         console.error('Error setting tokens:', error);
     }

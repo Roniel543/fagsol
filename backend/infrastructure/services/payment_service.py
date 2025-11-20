@@ -6,6 +6,7 @@ Integración con Mercado Pago
 import logging
 import hashlib
 import hmac
+import requests
 from typing import Dict, List, Optional, Tuple
 from decimal import Decimal
 from django.conf import settings
@@ -15,8 +16,34 @@ import mercadopago
 from apps.courses.models import Course
 from apps.payments.models import PaymentIntent, Payment, PaymentWebhook
 from apps.users.models import Enrollment
+from infrastructure.external_services import DjangoEmailService
 
 logger = logging.getLogger('apps')
+
+
+def get_user_friendly_error_message(status_detail: str) -> str:
+    """
+    Traduce códigos de error de Mercado Pago a mensajes amigables para el usuario
+    """
+    error_messages = {
+        'cc_rejected_other_reason': 'Tu tarjeta fue rechazada. Por favor, verifica los datos o intenta con otra tarjeta.',
+        'cc_rejected_call_for_authorize': 'Necesitas autorizar este pago. Por favor, contacta a tu banco.',
+        'cc_rejected_card_disabled': 'Tu tarjeta está deshabilitada. Por favor, contacta a tu banco.',
+        'cc_rejected_insufficient_amount': 'Fondos insuficientes en tu tarjeta.',
+        'cc_rejected_bad_filled_card_number': 'El número de tarjeta es incorrecto.',
+        'cc_rejected_bad_filled_date': 'La fecha de vencimiento es incorrecta.',
+        'cc_rejected_bad_filled_other': 'Algunos datos de la tarjeta son incorrectos.',
+        'cc_rejected_bad_filled_security_code': 'El código de seguridad (CVV) es incorrecto.',
+        'cc_rejected_high_risk': 'El pago fue rechazado por medidas de seguridad.',
+        'cc_rejected_max_attempts': 'Has excedido el número máximo de intentos. Intenta más tarde.',
+        'cc_rejected_card_error': 'Error al procesar tu tarjeta. Intenta nuevamente.',
+        'cc_rejected_duplicated_payment': 'Ya existe un pago con estos datos.',
+        'cc_rejected_invalid_installments': 'El número de cuotas no es válido.',
+        'cc_rejected_fraud': 'El pago fue rechazado por medidas de seguridad.',
+    }
+    
+    # Si tenemos un mensaje específico, usarlo; si no, devolver un mensaje genérico
+    return error_messages.get(status_detail, f'Tu pago fue rechazado. Razón: {status_detail}')
 
 
 class PaymentService:
@@ -93,6 +120,38 @@ class PaymentService:
             logger.error(f"Error al crear payment intent: {str(e)}")
             return False, None, f"Error al crear payment intent: {str(e)}"
     
+    def _infer_payment_method_id(self, card_number: str) -> str:
+        """
+        Infiere el payment_method_id basándose en el BIN (primeros dígitos) de la tarjeta
+        
+        Args:
+            card_number: Número de tarjeta (sin espacios)
+            
+        Returns:
+            payment_method_id (ej: "visa", "master", "amex", etc.)
+        """
+        # Limpiar número de tarjeta
+        card_number = card_number.replace(' ', '').replace('-', '')
+        
+        if not card_number or len(card_number) < 6:
+            return "visa"  # Valor por defecto
+        
+        # Obtener BIN (primeros 6 dígitos)
+        bin_number = card_number[:6]
+        first_digit = bin_number[0]
+        
+        # Inferir payment_method_id basándose en el BIN
+        if first_digit == '4':
+            return "visa"
+        elif first_digit == '5' or (first_digit == '2' and len(bin_number) >= 2 and bin_number[1] in ['2', '3', '4', '5', '6', '7']):
+            return "master"
+        elif first_digit == '3':
+            return "amex"
+        elif first_digit == '6':
+            return "diners"
+        else:
+            return "visa"  # Valor por defecto
+    
     def tokenize_card(
         self,
         card_number: str,
@@ -102,7 +161,7 @@ class PaymentService:
         security_code: str,
         identification_type: str = 'DNI',
         identification_number: str = '12345678'
-    ) -> Tuple[bool, Optional[str], str]:
+    ) -> Tuple[bool, Optional[str], Optional[str], str]:
         """
         Tokeniza una tarjeta usando Mercado Pago API
         
@@ -146,37 +205,62 @@ class PaymentService:
             token_result = self.mp.card_token().create(card_data)
             
             if token_result.get("status") == 201:
-                token_id = token_result.get("response", {}).get("id")
+                response_data = token_result.get("response", {})
+                token_id = response_data.get("id")
+                payment_method_id_from_token = response_data.get("payment_method_id")  # Ej: "visa", "master", etc.
+                
+                # Si el token no devuelve payment_method_id, inferirlo del número de tarjeta
+                if not payment_method_id_from_token:
+                    payment_method_id_from_token = self._infer_payment_method_id(card_number)
+                
                 if token_id:
-                    logger.info(f"Tarjeta tokenizada exitosamente")
-                    return True, token_id, ""
+                    logger.info(f"Tarjeta tokenizada exitosamente. Token: {token_id[:20]}..., Payment Method: {payment_method_id_from_token}")
+                    # Retornar token y payment_method_id
+                    return True, token_id, payment_method_id_from_token, ""
                 else:
-                    return False, None, "No se pudo obtener el token de la respuesta"
+                    return False, None, None, "No se pudo obtener el token de la respuesta"
             else:
                 error_message = token_result.get("message", "Error desconocido al tokenizar")
                 logger.error(f"Error al tokenizar tarjeta: {error_message}")
-                return False, None, f"Error al tokenizar la tarjeta: {error_message}"
+                return False, None, None, f"Error al tokenizar la tarjeta: {error_message}"
                 
         except Exception as e:
             logger.error(f"Error al tokenizar tarjeta: {str(e)}")
-            return False, None, f"Error al tokenizar la tarjeta: {str(e)}"
+            return False, None, None, f"Error al tokenizar la tarjeta: {str(e)}"
     
     def process_payment(
         self,
         user,
         payment_intent_id: str,
         payment_token: str,
-        expiration_month: str,
-        expiration_year: str,
+        payment_method_id: str,
+        installments: int,
+        amount: Decimal,
         idempotency_key: Optional[str] = None
     ) -> Tuple[bool, Optional[Payment], str]:
         """
-        Procesa un pago con Mercado Pago
+        Procesa un pago con Mercado Pago usando token de CardPayment Brick
+        
+        IMPORTANTE: Solo acepta token, payment_method_id, installments, amount.
+        NO acepta datos de tarjeta (card_number, expiration_month, expiration_year, security_code).
+        
+        Campos enviados a Mercado Pago:
+        - token (obligatorio) - obtenido de CardPayment Brick
+        - transaction_amount (obligatorio) - validado contra payment_intent.total desde DB
+        - installments (obligatorio)
+        - payment_method_id (obligatorio - debe venir del token)
+        - payer.email (obligatorio)
+        - payer.identification (obligatorio)
+        
+        NO se envían: expiration_month, expiration_year, card_number, security_code
         
         Args:
             user: Usuario que está pagando
             payment_intent_id: ID del payment intent
-            payment_token: Token de Mercado Pago (tokenizado, NO datos de tarjeta)
+            payment_token: Token de Mercado Pago (obtenido de CardPayment Brick)
+            payment_method_id: Payment method ID (ej: "visa", "master")
+            installments: Número de cuotas
+            amount: Monto del pago (será validado contra payment_intent.total desde DB)
             idempotency_key: Clave de idempotencia para evitar cobros duplicados
         
         Returns:
@@ -199,30 +283,70 @@ class PaymentService:
                 payment_intent.save()
                 return False, None, "Payment intent expirado"
             
-            # 4. Verificar idempotencia
+            # 4. VALIDAR AMOUNT contra DB (NO confiar en frontend)
+            # Convertir amount a Decimal para comparación precisa
+            amount_decimal = Decimal(str(amount))
+            if amount_decimal != payment_intent.total:
+                logger.warning(
+                    f"Amount mismatch: frontend={amount_decimal}, db={payment_intent.total}, "
+                    f"payment_intent_id={payment_intent_id}, user_id={user.id}"
+                )
+                return False, None, f"El monto enviado ({amount_decimal}) no coincide con el monto calculado ({payment_intent.total})"
+            
+            # 5. Verificar idempotencia
             if idempotency_key:
                 existing_payment = Payment.objects.filter(idempotency_key=idempotency_key).first()
                 if existing_payment:
                     logger.warning(f"Intento de pago duplicado detectado: {idempotency_key}")
                     return False, None, "Este pago ya fue procesado"
             
-            # 5. Actualizar payment intent a processing
+            # 6. Actualizar payment intent a processing
             payment_intent.status = 'processing'
             payment_intent.save()
             
-            # 6. Procesar pago con Mercado Pago
+            # 7. Procesar pago con Mercado Pago
             if not self.mp:
                 return False, None, "Mercado Pago no está configurado"
             
-            # Crear preferencia de pago en Mercado Pago
-            # NOTA: Cuando se usa token, NO se deben incluir card_expiration_month ni card_expiration_year
-            # porque esa información ya está incluida en el token mismo
-            # payment_method_id también se detecta automáticamente del token
+            # Validar que el token existe
+            if not payment_token:
+                payment_intent.status = 'failed'
+                payment_intent.save()
+                return False, None, "token es requerido"
+            
+            # Validar payment_method_id (REQUERIDO cuando se usa token)
+            if not payment_method_id:
+                logger.warning("⚠️ payment_method_id NO proporcionado. Esto puede causar error 'diff_param_bins'")
+            else:
+                logger.info(f"Usando payment_method_id del token: {payment_method_id}")
+            
+            # Validar installments
+            if installments < 1:
+                payment_intent.status = 'failed'
+                payment_intent.save()
+                return False, None, "El número de cuotas debe ser al menos 1"
+            
+            # Preparar datos para Mercado Pago
+            # IMPORTANTE: Cuando se usa un TOKEN de CardPayment Brick, Mercado Pago NO acepta expiration_month ni expiration_year.
+            # El token ya contiene TODA la información de la tarjeta, incluyendo fecha de expiración.
+            # 
+            # Según la documentación oficial de Mercado Pago 2024-2025:
+            # Campos REQUERIDOS cuando se usa token:
+            # - token (obligatorio) - obtenido de CardPayment Brick
+            # - transaction_amount (obligatorio) - validado contra DB
+            # - installments (obligatorio) - recibido del frontend
+            # - payment_method_id (obligatorio - debe venir del token)
+            # - payer.email (obligatorio)
+            # - payer.identification (obligatorio)
+            #
+            # NO incluir: expiration_month, expiration_year, card_expiration_month, card_expiration_year
+            # NO incluir: card_number, security_code (están en el token)
             payment_data = {
-                "transaction_amount": float(payment_intent.total),
-                "token": payment_token,  # El token ya contiene toda la información de la tarjeta, incluyendo expiración
+                "transaction_amount": float(payment_intent.total),  # Usar total de DB, no del frontend
+                "token": payment_token,  # Token obtenido de CardPayment Brick
                 "description": f"Pago de cursos: {', '.join(payment_intent.course_ids)}",
-                "installments": 1,
+                "installments": installments,  # Usar installments recibido del frontend
+                "payment_method_id": payment_method_id,  # REQUERIDO cuando se usa token
                 "payer": {
                     "email": user.email,
                     "identification": {
@@ -237,12 +361,42 @@ class PaymentService:
                 }
             }
             
-            # Loggear datos antes de enviar (sin token por seguridad)
-            logger.info(f"Procesando pago. Payment Intent: {payment_intent_id}, Amount: {payment_intent.total}, Token: {payment_token[:20]}...")
+            logger.info(f"Payment method ID usado: {payment_method_id}")
+            logger.info(f"Installments: {installments}")
             
-            # Procesar pago
+            # Loggear datos antes de enviar (sin token completo por seguridad)
+            logger.info(f"Procesando pago. Payment Intent: {payment_intent_id}, Amount: {payment_intent.total}, Token: {payment_token[:20]}...")
+            logger.info(f"Payment data keys: {list(payment_data.keys())}")
+            logger.info(f"Payment data (sin token): { {k: v for k, v in payment_data.items() if k != 'token'} }")
+            
+            # Procesar pago usando el SDK de Mercado Pago
+            # El SDK maneja correctamente los tokens y la estructura del payload
             try:
+                logger.info(f"Enviando pago a Mercado Pago usando SDK...")
                 payment_result = self.mp.payment().create(payment_data)
+                
+                # El SDK retorna un dict con 'status' y 'response'
+                if not isinstance(payment_result, dict):
+                    # Si el SDK retorna algo diferente, intentar con API REST como fallback
+                    logger.warning("SDK retornó formato inesperado, intentando con API REST...")
+                    headers = {
+                        "Authorization": f"Bearer {self.mp_access_token}",
+                        "Content-Type": "application/json",
+                        "X-Idempotency-Key": idempotency_key or f"{payment_intent_id}_{int(timezone.now().timestamp())}"
+                    }
+                    response = requests.post(
+                        "https://api.mercadopago.com/v1/payments",
+                        json=payment_data,
+                        headers=headers,
+                        timeout=30
+                    )
+                    payment_result = {
+                        "status": response.status_code,
+                        "response": response.json() if response.content else {}
+                    }
+                    logger.info(f"Respuesta de API REST (fallback): Status {response.status_code}")
+                else:
+                    logger.info(f"Respuesta de SDK: Status {payment_result.get('status')}")
                 
                 # Validar que payment_result no sea None
                 if payment_result is None:
@@ -271,9 +425,10 @@ class PaymentService:
                 payment = Payment.objects.create(
                     payment_intent=payment_intent,
                     user=user,
-                    amount=payment_intent.total,
+                    amount=payment_intent.total,  # Usar total de DB
                     currency=payment_intent.currency,
                     payment_token=payment_token,
+                    installments=installments,  # Guardar installments
                     idempotency_key=idempotency_key,
                     mercado_pago_payment_id=response_data.get("id"),
                     mercado_pago_status=payment_status,
@@ -290,8 +445,25 @@ class PaymentService:
                     payment_intent.status = 'succeeded'
                     payment_intent.save()
                     
-                    # Crear enrollments
-                    self._create_enrollments(user, payment_intent.course_ids, payment)
+                    # Crear enrollments y obtener nombres de cursos
+                    enrollments, course_names = self._create_enrollments(user, payment_intent.course_ids, payment)
+                    
+                    # Enviar email de confirmación de pago (en background, no bloquea la respuesta)
+                    try:
+                        email_service = DjangoEmailService()
+                        user_name = user.get_full_name() or user.username or user.email.split('@')[0]
+                        email_service.send_payment_success_email(
+                            user_email=user.email,
+                            user_name=user_name,
+                            payment_id=payment.id,
+                            amount=float(payment.amount),
+                            currency=payment.currency,
+                            course_names=course_names
+                        )
+                        logger.info(f"Email de confirmación de pago enviado a {user.email}")
+                    except Exception as email_error:
+                        # No fallar el pago si el email falla, solo loguear
+                        logger.error(f"Error al enviar email de confirmación de pago: {str(email_error)}")
                     
                     logger.info(f"Pago aprobado: {payment.id} para usuario {user.id}")
                     return True, payment, ""
@@ -301,8 +473,11 @@ class PaymentService:
                     payment_intent.status = 'failed'
                     payment_intent.save()
                     # Extraer mensaje de rechazo si está disponible
-                    rejection_reason = response_data.get("status_detail", "Pago rechazado")
-                    return False, payment, f"Pago rechazado por Mercado Pago: {rejection_reason}"
+                    status_detail = response_data.get("status_detail", "cc_rejected_other_reason")
+                    # Traducir código de error a mensaje amigable
+                    user_message = get_user_friendly_error_message(status_detail)
+                    logger.warning(f"Pago rechazado: {status_detail} para usuario {user.id}, Payment Intent: {payment_intent_id}")
+                    return False, payment, user_message
                 else:
                     payment.status = 'pending'
                     payment.save()
@@ -351,10 +526,23 @@ class PaymentService:
     def _create_enrollments(self, user, course_ids: List[str], payment):
         """
         Crea enrollments después de un pago exitoso
+        
+        Returns:
+            Tuple[enrollments, course_names]: Lista de enrollments creados y nombres de cursos
         """
         try:
             enrollments = []
+            course_names = []
+            
             for course_id in course_ids:
+                # Obtener curso para obtener el nombre
+                try:
+                    course = Course.objects.get(id=course_id)
+                    course_names.append(course.title)
+                except Course.DoesNotExist:
+                    logger.warning(f"Curso {course_id} no encontrado, usando ID como nombre")
+                    course_names.append(f"Curso {course_id}")
+                
                 enrollment = Enrollment.objects.create(
                     user=user,
                     course_id=course_id,
@@ -365,7 +553,7 @@ class PaymentService:
                 enrollments.append(enrollment)
             
             logger.info(f"Enrollments creados: {len(enrollments)} para usuario {user.id}")
-            return enrollments
+            return enrollments, course_names
         except Exception as e:
             logger.error(f"Error al crear enrollments: {str(e)}")
             raise

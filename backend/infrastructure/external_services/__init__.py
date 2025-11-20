@@ -6,6 +6,7 @@ import requests
 from decimal import Decimal
 from typing import Dict, Any
 from django.conf import settings
+from django.utils import timezone
 from ..adapters import PaymentGateway, EmailService, NotificationService, FileStorageService
 
 
@@ -172,6 +173,173 @@ class DjangoEmailService(EmailService):
         """
         
         return self.send_email(user_email, subject, body)
+
+    def send_payment_success_email(
+        self, 
+        user_email: str, 
+        user_name: str, 
+        payment_id: str, 
+        amount: float, 
+        currency: str, 
+        course_names: list[str]
+    ) -> bool:
+        """
+        Envía email de confirmación de pago exitoso
+        """
+        try:
+            from django.conf import settings
+            
+            # Formatear monto con símbolo de moneda
+            currency_symbols = {
+                'PEN': 'S/',
+                'USD': '$',
+                'EUR': '€',
+            }
+            currency_symbol = currency_symbols.get(currency, currency)
+            formatted_amount = f"{currency_symbol} {amount:.2f}"
+            
+            # Construir lista de cursos
+            if len(course_names) == 1:
+                courses_text = f'el curso "{course_names[0]}"'
+            else:
+                courses_list = '\n'.join([f'  • {name}' for name in course_names])
+                courses_text = f'los siguientes cursos:\n{courses_list}'
+            
+            subject = "¡Pago confirmado - FagSol Escuela Virtual!"
+            
+            # Cuerpo del email en texto plano
+            body_text = f"""
+Hola {user_name},
+
+¡Tu pago ha sido procesado exitosamente!
+
+Detalles del pago:
+  • ID de pago: {payment_id}
+  • Monto: {formatted_amount}
+  • Cursos: {courses_text}
+
+Ya puedes acceder a {courses_text if len(course_names) == 1 else 'tus cursos'} desde tu panel de usuario.
+
+¡Gracias por confiar en FagSol Escuela Virtual!
+
+Saludos,
+Equipo FagSol
+            """
+            
+            # Cuerpo del email en HTML
+            body_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        .header {{
+            background-color: #1a1a1a;
+            color: #fff;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }}
+        .content {{
+            background-color: #f9f9f9;
+            padding: 30px;
+            border-radius: 0 0 5px 5px;
+        }}
+        .payment-details {{
+            background-color: #fff;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 20px 0;
+        }}
+        .payment-details h3 {{
+            margin-top: 0;
+            color: #4CAF50;
+        }}
+        .payment-details p {{
+            margin: 5px 0;
+        }}
+        .courses-list {{
+            background-color: #fff;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }}
+        .courses-list ul {{
+            margin: 10px 0;
+            padding-left: 20px;
+        }}
+        .button {{
+            display: inline-block;
+            background-color: #FF6B35;
+            color: #fff;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }}
+        .footer {{
+            text-align: center;
+            margin-top: 30px;
+            color: #666;
+            font-size: 12px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>¡Pago Confirmado!</h1>
+    </div>
+    <div class="content">
+        <p>Hola <strong>{user_name}</strong>,</p>
+        
+        <p>¡Tu pago ha sido procesado exitosamente!</p>
+        
+        <div class="payment-details">
+            <h3>Detalles del pago</h3>
+            <p><strong>ID de pago:</strong> {payment_id}</p>
+            <p><strong>Monto:</strong> {formatted_amount}</p>
+        </div>
+        
+        <div class="courses-list">
+            <h3>Cursos adquiridos:</h3>
+            {'<p>' + course_names[0] + '</p>' if len(course_names) == 1 else '<ul>' + ''.join([f'<li>{name}</li>' for name in course_names]) + '</ul>'}
+        </div>
+        
+        <p>Ya puedes acceder a {'tu curso' if len(course_names) == 1 else 'tus cursos'} desde tu panel de usuario.</p>
+        
+        <div style="text-align: center;">
+            <a href="{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}/dashboard" class="button">
+                Ir a mi Dashboard
+            </a>
+        </div>
+        
+        <p>¡Gracias por confiar en FagSol Escuela Virtual!</p>
+    </div>
+    <div class="footer">
+        <p>Este es un email automático, por favor no respondas a este mensaje.</p>
+        <p>© {timezone.now().year} FagSol Escuela Virtual. Todos los derechos reservados.</p>
+    </div>
+</body>
+</html>
+            """
+            
+            # Enviar email con HTML
+            return self.send_email(user_email, subject, body_html, is_html=True)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('apps')
+            logger.error(f"Error al enviar email de confirmación de pago: {str(e)}")
+            # Intentar enviar versión de texto plano como fallback
+            return self.send_email(user_email, subject, body_text, is_html=False)
 
 
 class DjangoNotificationService(NotificationService):

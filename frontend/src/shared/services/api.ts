@@ -29,9 +29,21 @@ function getBaseUrl(): string {
 
 const baseUrl = getBaseUrl();
 
+// Extraer la URL base sin el path /api/v1 para endpoints JWT
+function getJwtBaseUrl(): string {
+    // Si baseUrl es "http://localhost:8000/api/v1", extraer "http://localhost:8000"
+    try {
+        const url = new URL(baseUrl);
+        return `${url.protocol}//${url.host}`;
+    } catch {
+        // Fallback si hay error al parsear URL
+        return baseUrl.replace(/\/api\/v1.*$/, '');
+    }
+}
+
 export const API_CONFIG = {
     BASE_URL: baseUrl,
-    JWT_BASE_URL: baseUrl.replace('/api', ''),
+    JWT_BASE_URL: getJwtBaseUrl(), // http://localhost:8000 (sin /api/v1)
     ENDPOINTS: {
         LOGIN: '/auth/login/',
         REGISTER: '/auth/register/',
@@ -51,8 +63,9 @@ let refreshPromise: Promise<string | null> | null = null;
 
 /**
  * Refresca el token de acceso usando el refresh token
+ * Exportada para uso en otros módulos (ej: useAuth)
  */
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
     // Si ya hay un refresh en curso, esperar a que termine
     if (isRefreshing && refreshPromise) {
         return refreshPromise;
@@ -81,10 +94,11 @@ async function refreshAccessToken(): Promise<string | null> {
             const data = await response.json();
 
             if (data.access) {
-                // Actualizar solo el access token, mantener el refresh token
-                const currentRefreshToken = getRefreshToken();
-                if (currentRefreshToken) {
-                    setTokens(data.access, currentRefreshToken);
+                // El backend tiene ROTATE_REFRESH_TOKENS activado, así que puede enviar un nuevo refresh token
+                // Si viene un nuevo refresh token, usarlo; si no, mantener el actual
+                const newRefreshToken = data.refresh || getRefreshToken();
+                if (newRefreshToken) {
+                    setTokens(data.access, newRefreshToken);
                 }
                 return data.access;
             }
@@ -149,29 +163,52 @@ export const apiRequest = async <T = any>(
         };
     }
 
+    // Construir los headers finales que se usarán en la petición
+    const finalHeaders = {
+        ...defaultOptions.headers,
+        ...(options.headers || {}),
+    };
+
+    // Construir las opciones finales para la petición
+    const finalOptions: RequestInit = {
+        ...defaultOptions,
+        ...options,
+        headers: finalHeaders,
+    };
+
     try {
-        let response = await fetch(url, {
-            ...defaultOptions,
-            ...options,
-        });
+        let response = await fetch(url, finalOptions);
 
         // Si el token expiró (401), intentar refrescar y reintentar
         if (response.status === 401 && token) {
+            console.log('🔄 Token expirado, intentando refrescar...');
             const newToken = await refreshAccessToken();
 
             if (newToken) {
+                console.log('✅ Token refrescado exitosamente, reintentando petición...');
                 // Reintentar con el nuevo token
-                defaultOptions.headers = {
-                    ...defaultOptions.headers,
-                    'Authorization': `Bearer ${newToken}`,
+                // IMPORTANTE: Preservar TODOS los headers originales y actualizar solo Authorization
+                const retryOptions: RequestInit = {
+                    method: finalOptions.method || 'GET',
+                    headers: {
+                        ...finalHeaders, // Preservar todos los headers originales
+                        'Authorization': `Bearer ${newToken}`, // Sobrescribir solo Authorization
+                    },
+                    // Mantener el body original si existe
+                    body: finalOptions.body,
                 };
 
-                response = await fetch(url, {
-                    ...defaultOptions,
-                    ...options,
-                });
+                // Copiar otros campos de finalOptions (como signal, etc.)
+                if (finalOptions.signal) {
+                    retryOptions.signal = finalOptions.signal;
+                }
+
+                response = await fetch(url, retryOptions);
             } else {
-                // Si no se pudo refrescar, lanzar error
+                // Si no se pudo refrescar, verificar si el refresh token también expiró
+                console.warn('⚠️ No se pudo refrescar el token');
+                // No limpiar tokens aquí, dejar que el código de abajo lo maneje
+                // Solo lanzar error para que se maneje apropiadamente
                 throw new Error('Authentication failed. Please login again.');
             }
         }

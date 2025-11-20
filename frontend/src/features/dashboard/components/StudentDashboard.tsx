@@ -2,12 +2,15 @@
 
 import { Button, LoadingSpinner } from '@/shared/components';
 import { useDashboard } from '@/shared/hooks/useDashboard';
+import { PaymentsDashboard } from './PaymentsDashboard';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
 export function StudentDashboard() {
     const router = useRouter();
     const { studentStats, isLoading, isError } = useDashboard();
+    const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
 
     if (isLoading) {
         return (
@@ -28,7 +31,38 @@ export function StudentDashboard() {
 
     return (
         <div className="space-y-6">
-            {/* Estadísticas principales */}
+            {/* Tabs de navegación */}
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-8">
+                    <button
+                        onClick={() => setActiveTab('overview')}
+                        className={`${
+                            activeTab === 'overview'
+                                ? 'border-primary-orange text-primary-orange'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+                    >
+                        Resumen
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('payments')}
+                        className={`${
+                            activeTab === 'payments'
+                                ? 'border-primary-orange text-primary-orange'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
+                    >
+                        Historial de Pagos
+                    </button>
+                </nav>
+            </div>
+
+            {/* Contenido según tab activo */}
+            {activeTab === 'payments' ? (
+                <PaymentsDashboard />
+            ) : (
+                <>
+                    {/* Estadísticas principales */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <div className="bg-white shadow rounded-lg p-6">
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Cursos Inscritos</h3>
@@ -150,6 +184,8 @@ export function StudentDashboard() {
                         ))}
                     </div>
                 </div>
+            )}
+                </>
             )}
         </div>
     );

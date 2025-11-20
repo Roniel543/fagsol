@@ -1,0 +1,566 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - main [ref=e3]:
+    - navigation [ref=e5]:
+      - generic [ref=e6]:
+        - link "Fagsol S.A.C" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - img "Fagsol S.A.C" [ref=e9]
+        - generic [ref=e11]:
+          - img [ref=e12]
+          - textbox "¿Qué quieres aprender?" [ref=e15]
+        - generic [ref=e16]:
+          - link "Inicio" [ref=e17] [cursor=pointer]:
+            - /url: "#inicio"
+            - text: Inicio
+          - link "Marketplace" [ref=e19] [cursor=pointer]:
+            - /url: /marketplace
+            - text: Marketplace
+          - link "Contacto" [ref=e20] [cursor=pointer]:
+            - /url: /contacto
+            - text: Contacto
+        - link "🎓 Fagsol Academy NUEVO" [ref=e21] [cursor=pointer]:
+          - /url: /academy
+          - generic [ref=e22]:
+            - generic [ref=e23]: 🎓
+            - generic [ref=e24]: Fagsol Academy
+            - img [ref=e25]
+          - generic [ref=e27]: NUEVO
+    - generic [ref=e34]:
+      - generic [ref=e35]: Educación + Servicios Industriales
+      - heading "Aprende, Aplica y Transforma la Industria" [level=1] [ref=e36]:
+        - text: Aprende, Aplica y
+        - text: Transforma la Industria
+      - paragraph [ref=e37]: Plataforma de educación en línea especializada en procesos industriales y metalúrgicos. Ofrecemos cursos prácticos y servicios profesionales para la pequeña minería en Perú y toda Latinoamérica.
+      - generic [ref=e38]:
+        - button "Explorar Cursos" [ref=e39] [cursor=pointer]:
+          - generic [ref=e40]: Explorar Cursos
+          - img [ref=e41]
+        - button "Servicios Metalúrgicos" [ref=e44] [cursor=pointer]:
+          - generic [ref=e45]: Servicios Metalúrgicos
+          - img [ref=e46]
+      - generic [ref=e48]:
+        - generic [ref=e49]:
+          - generic [ref=e51]: 500+
+          - generic [ref=e52]: Estudiantes
+        - generic [ref=e53]:
+          - generic [ref=e55]: 50+
+          - generic [ref=e56]: Cursos
+        - generic [ref=e57]:
+          - generic [ref=e59]: 10+
+          - generic [ref=e60]: Años Experiencia
+    - generic [ref=e62]:
+      - generic [ref=e63]:
+        - generic [ref=e64]: 🎓 Academia Fagsol
+        - heading "Cursos Especializados" [level=2] [ref=e65]
+        - paragraph [ref=e66]: Domina las técnicas más avanzadas en procesamiento de minerales con nuestros cursos modulares. Cada módulo es independiente - aprende solo lo que necesitas o completa la especialización completa.
+      - generic [ref=e67]:
+        - generic [ref=e68]:
+          - generic [ref=e69]:
+            - generic [ref=e70]:
+              - generic [ref=e71]: Bestseller
+              - generic [ref=e72]:
+                - generic [ref=e73]: ⭐
+                - generic [ref=e74]: "4.9"
+                - generic [ref=e75]: (0 estudiantes)
+            - heading "Procesamiento de Minerales Auríferos" [level=3] [ref=e76]
+            - paragraph [ref=e77]: Domina las técnicas más avanzadas y sostenibles para el procesamiento de oro sin mercurio.
+            - generic [ref=e78]:
+              - generic [ref=e79]:
+                - img [ref=e80]
+                - generic [ref=e83]: 120 horas
+              - generic [ref=e84]:
+                - img [ref=e85]
+                - generic [ref=e90]: 657 estudiantes
+              - generic [ref=e91]:
+                - img [ref=e92]
+                - generic [ref=e95]: 6 módulos
+          - generic [ref=e96]:
+            - paragraph [ref=e97]: $3999
+            - paragraph [ref=e98]: $1999
+        - generic [ref=e99]:
+          - heading "Beneficios incluidos:" [level=4] [ref=e100]
+          - generic [ref=e101]:
+            - generic [ref=e102]:
+              - img [ref=e103]
+              - generic [ref=e106]: Certificado profesional reconocido
+            - generic [ref=e107]:
+              - img [ref=e108]
+              - generic [ref=e111]: Acceso de por vida al contenido actualizado
+            - generic [ref=e112]:
+              - img [ref=e113]
+              - generic [ref=e116]: Networking con expertos de la industria
+            - generic [ref=e117]:
+              - img [ref=e118]
+              - generic [ref=e121]: Soporte directo del instructor 24/7
+            - generic [ref=e122]:
+              - img [ref=e123]
+              - generic [ref=e126]: Kit de herramientas digitales GRATIS
+            - generic [ref=e127]:
+              - img [ref=e128]
+              - generic [ref=e131]: Garantía de devolución por 30 días
+        - generic [ref=e132]:
+          - button "Comprar Curso Completo" [ref=e133] [cursor=pointer]:
+            - img [ref=e134]
+            - generic [ref=e138]: Comprar Curso Completo
+          - button "Vista Previa Gratuita" [ref=e139] [cursor=pointer]:
+            - img [ref=e140]
+            - generic [ref=e142]: Vista Previa Gratuita
+          - button "Consultar por WhatsApp" [ref=e143] [cursor=pointer]:
+            - img [ref=e144]
+            - generic [ref=e146]: Consultar por WhatsApp
+      - generic [ref=e147]:
+        - generic [ref=e148]:
+          - heading "Módulos Independientes" [level=3] [ref=e149]
+          - paragraph [ref=e150]: Inscríbete solo en las unidades que necesites
+        - generic [ref=e151]:
+          - generic [ref=e153]:
+            - generic [ref=e154]:
+              - generic [ref=e155]: Básico
+              - generic [ref=e156]: $299
+            - heading "Fundamentos de Mineralogía Aurífera" [level=4] [ref=e157]
+            - paragraph [ref=e158]: Aprende a identificar y clasificar minerales auríferos de forma profesional
+            - generic [ref=e159]:
+              - generic [ref=e160]:
+                - generic [ref=e161]: ✓
+                - generic [ref=e162]: Teoría incluida
+              - generic [ref=e163]:
+                - generic [ref=e164]: ✓
+                - generic [ref=e165]: Evaluación en línea
+              - generic [ref=e166]:
+                - generic [ref=e167]: ✓
+                - generic [ref=e168]: Duración secuencial
+              - generic [ref=e169]:
+                - generic [ref=e170]: ✓
+                - generic [ref=e171]: Técnicas de identificación
+              - generic [ref=e172]:
+                - generic [ref=e173]: ✓
+                - generic [ref=e174]: +7 más
+            - button "Inscribirse Ahora" [ref=e175] [cursor=pointer]
+          - generic [ref=e177]:
+            - generic [ref=e178]:
+              - generic [ref=e179]: Intermedio
+              - generic [ref=e180]: $399
+            - heading "Separación Gravimétrica Avanzada" [level=4] [ref=e181]
+            - paragraph [ref=e182]: Técnicas modernas de concentración gravimétrica para recuperación óptima
+            - generic [ref=e183]:
+              - generic [ref=e184]:
+                - generic [ref=e185]: ✓
+                - generic [ref=e186]: Teoría incluida
+              - generic [ref=e187]:
+                - generic [ref=e188]: ✓
+                - generic [ref=e189]: Proyectos en línea
+              - generic [ref=e190]:
+                - generic [ref=e191]: ✓
+                - generic [ref=e192]: Duración de Navidades
+              - generic [ref=e193]:
+                - generic [ref=e194]: ✓
+                - generic [ref=e195]: Tips esenciales
+              - generic [ref=e196]:
+                - generic [ref=e197]: ✓
+                - generic [ref=e198]: +7 más
+            - button "Inscribirse Ahora" [ref=e199] [cursor=pointer]
+          - generic [ref=e201]:
+            - generic [ref=e202]:
+              - generic [ref=e203]: Avanzado
+              - generic [ref=e204]: $499
+            - heading "Flotación Ecológica" [level=4] [ref=e205]
+            - paragraph [ref=e206]: Procesos de flotación sin químicos tóxicos para minería sostenible
+            - generic [ref=e207]:
+              - generic [ref=e208]:
+                - generic [ref=e209]: ✓
+                - generic [ref=e210]: Teoría incluida
+              - generic [ref=e211]:
+                - generic [ref=e212]: ✓
+                - generic [ref=e213]: Recursos digitales
+              - generic [ref=e214]:
+                - generic [ref=e215]: ✓
+                - generic [ref=e216]: Evaluación del curso
+              - generic [ref=e217]:
+                - generic [ref=e218]: ✓
+                - generic [ref=e219]: Recuperación de agua
+              - generic [ref=e220]:
+                - generic [ref=e221]: ✓
+                - generic [ref=e222]: +7 más
+            - button "Inscribirse Ahora" [ref=e223] [cursor=pointer]
+      - generic [ref=e224]:
+        - heading "Métodos de Pago Disponibles" [level=4] [ref=e225]
+        - generic [ref=e227]:
+          - generic [ref=e228]: 💳
+          - generic [ref=e229]: Transferencia
+      - link "Ver Todos los Cursos Disponibles" [ref=e231] [cursor=pointer]:
+        - /url: /academy
+        - generic [ref=e232]: Ver Todos los Cursos Disponibles
+        - img [ref=e233]
+    - generic [ref=e236]:
+      - generic [ref=e237]:
+        - heading "Procesos Metalúrgicos" [level=2] [ref=e238]
+        - paragraph [ref=e239]: Soluciones metalúrgicas especializadas para pequeños mineros en Perú y toda la región. Procesos eficientes, sostenibles y adaptados a operaciones de pequeña escala.
+      - generic [ref=e240]:
+        - generic [ref=e241]:
+          - generic [ref=e242]:
+            - img [ref=e244]
+            - heading "Separación por Gravedad" [level=3] [ref=e247]
+          - generic [ref=e251]: 📷 Imagen
+          - paragraph [ref=e252]: Tecnología de separación mineral por densidad específica. Separa materiales ligeros de pesados con alta precisión, ideal para oro, plata y minerales pesados.
+          - generic [ref=e253]:
+            - generic [ref=e254]: Sin Químicos Tóxicos
+            - generic [ref=e255]: 95% Recuperación
+          - link "Más Información →" [ref=e257] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=e258]:
+          - generic [ref=e259]:
+            - img [ref=e261]
+            - heading "Extracción Electrolítica" [level=3] [ref=e263]
+          - generic [ref=e267]: 📷 Imagen
+          - paragraph [ref=e268]: Proceso de extracción de metales preciosos mediante electrólisis. Recuperación de oro y plata de desechos electrónicos y concentrados minerales.
+          - generic [ref=e269]:
+            - generic [ref=e270]: Proceso Limpio
+            - generic [ref=e271]: 98% Pureza
+          - link "Más Información →" [ref=e273] [cursor=pointer]:
+            - /url: "#"
+        - generic [ref=e274]:
+          - generic [ref=e275]:
+            - img [ref=e277]
+            - heading "Fundición Especializada" [level=3] [ref=e279]
+          - generic [ref=e283]: 📷 Imagen
+          - paragraph [ref=e284]: Hornos de fundición para metales preciosos con control de temperatura preciso. Procesamiento de concentrados auríferos y argentíferos.
+          - generic [ref=e285]:
+            - generic [ref=e286]: Emisiones Controladas
+            - generic [ref=e287]: 99.5% Recuperación
+          - link "Más Información →" [ref=e289] [cursor=pointer]:
+            - /url: "#"
+    - generic [ref=e291]:
+      - generic [ref=e292]:
+        - generic [ref=e293]: Marketplace Industrial
+        - heading "Equipos Especializados" [level=2] [ref=e294]
+        - paragraph [ref=e295]: Maquinaria industrial especializada para procesos sostenibles. Equipos diseñados para minería artesanal, procesos agroindustriales, manejo de agua y agroindustria ecológica.
+      - generic [ref=e296]:
+        - generic [ref=e297]:
+          - generic [ref=e298]:
+            - generic [ref=e301]: ⭐ Más Vendido
+            - generic [ref=e302]:
+              - img [ref=e303]
+              - generic [ref=e305]: Minería
+            - generic [ref=e306]:
+              - img [ref=e307]
+              - generic [ref=e309]: "5.0"
+            - generic [ref=e313]: 📷 Imagen
+          - generic [ref=e314]:
+            - heading "Separador Mineral por Densidad" [level=3] [ref=e315]
+            - paragraph [ref=e316]: Equipo de alta precisión para procesos de concentración gravimétrica. Ideal para separar minerales de diferentes densidades con alta eficiencia y bajo consumo energético.
+            - generic [ref=e317]:
+              - generic [ref=e318]: Alta Eficiencia
+              - generic [ref=e319]: Separación 95%
+              - generic [ref=e320]: Bajo Consumo
+            - generic [ref=e321]:
+              - generic [ref=e322]:
+                - paragraph [ref=e323]: Capacidad
+                - paragraph [ref=e324]: 500 kg/h
+              - generic [ref=e325]:
+                - paragraph [ref=e326]: Garantía
+                - paragraph [ref=e327]: 2 Años
+              - generic [ref=e328]:
+                - paragraph [ref=e329]: Instalación
+                - paragraph [ref=e330]: Incluida
+              - generic [ref=e331]:
+                - paragraph [ref=e332]: Soporte
+                - paragraph [ref=e333]: 24/7
+            - button "Solicitar Cotización" [ref=e334] [cursor=pointer]:
+              - img [ref=e335]
+              - generic [ref=e339]: Solicitar Cotización
+              - img [ref=e340]
+        - generic [ref=e342]:
+          - generic [ref=e343]:
+            - generic [ref=e345]:
+              - img [ref=e346]
+              - generic [ref=e349]: Agroindustria
+            - generic [ref=e350]:
+              - img [ref=e351]
+              - generic [ref=e353]: "5"
+            - generic [ref=e357]: 📷 Imagen
+          - generic [ref=e358]:
+            - heading "Destilador de Aceites Esenciales" [level=3] [ref=e359]
+            - paragraph [ref=e360]: Sistema de destilación por arrastre de vapor para extracción de aceites esenciales. Diseño modular de acero inoxidable con control automático de temperatura.
+            - generic [ref=e361]:
+              - generic [ref=e362]: Pureza 99.9%
+              - generic [ref=e363]: Acero Inoxidable
+            - button "Cotizar" [ref=e364] [cursor=pointer]:
+              - img [ref=e365]
+              - generic [ref=e369]: Cotizar
+        - generic [ref=e370]:
+          - generic [ref=e371]:
+            - generic [ref=e373]:
+              - img [ref=e374]
+              - generic [ref=e384]: Agricultura
+            - generic [ref=e385]:
+              - img [ref=e386]
+              - generic [ref=e388]: "5"
+            - generic [ref=e392]: 📷 Imagen
+          - generic [ref=e393]:
+            - heading "Sistema Hidropónico Solar" [level=3] [ref=e394]
+            - paragraph [ref=e395]: Sistema de cultivo hidropónico completamente autónomo con paneles solares. Ideal para zonas remotas, optimiza recursos hídricos y energéticos.
+            - generic [ref=e396]:
+              - generic [ref=e397]: 100% Solar
+              - generic [ref=e398]: Ahorro Agua
+            - button "Cotizar" [ref=e399] [cursor=pointer]:
+              - img [ref=e400]
+              - generic [ref=e404]: Cotizar
+      - link "Ver Catálogo Completo de Equipos Sostenibles" [ref=e406] [cursor=pointer]:
+        - /url: /marketplace
+        - generic [ref=e407]: Ver Catálogo Completo de Equipos Sostenibles
+        - img [ref=e408]
+      - generic [ref=e410]:
+        - generic [ref=e411]:
+          - generic [ref=e413]: 0+
+          - generic [ref=e414]: Equipos Disponibles
+        - generic [ref=e415]:
+          - generic [ref=e416]: 24/7
+          - generic [ref=e417]: Financiamiento Disponible
+        - generic [ref=e418]:
+          - generic [ref=e420]: 0 Años
+          - generic [ref=e421]: Garantía Extendida
+    - generic [ref=e424]:
+      - generic [ref=e425]:
+        - generic [ref=e426]: Para Profesores
+        - heading "Comparte tu Conocimiento" [level=2] [ref=e427]
+        - paragraph [ref=e428]: ¿Eres experto en procesos industriales, metalurgia, energías renovables o áreas relacionadas? Únete a nuestra plataforma y monetiza tu experiencia enseñando a profesionales de todo el mundo.
+        - generic [ref=e429]:
+          - generic [ref=e430]:
+            - img [ref=e432]
+            - generic [ref=e435]:
+              - heading "Excelentes Ganancias" [level=3] [ref=e436]
+              - paragraph [ref=e437]: Obtén un margen competitivo por cada curso vendido
+          - generic [ref=e438]:
+            - img [ref=e440]
+            - generic [ref=e446]:
+              - heading "Asesoría Completa" [level=3] [ref=e447]
+              - paragraph [ref=e448]: Te ayudamos a desarrollar módulos de cursos profesionales
+          - generic [ref=e449]:
+            - img [ref=e451]
+            - generic [ref=e456]:
+              - heading "Audiencia Global" [level=3] [ref=e457]
+              - paragraph [ref=e458]: Alcanza estudiantes de toda Latinoamérica
+          - generic [ref=e459]:
+            - img [ref=e461]
+            - generic [ref=e463]:
+              - heading "Soporte 24/7" [level=3] [ref=e464]
+              - paragraph [ref=e465]: Equipo dedicado para resolver tus dudas
+        - button "Comienza a Enseñar Hoy" [ref=e466] [cursor=pointer]
+      - generic [ref=e469]:
+        - generic [ref=e470]:
+          - generic [ref=e471]: "+500"
+          - paragraph [ref=e472]: Estudiantes Activos
+        - generic [ref=e474]:
+          - generic [ref=e475]: 50+
+          - paragraph [ref=e476]: Cursos Disponibles
+        - generic [ref=e478]:
+          - generic [ref=e479]: 4.8★
+          - paragraph [ref=e480]: Calificación Promedio
+    - generic [ref=e484]:
+      - generic [ref=e485]:
+        - generic [ref=e486]: Sostenibilidad
+        - heading "Compromiso con la Sostenibilidad" [level=2] [ref=e487]
+        - paragraph [ref=e488]: Todos nuestros procesos están diseñados para operar con energía 100% renovable, principalmente solar. No utilizamos químicos tóxicos como mercurio en minería, y nuestros métodos de deshidratación y destilación son completamente naturales, preservando la calidad del producto final mientras cuidamos el planeta.
+      - generic [ref=e489]:
+        - generic [ref=e490]:
+          - img [ref=e493]
+          - heading "Energía 100% Renovable" [level=3] [ref=e503]
+          - paragraph [ref=e504]: Operamos con energía solar, reduciendo la huella de carbono y costos operativos.
+        - generic [ref=e505]:
+          - img [ref=e508]
+          - heading "Cero Químicos Tóxicos" [level=3] [ref=e511]
+          - paragraph [ref=e512]: Sin mercurio ni cianuro. Procesos limpios que protegen el medio ambiente y la salud.
+        - generic [ref=e513]:
+          - img [ref=e516]
+          - heading "Deshidratación Natural" [level=3] [ref=e523]
+          - paragraph [ref=e524]: Métodos naturales que preservan la calidad del producto y cuidan el planeta.
+        - generic [ref=e525]:
+          - img [ref=e528]
+          - heading "Procesos Sostenibles" [level=3] [ref=e531]
+          - paragraph [ref=e532]: Diseñados para la pequeña minería con mínimo impacto ambiental.
+      - generic [ref=e533]:
+        - generic [ref=e534]:
+          - generic [ref=e535]: 100%
+          - paragraph [ref=e536]: Libre de Mercurio
+        - generic [ref=e537]:
+          - generic [ref=e538]: 95%+
+          - paragraph [ref=e539]: Recuperación de Metales
+        - generic [ref=e540]:
+          - generic [ref=e541]: 24/7
+          - paragraph [ref=e542]: Soporte Técnico
+    - generic [ref=e544]:
+      - generic [ref=e545]:
+        - generic [ref=e546]: 📧 Estamos Listos para Ayudarte
+        - heading "Contáctanos" [level=2] [ref=e547]
+        - paragraph [ref=e548]: Estamos listos para ayudarte con tu próximo proyecto. Contáctanos y recibe una solución personalizada.
+      - generic [ref=e549]:
+        - generic [ref=e550]:
+          - heading "Envíanos un Mensaje" [level=3] [ref=e551]
+          - generic [ref=e552]:
+            - generic [ref=e553]:
+              - generic [ref=e554]: Nombre Completo *
+              - textbox "Nombre Completo *" [ref=e555]:
+                - /placeholder: Tu nombre completo
+            - generic [ref=e556]:
+              - generic [ref=e557]: Teléfono *
+              - textbox "Teléfono *" [ref=e558]:
+                - /placeholder: +51 999 999 999
+            - generic [ref=e559]:
+              - generic [ref=e560]: Correo Electrónico *
+              - textbox "Correo Electrónico *" [active] [ref=e561]:
+                - /placeholder: tu@email.com
+                - text: student@test.com
+            - generic [ref=e562]:
+              - generic [ref=e563]: Mensaje *
+              - textbox "Mensaje *" [ref=e564]:
+                - /placeholder: Cuéntanos sobre tu proyecto...
+            - button "Enviar Mensaje" [ref=e565] [cursor=pointer]:
+              - img [ref=e566]
+              - generic [ref=e569]: Enviar Mensaje
+        - generic [ref=e570]:
+          - generic [ref=e572]:
+            - img [ref=e574]
+            - generic [ref=e577]:
+              - heading "Dirección" [level=4] [ref=e578]
+              - paragraph [ref=e579]: Av. Polinesia 1234
+              - paragraph [ref=e580]: Arequipa, Perú 04001
+          - generic [ref=e582]:
+            - img [ref=e584]
+            - generic [ref=e586]:
+              - heading "Teléfono" [level=4] [ref=e587]
+              - paragraph [ref=e588]: +51 1 234 5678
+              - paragraph [ref=e589]: +51 954 885 777
+          - generic [ref=e591]:
+            - img [ref=e593]
+            - generic [ref=e596]:
+              - heading "Email" [level=4] [ref=e597]
+              - paragraph [ref=e598]: dev.fagsol.sac@gmail.com
+              - paragraph [ref=e599]: atencion@gmail.com
+          - generic [ref=e601]:
+            - img [ref=e603]
+            - generic [ref=e606]:
+              - heading "Horarios" [level=4] [ref=e607]
+              - paragraph [ref=e608]: "Lunes - Viernes: 8:00 AM - 16:00 PM"
+              - paragraph [ref=e609]: "Sábados: 8:00 AM - 1:00 PM"
+          - generic [ref=e610]:
+            - heading "¿Necesitas Ayuda Inmediata?" [level=4] [ref=e611]
+            - paragraph [ref=e612]: Nuestro equipo está disponible para responder tus preguntas en tiempo real.
+            - link "Chatear por WhatsApp" [ref=e613] [cursor=pointer]:
+              - /url: https://wa.me/51954885777
+              - img [ref=e614]
+              - generic [ref=e616]: Chatear por WhatsApp
+    - generic [ref=e618]:
+      - generic [ref=e621]:
+        - generic [ref=e622]:
+          - heading "Mantente Actualizado" [level=3] [ref=e623]
+          - paragraph [ref=e624]: Recibe las últimas noticias sobre cursos, tecnología metalúrgica y ofertas exclusivas.
+        - generic [ref=e626]:
+          - textbox "tu@email.com" [ref=e627]
+          - button "Suscribirme" [ref=e628] [cursor=pointer]:
+            - img [ref=e629]
+            - generic [ref=e632]: Suscribirme
+      - generic [ref=e634]:
+        - generic [ref=e636]:
+          - img "Fagsol SAC" [ref=e637]
+          - paragraph [ref=e638]: Líderes en servicios metalúrgicos y educación especializada. Transformando la industria minera con tecnología y conocimiento.
+          - generic [ref=e639]:
+            - generic [ref=e640]:
+              - img [ref=e641]
+              - generic [ref=e643]: +51 1 234 5678
+            - generic [ref=e644]:
+              - img [ref=e645]
+              - generic [ref=e648]: dev.fagsol.sac@gmail.com
+            - generic [ref=e649]:
+              - img [ref=e650]
+              - generic [ref=e653]: Av. Polinesia 1234, Arequipa, Perú
+        - generic [ref=e654]:
+          - heading "Empresa" [level=4] [ref=e655]
+          - list [ref=e656]:
+            - listitem [ref=e657]:
+              - link "Sobre Nosotros" [ref=e658] [cursor=pointer]:
+                - /url: "#inicio"
+            - listitem [ref=e659]:
+              - link "Nuestros Procesos" [ref=e660] [cursor=pointer]:
+                - /url: "#procesos"
+            - listitem [ref=e661]:
+              - link "Equipos" [ref=e662] [cursor=pointer]:
+                - /url: "#marketplace"
+            - listitem [ref=e663]:
+              - link "Blog" [ref=e664] [cursor=pointer]:
+                - /url: /blog
+            - listitem [ref=e665]:
+              - link "Carreras" [ref=e666] [cursor=pointer]:
+                - /url: /carreras
+        - generic [ref=e667]:
+          - heading "Educación" [level=4] [ref=e668]
+          - list [ref=e669]:
+            - listitem [ref=e670]:
+              - link "Fagsol Academy" [ref=e671] [cursor=pointer]:
+                - /url: /academy
+            - listitem [ref=e672]:
+              - link "Cursos Disponibles" [ref=e673] [cursor=pointer]:
+                - /url: /academy/cursos
+            - listitem [ref=e674]:
+              - link "Conviértete en Instructor" [ref=e675] [cursor=pointer]:
+                - /url: "#enseña"
+            - listitem [ref=e676]:
+              - link "Certificaciones" [ref=e677] [cursor=pointer]:
+                - /url: /academy/certificaciones
+            - listitem [ref=e678]:
+              - link "Preguntas Frecuentes" [ref=e679] [cursor=pointer]:
+                - /url: /faq
+        - generic [ref=e680]:
+          - heading "Servicios" [level=4] [ref=e681]
+          - list [ref=e682]:
+            - listitem [ref=e683]:
+              - link "Consultoría Metalúrgica" [ref=e684] [cursor=pointer]:
+                - /url: "#servicios"
+            - listitem [ref=e685]:
+              - link "Análisis de Laboratorio" [ref=e686] [cursor=pointer]:
+                - /url: "#servicios"
+            - listitem [ref=e687]:
+              - link "Asesoría Técnica" [ref=e688] [cursor=pointer]:
+                - /url: "#servicios"
+            - listitem [ref=e689]:
+              - link "Capacitación In-House" [ref=e690] [cursor=pointer]:
+                - /url: "#servicios"
+            - listitem [ref=e691]:
+              - link "Venta de Equipos" [ref=e692] [cursor=pointer]:
+                - /url: "#marketplace"
+        - generic [ref=e693]:
+          - heading "Legal" [level=4] [ref=e694]
+          - list [ref=e695]:
+            - listitem [ref=e696]:
+              - link "Política de Privacidad" [ref=e697] [cursor=pointer]:
+                - /url: /privacidad
+            - listitem [ref=e698]:
+              - link "Términos y Condiciones" [ref=e699] [cursor=pointer]:
+                - /url: /terminos
+            - listitem [ref=e700]:
+              - link "Política de Cookies" [ref=e701] [cursor=pointer]:
+                - /url: /cookies
+            - listitem [ref=e702]:
+              - link "Política de Reembolso" [ref=e703] [cursor=pointer]:
+                - /url: /reembolso
+      - generic [ref=e705]:
+        - generic [ref=e706]:
+          - generic [ref=e707]: © 2025 FAGSOL SAC. Todos los derechos reservados.
+          - generic [ref=e708]:
+            - link "Facebook" [ref=e709] [cursor=pointer]:
+              - /url: https://facebook.com/fagsol
+              - img [ref=e710]
+            - link "Instagram" [ref=e712] [cursor=pointer]:
+              - /url: https://instagram.com/fagsol
+              - img [ref=e713]
+            - link "LinkedIn" [ref=e717] [cursor=pointer]:
+              - /url: https://linkedin.com/company/fagsol
+              - img [ref=e718]
+            - link "YouTube" [ref=e722] [cursor=pointer]:
+              - /url: https://youtube.com/fagsol
+              - img [ref=e723]
+        - paragraph [ref=e727]: Hecho con ❤️ por el equipo de Fagsol
+  - alert [ref=e728]
+```

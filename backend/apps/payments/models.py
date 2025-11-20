@@ -107,6 +107,9 @@ class Payment(models.Model):
     # Tokenización (NO almacenar datos de tarjeta)
     payment_token = models.CharField(max_length=200, blank=True, null=True, verbose_name="Token de pago", help_text="Token de Mercado Pago (NO datos de tarjeta)")
     
+    # Cuotas
+    installments = models.IntegerField(default=1, validators=[MinValueValidator(1)], verbose_name="Cuotas", help_text="Número de cuotas del pago")
+    
     # Idempotency (evitar cobros duplicados)
     idempotency_key = models.CharField(max_length=100, unique=True, blank=True, null=True, verbose_name="Clave de idempotencia")
     
