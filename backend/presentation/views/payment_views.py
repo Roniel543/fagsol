@@ -331,7 +331,7 @@ def tokenize_card(request):
     operation_description='Procesa un pago con Mercado Pago usando tokenización. Solo estudiantes pueden procesar pagos.',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
-        required=['payment_intent_id', 'payment_token'],
+        required=['payment_intent_id', 'payment_token', 'expiration_month', 'expiration_year'],
         properties={
             'payment_intent_id': openapi.Schema(
                 type=openapi.TYPE_STRING,
@@ -342,6 +342,16 @@ def tokenize_card(request):
                 type=openapi.TYPE_STRING,
                 description='Token de Mercado Pago (tokenizado, NO datos de tarjeta)',
                 example='token_mercadopago_123'
+            ),
+            'expiration_month': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Mes de expiración de la tarjeta (MM)',
+                example='12'
+            ),
+            'expiration_year': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Año de expiración de la tarjeta (YY o YYYY)',
+                example='25'
             ),
             'idempotency_key': openapi.Schema(
                 type=openapi.TYPE_STRING,
@@ -384,6 +394,8 @@ def process_payment(request):
     {
         "payment_intent_id": "pi_...",
         "payment_token": "token_de_mercadopago",
+        "expiration_month": "12",
+        "expiration_year": "25",
         "idempotency_key": "optional_key"  # Opcional
     }
     
@@ -411,11 +423,19 @@ def process_payment(request):
         # 1. Validar datos de entrada
         payment_intent_id = request.data.get('payment_intent_id')
         payment_token = request.data.get('payment_token')
+        expiration_month = request.data.get('expiration_month')
+        expiration_year = request.data.get('expiration_year')
         
         if not payment_intent_id or not payment_token:
             return Response({
                 'success': False,
                 'message': 'payment_intent_id y payment_token son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not expiration_month or not expiration_year:
+            return Response({
+                'success': False,
+                'message': 'expiration_month y expiration_year son requeridos'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # 2. Generar idempotency key si no se proporciona
@@ -429,6 +449,8 @@ def process_payment(request):
             user=request.user,
             payment_intent_id=payment_intent_id,
             payment_token=payment_token,
+            expiration_month=expiration_month,
+            expiration_year=expiration_year,
             idempotency_key=idempotency_key
         )
         

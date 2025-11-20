@@ -1,11 +1,13 @@
 'use client';
 
+import { apiRequest } from '@/shared/services/api';
+import { getAccessToken } from '@/shared/utils/tokenStorage';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface MercadoPagoCardFormProps {
     publicKey: string;
-    onTokenReady: (token: string) => void;
+    onTokenReady: (token: string, expirationMonth: string, expirationYear: string) => void;
     onError: (error: string) => void;
     amount: number;
     disabled?: boolean;
@@ -109,41 +111,36 @@ export function MercadoPagoCardForm({
             const cardNumber = cardData.cardNumber.replace(/\s/g, '');
             const [expMonth, expYear] = cardData.expirationDate.split('/');
 
-            // Obtener token de autenticación
-            const token = localStorage.getItem('access_token');
+            // Verificar autenticación
+            const token = getAccessToken();
             if (!token) {
                 throw new Error('No estás autenticado. Por favor, inicia sesión.');
             }
 
-            // Llamar al endpoint del backend para tokenizar
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-            const tokenizeResponse = await fetch(`${apiUrl}/api/v1/payments/tokenize/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    card_number: cardNumber,
-                    cardholder_name: cardData.cardholderName,
-                    expiration_month: expMonth,
-                    expiration_year: expYear,
-                    security_code: cardData.securityCode,
-                    identification_type: 'DNI',
-                    identification_number: '12345678', // TODO: Obtener del perfil del usuario
-                }),
-            });
+            // Llamar al endpoint del backend para tokenizar usando apiRequest
+            // apiRequest maneja automáticamente la URL base, autenticación y refresh de tokens
+            const tokenizeData = await apiRequest<{ token: string }>(
+                '/payments/tokenize/',
+                {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        card_number: cardNumber,
+                        cardholder_name: cardData.cardholderName,
+                        expiration_month: expMonth,
+                        expiration_year: expYear,
+                        security_code: cardData.securityCode,
+                        identification_type: 'DNI',
+                        identification_number: '12345678', // TODO: Obtener del perfil del usuario
+                    }),
+                }
+            );
 
-            if (!tokenizeResponse.ok) {
-                const errorData = await tokenizeResponse.json();
-                throw new Error(errorData.message || 'Error al tokenizar la tarjeta');
-            }
-
-            const tokenizeData = await tokenizeResponse.json();
+            // apiRequest retorna ApiResponse<T>, verificar success y data
             if (tokenizeData.success && tokenizeData.data?.token) {
-                onTokenReady(tokenizeData.data.token);
+                // Pasar token y datos de expiración al callback
+                onTokenReady(tokenizeData.data.token, expMonth, expYear);
             } else {
-                throw new Error('No se pudo generar el token');
+                throw new Error(tokenizeData.message || 'No se pudo generar el token');
             }
         } catch (err: any) {
             console.error('Error tokenizing card:', err);

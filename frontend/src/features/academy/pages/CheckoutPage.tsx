@@ -21,6 +21,8 @@ function CheckoutPageContent() {
 	const [loadingIntent, setLoadingIntent] = useState(false);
 	const [processingPayment, setProcessingPayment] = useState(false);
 	const [paymentToken, setPaymentToken] = useState<string | null>(null);
+	const [expirationMonth, setExpirationMonth] = useState<string | null>(null);
+	const [expirationYear, setExpirationYear] = useState<string | null>(null);
 	const [error, setError] = useState<string | null>(null);
 
 	// Datos de contacto
@@ -72,14 +74,14 @@ function CheckoutPageContent() {
 
 	// Procesar pago cuando se obtiene el token
 	useEffect(() => {
-		if (!paymentToken || !paymentIntent) return;
+		if (!paymentToken || !paymentIntent || !expirationMonth || !expirationYear) return;
 
 		const process = async () => {
 			setProcessingPayment(true);
 			setError(null);
 
 			try {
-				const response = await processPayment(paymentIntent.id, paymentToken);
+				const response = await processPayment(paymentIntent.id, paymentToken, expirationMonth, expirationYear);
 
 				if (response.success) {
 					showToast('¡Pago procesado exitosamente!', 'success');
@@ -101,11 +103,13 @@ function CheckoutPageContent() {
 		};
 
 		process();
-	}, [paymentToken, paymentIntent, clearCart, router, showToast]);
+	}, [paymentToken, paymentIntent, expirationMonth, expirationYear, clearCart, router, showToast]);
 
 	// Handler cuando Mercado Pago tokeniza la tarjeta
-	const handleTokenReady = (token: string) => {
+	const handleTokenReady = (token: string, expMonth: string, expYear: string) => {
 		setPaymentToken(token);
+		setExpirationMonth(expMonth);
+		setExpirationYear(expYear);
 	};
 
 	const handlePaymentError = (errorMessage: string) => {
