@@ -166,6 +166,8 @@ class PaymentService:
         user,
         payment_intent_id: str,
         payment_token: str,
+        expiration_month: str,
+        expiration_year: str,
         idempotency_key: Optional[str] = None
     ) -> Tuple[bool, Optional[Payment], str]:
         """
@@ -213,12 +215,14 @@ class PaymentService:
                 return False, None, "Mercado Pago no está configurado"
             
             # Crear preferencia de pago en Mercado Pago
+            # NOTA: Cuando se usa token, NO se deben incluir card_expiration_month ni card_expiration_year
+            # porque esa información ya está incluida en el token mismo
+            # payment_method_id también se detecta automáticamente del token
             payment_data = {
                 "transaction_amount": float(payment_intent.total),
-                "token": payment_token,
+                "token": payment_token,  # El token ya contiene toda la información de la tarjeta, incluyendo expiración
                 "description": f"Pago de cursos: {', '.join(payment_intent.course_ids)}",
                 "installments": 1,
-                "payment_method_id": "visa",  # Se detecta automáticamente del token
                 "payer": {
                     "email": user.email,
                     "identification": {
@@ -233,28 +237,50 @@ class PaymentService:
                 }
             }
             
+            # Loggear datos antes de enviar (sin token por seguridad)
+            logger.info(f"Procesando pago. Payment Intent: {payment_intent_id}, Amount: {payment_intent.total}, Token: {payment_token[:20]}...")
+            
             # Procesar pago
-            payment_result = self.mp.payment().create(payment_data)
+            try:
+                payment_result = self.mp.payment().create(payment_data)
+                
+                # Validar que payment_result no sea None
+                if payment_result is None:
+                    logger.error("Mercado Pago retornó None")
+                    payment_intent.status = 'failed'
+                    payment_intent.save()
+                    return False, None, "Error al procesar pago: Mercado Pago no retornó respuesta"
+                
+                logger.info(f"Respuesta de Mercado Pago recibida. Status: {payment_result.get('status') if isinstance(payment_result, dict) else 'N/A'}, Tipo: {type(payment_result)}")
+                logger.info(f"Respuesta completa de Mercado Pago: {payment_result}")
+            except Exception as mp_error:
+                logger.error(f"Excepción al llamar a Mercado Pago: {str(mp_error)}")
+                logger.error(f"Tipo de error: {type(mp_error)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                payment_intent.status = 'failed'
+                payment_intent.save()
+                return False, None, f"Error al procesar pago: {str(mp_error)}"
             
-            # 7. Crear registro de pago
-            payment = Payment.objects.create(
-                payment_intent=payment_intent,
-                user=user,
-                amount=payment_intent.total,
-                currency=payment_intent.currency,
-                payment_token=payment_token,
-                idempotency_key=idempotency_key,
-                mercado_pago_payment_id=payment_result.get("response", {}).get("id"),
-                mercado_pago_status=payment_result.get("response", {}).get("status"),
-                mercado_pago_response=payment_result.get("response", {}),
-                status='pending',
-                metadata={}
-            )
-            
-            # 8. Verificar resultado
+            # 7. Verificar resultado ANTES de crear el registro de pago
             if payment_result.get("status") == 201:
                 response_data = payment_result.get("response", {})
                 payment_status = response_data.get("status")
+                
+                # Crear registro de pago solo si la respuesta es exitosa
+                payment = Payment.objects.create(
+                    payment_intent=payment_intent,
+                    user=user,
+                    amount=payment_intent.total,
+                    currency=payment_intent.currency,
+                    payment_token=payment_token,
+                    idempotency_key=idempotency_key,
+                    mercado_pago_payment_id=response_data.get("id"),
+                    mercado_pago_status=payment_status,
+                    mercado_pago_response=response_data,
+                    status='pending',
+                    metadata={}
+                )
                 
                 if payment_status == "approved":
                     payment.status = 'approved'
@@ -274,22 +300,49 @@ class PaymentService:
                     payment.save()
                     payment_intent.status = 'failed'
                     payment_intent.save()
-                    return False, payment, "Pago rechazado por Mercado Pago"
+                    # Extraer mensaje de rechazo si está disponible
+                    rejection_reason = response_data.get("status_detail", "Pago rechazado")
+                    return False, payment, f"Pago rechazado por Mercado Pago: {rejection_reason}"
                 else:
                     payment.status = 'pending'
                     payment.save()
                     return False, payment, f"Pago pendiente. Estado: {payment_status}"
             else:
-                payment.status = 'rejected'
-                payment.save()
+                # Error en la creación del pago - extraer mensaje de error detallado
+                error_message = "Error desconocido"
+                
+                # Intentar extraer mensaje de diferentes estructuras posibles
+                if "message" in payment_result:
+                    error_message = payment_result.get("message")
+                elif "error" in payment_result:
+                    error_data = payment_result.get("error")
+                    if isinstance(error_data, str):
+                        error_message = error_data
+                    elif isinstance(error_data, dict):
+                        error_message = error_data.get("message", str(error_data))
+                elif "response" in payment_result:
+                    response_data = payment_result.get("response", {})
+                    if "message" in response_data:
+                        error_message = response_data.get("message")
+                    elif "cause" in response_data:
+                        causes = response_data.get("cause", [])
+                        if causes and len(causes) > 0:
+                            error_message = causes[0].get("description", "Error en el pago")
+                
+                # Loggear respuesta completa para debugging
+                logger.error(f"Error en pago Mercado Pago. Status: {payment_result.get('status')}, Respuesta completa: {payment_result}")
+                
+                # Actualizar payment intent a failed
                 payment_intent.status = 'failed'
                 payment_intent.save()
-                error_message = payment_result.get("message", "Error desconocido")
-                logger.error(f"Error en pago Mercado Pago: {error_message}")
-                return False, payment, f"Error al procesar pago: {error_message}"
+                
+                return False, None, f"Error al procesar pago: {error_message}"
                 
         except Exception as e:
-            logger.error(f"Error al procesar pago: {str(e)}")
+            import traceback
+            logger.error(f"Excepción al procesar pago: {str(e)}")
+            logger.error(f"Tipo de excepción: {type(e)}")
+            logger.error(f"Traceback completo: {traceback.format_exc()}")
             if payment_intent:
                 payment_intent.status = 'failed'
                 payment_intent.save()

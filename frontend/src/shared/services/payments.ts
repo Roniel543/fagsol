@@ -37,7 +37,9 @@ export interface CreatePaymentIntentResponse {
 export interface ProcessPaymentRequest {
     payment_intent_id: string;
     payment_token: string; // Token de Mercado Pago (tokenización client-side)
-    //  NO incluir: card_number, cvv, expiration_date, amount, price osea solo el token de mercado pago
+    expiration_month: string; // Mes de expiración (MM) - requerido por Mercado Pago
+    expiration_year: string; // Año de expiración (YY o YYYY) - requerido por Mercado Pago
+    //  NO incluir: card_number, cvv, amount, price - solo token y datos de expiración
 }
 
 export interface ProcessPaymentResponse {
@@ -108,9 +110,11 @@ export async function createPaymentIntent(
  */
 export async function processPayment(
     paymentIntentId: string,
-    paymentToken: string
+    paymentToken: string,
+    expirationMonth: string,
+    expirationYear: string
 ): Promise<ProcessPaymentResponse> {
-    if (!paymentIntentId || !paymentToken) {
+    if (!paymentIntentId || !paymentToken || !expirationMonth || !expirationYear) {
         return {
             success: false,
             message: 'Datos de pago incompletos'
@@ -124,7 +128,9 @@ export async function processPayment(
                 method: 'POST',
                 body: JSON.stringify({
                     payment_intent_id: paymentIntentId,
-                    payment_token: paymentToken // ✅ Solo token, NO datos de tarjeta
+                    payment_token: paymentToken,
+                    expiration_month: expirationMonth,
+                    expiration_year: expirationYear
                 } as ProcessPaymentRequest),
             }
         );
