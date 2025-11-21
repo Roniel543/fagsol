@@ -1,6 +1,6 @@
 'use client';
 
-import { AuthBackground, Button, Input } from '@/shared/components';
+import { AuthBackground, Button, Input, PasswordInput } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { LoginRequest } from '@/shared/types';
 import Image from 'next/image';
@@ -54,26 +54,26 @@ export function LoginForm() {
             <AuthBackground variant="academy" />
 
             {/* Contenido */}
-            <div className="relative z-10 w-full max-w-md">
-                <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-950/95 to-black/95 backdrop-blur-xl rounded-2xl p-8 sm:p-10 border border-primary-orange/20 shadow-2xl shadow-primary-orange/10 animate-fade-in">
+            <div className="relative z-10 w-full max-w-lg">
+                <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-950/95 to-black/95 backdrop-blur-xl rounded-2xl p-10 sm:p-12 border border-primary-orange/20 shadow-2xl shadow-primary-orange/10 animate-fade-in">
                     {/* Logo y Header */}
-                    <div className="text-center mb-8 animate-slide-down">
-                        <div className="flex justify-center mb-4">
+                    <div className="text-center mb-10 animate-slide-down">
+                        <div className="flex justify-center mb-6">
                             <Image
                                 src="/assets/logo_school.png"
                                 alt="FagSol Logo"
-                                width={80}
-                                height={80}
+                                width={120}
+                                height={120}
                                 className="object-contain"
                             />
                         </div>
-                        <h2 className="text-3xl sm:text-4xl font-bold mb-2">
+                        <h2 className="text-4xl sm:text-5xl font-bold mb-3">
                             <span className="text-primary-white">Iniciar </span>
                             <span className="bg-gradient-to-r from-primary-orange via-amber-500 to-primary-orange bg-clip-text text-transparent">
                                 Sesión
                             </span>
                         </h2>
-                        <p className="text-sm text-gray-400 mt-2">
+                        <p className="text-base text-gray-400 mt-2">
                             FagSol Escuela Virtual
                         </p>
                     </div>
@@ -90,30 +90,21 @@ export function LoginForm() {
                                     onChange={handleChange}
                                     placeholder="tu@email.com"
                                     required
-                                    error={error && error.includes('email') ? error : undefined}
                                 />
                             </div>
 
                             <div>
-                                <Input
+                                <PasswordInput
                                     label="Contraseña"
-                                    type="password"
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     placeholder="Tu contraseña"
                                     required
-                                    error={error && error.includes('contraseña') ? error : undefined}
+                                    error={error || undefined}
                                 />
                             </div>
                         </div>
-
-                        {/* Mensaje de error */}
-                        {error && (
-                            <div className="bg-status-error/10 border border-status-error/30 text-status-error px-4 py-3 rounded-lg text-sm text-center animate-slide-down">
-                                {error}
-                            </div>
-                        )}
 
                         {/* Botón de submit */}
                         <Button

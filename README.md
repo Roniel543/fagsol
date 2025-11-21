@@ -1,360 +1,394 @@
-# FagSol Escuela Virtual
+# 🎓 FagSol Escuela Virtual
 
-## 📚 Descripción del Proyecto
+**Plataforma educativa en línea con sistema de roles, cursos, pagos y certificados**
 
-Plataforma educativa web moderna desarrollada para **FagSol S.A.C.**, orientada a digitalizar la oferta educativa y facilitar el acceso a capacitaciones en línea especializadas.
-
-**Versión:** 1.0 (Piloto)  
-**Fecha:** Octubre 2025  
-**Desarrollador:** Roniel Fernando Chambilla del Carpio  
-**Última actualización:** FASE 3 (Frontend SWR) - Completada ✅
+[![Django](https://img.shields.io/badge/Django-5.0-green.svg)](https://www.djangoproject.com/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black.svg)](https://nextjs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 
 ---
 
-## 🏗️ Arquitectura
+## 📋 **TABLA DE CONTENIDOS**
 
-Este proyecto implementa **Clean Architecture** con **Hexagonal Architecture**, garantizando:
-
-- ✅ Código modular, escalable y mantenible
-- ✅ Desacoplamiento entre capas
-- ✅ Principios SOLID
-- ✅ Fácil testing y extensibilidad
-
-### Stack Tecnológico
-
-**Frontend:**
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- SWR (Data Fetching)
-- DOMPurify (Sanitización HTML)
-- Jest + React Testing Library (Testing)
-- Arquitectura feature-based
-
-**Backend:**
-- Django 5.0
-- Django REST Framework
-- PostgreSQL 15
-- JWT Authentication
-- Celery + Redis
-
-**DevOps:**
-- Docker + Docker Compose
-- Render (Deployment)
+- [Características](#-características)
+- [Arquitectura](#-arquitectura)
+- [Inicio Rápido con Docker](#-inicio-rápido-con-docker)
+- [Instalación Manual](#-instalación-manual)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Documentación](#-documentación)
+- [API Endpoints](#-api-endpoints)
+- [Sistema de Roles](#-sistema-de-roles)
+- [Desarrollo](#-desarrollo)
+- [Despliegue](#-despliegue)
 
 ---
 
-## 📂 Estructura del Proyecto
+## ✨ **CARACTERÍSTICAS**
 
-```
-fagsol/
-├── backend/                 # Django Backend
-│   ├── apps/
-│   │   ├── users/          # Gestión de usuarios y autenticación
-│   │   ├── courses/        # Cursos, módulos y lecciones
-│   │   ├── payments/       # Integración MercadoPago
-│   │   ├── evaluations/    # Sistema de evaluaciones
-│   │   ├── certificates/   # Generación de certificados
-│   │   └── core/           # Utilidades compartidas
-│   ├── config/             # Configuración del proyecto
-│   ├── requirements.txt
-│   └── manage.py
-│
-├── frontend/               # Next.js Frontend
-│   ├── src/
-│   │   ├── app/           # App Router (Next.js 14)
-│   │   ├── features/      # Arquitectura feature-based
-│   │   │   ├── academy/   # Feature: Academia/Cursos
-│   │   │   ├── auth/      # Feature: Autenticación
-│   │   │   ├── dashboard/ # Feature: Dashboard
-│   │   │   └── home/      # Feature: Home
-│   │   ├── shared/        # Componentes y utilidades compartidas
-│   │   │   ├── components/ # Componentes reutilizables
-│   │   │   ├── contexts/   # Contexts (Auth, Cart)
-│   │   │   ├── hooks/     # Hooks personalizados
-│   │   │   ├── services/  # Servicios API
-│   │   │   ├── types/      # TypeScript types
-│   │   │   └── utils/      # Utilidades (sanitize, tokenStorage)
-│   │   └── types/         # Types globales
-│   ├── public/            # Assets estáticos
-│   ├── jest.config.js     # Configuración Jest
-│   ├── jest.setup.js      # Setup de tests
-│   ├── SECURITY_README_FRONTEND.md  # Documentación de seguridad
-│   └── package.json
-│
-├── docker-compose.yml     # Orquestación de servicios
-├── .env.example          # Variables de entorno de ejemplo
-└── README.md
-```
+### **Para Estudiantes:**
+- ✅ Registro e inicio de sesión seguro
+- ✅ Explorar catálogo de cursos
+- ✅ Inscribirse en cursos
+- ✅ Acceder a contenido educativo
+- ✅ Seguir progreso de aprendizaje
+- ✅ Obtener certificados al completar cursos
+- ✅ Solicitar ser instructor
+
+### **Para Instructores:**
+- ✅ Sistema de solicitud y aprobación
+- ✅ Crear y gestionar cursos propios
+- ✅ Dashboard con estadísticas
+- ✅ Ver estudiantes e inscripciones
+- ✅ Rutas específicas para gestión
+
+### **Para Administradores:**
+- ✅ Panel de control completo
+- ✅ Gestionar solicitudes de instructores
+- ✅ Aprobar/rechazar cursos
+- ✅ Gestionar usuarios y permisos
+- ✅ Estadísticas del sistema
 
 ---
 
-## 🚀 Instalación y Configuración
+## 🏗️ **ARQUITECTURA**
 
-### Prerrequisitos
+### **Backend:**
+- **Framework:** Django 5.0
+- **Arquitectura:** Clean Architecture
+- **API:** Django REST Framework + Swagger
+- **Base de Datos:** PostgreSQL 15
+- **Autenticación:** JWT con refresh tokens
+- **Seguridad:** Django AXES, rate limiting, validaciones
 
-- Docker y Docker Compose
-- Node.js 18+ (para desarrollo local del frontend)
-- Python 3.11+ (para desarrollo local del backend)
+### **Frontend:**
+- **Framework:** Next.js 14 + TypeScript
+- **Arquitectura:** Feature-based
+- **Estilos:** Tailwind CSS
+- **Data Fetching:** SWR
+- **Autenticación:** JWT en sessionStorage
 
-### ⚡ Quick Start
+### **Infraestructura:**
+- **Containerización:** Docker + Docker Compose
+- **Base de Datos:** PostgreSQL
+- **Caché:** Redis
+- **Tareas Asíncronas:** Celery
+
+---
+
+## 🚀 **INICIO RÁPIDO CON DOCKER**
+
+### **Prerrequisitos:**
+- Docker Desktop (Windows/Mac) o Docker Engine + Docker Compose (Linux)
+- Git
+
+### **Pasos:**
 
 ```bash
 # 1. Clonar repositorio
-git clone <repository-url>
+git clone <url-del-repositorio>
 cd fagsol
 
 # 2. Configurar variables de entorno
 cp .env.example .env
+# Editar .env si es necesario (valores por defecto funcionan para desarrollo)
 
-# 3. Levantar servicios con Docker
+# 3. Levantar todos los servicios
 docker-compose up -d
 
-# 4. Inicializar base de datos
-docker-compose exec backend python manage.py migrate
-docker-compose exec backend python create_superuser.py
+# 4. Ver logs
+docker-compose logs -f
 
-# 5. Acceder a la aplicación
-# Frontend: http://localhost:3000
-# Backend Admin: http://localhost:8000/admin
-# API: http://localhost:8000/api
-```
-
-**📖 Para más detalles:** Ver `SETUP_COMPLETO.md`
-
-### Instalación con Docker (Recomendado)
-
-```bash
-# Clonar el repositorio
-git clone <repository-url>
-cd fagsol
-
-# Copiar variables de entorno
-cp .env.example .env
-
-# Configurar variables en .env (MercadoPago, DB, etc.)
-
-# Levantar servicios
-docker-compose up -d
-
-# Ejecutar migraciones
-docker-compose exec backend python manage.py migrate
-
-# Crear superusuario
+# 5. Crear superusuario (primera vez)
 docker-compose exec backend python manage.py createsuperuser
 
-# Acceder a la aplicación
+# 6. Acceder a la aplicación
 # Frontend: http://localhost:3000
-# Backend Admin: http://localhost:8000/admin
-# API: http://localhost:8000/api
+# Backend API: http://localhost:8000
+# Swagger: http://localhost:8000/swagger/
+# Admin: http://localhost:8000/admin/
 ```
 
-### Desarrollo Local
+**📖 Ver [DOCKER_SETUP.md](./DOCKER_SETUP.md) para documentación completa de Docker**
 
-**Backend:**
+---
+
+## 🛠️ **INSTALACIÓN MANUAL**
+
+### **Backend:**
+
 ```bash
 cd backend
+
+# Crear entorno virtual
 python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# Instalar dependencias
 pip install -r requirements.txt
+
+# Configurar variables de entorno
+cp .env.example .env
+# Editar .env con tus configuraciones
+
+# Aplicar migraciones
 python manage.py migrate
+
+# Crear superusuario
+python manage.py createsuperuser
+
+# Iniciar servidor
 python manage.py runserver
 ```
 
-**Frontend:**
+### **Frontend:**
+
 ```bash
 cd frontend
+
+# Instalar dependencias
 npm install
-npm run dev        # Desarrollo
-npm run build      # Build de producción
-npm run start      # Servidor de producción
-npm test           # Ejecutar tests
-npm run lint       # Linter
+
+# Configurar variables de entorno
+cp .env.example .env.local
+# Editar .env.local con NEXT_PUBLIC_API_URL
+
+# Iniciar servidor de desarrollo
+npm run dev
 ```
 
 ---
 
-## 🎯 Funcionalidades del Piloto
+## 📁 **ESTRUCTURA DEL PROYECTO**
 
-### Estudiantes
-- ✅ Registro post-pago con verificación de email
-- ✅ Acceso a módulos comprados
-- ✅ Visualización de materiales (videos, documentos)
-- ✅ Sistema de evaluaciones con intentos limitados
-- ✅ Certificados descargables con código QR
-- ✅ Tracking de progreso
-
-### Administradores
-- ✅ Panel de administración completo
-- ✅ Gestión de cursos y módulos
-- ✅ Subida de materiales (enlaces externos)
-- ✅ Creación de evaluaciones
-- ✅ Visualización de estudiantes inscritos
-- ✅ Estadísticas básicas (inscripciones, ingresos)
-
-### Sistema de Pagos
-- ✅ Integración con MercadoPago (Checkout Pro)
-- ✅ Compra de curso completo con descuento
-- ✅ Compra de módulos individuales
-- ✅ Webhooks para confirmación automática
-
----
-
-## 🔐 Seguridad
-
-### Backend
-- Contraseñas hasheadas con bcrypt
-- Autenticación JWT con refresh tokens
-- Validación de entrada en frontend y backend
-- Protección CSRF y CORS
-- HTTPS en producción
-- Variables de entorno para credenciales
-
-### Frontend (FASE 1 - ✅ Implementado)
-- ✅ **Tokens JWT en sessionStorage** (más seguro que localStorage)
-- ✅ **Refresh token automático** (preventivo y reactivo)
-- ✅ **Sanitización HTML con DOMPurify** (protección XSS)
-- ✅ **Content Security Policy (CSP)** configurada
-- ✅ **Logout server-side** (invalidación de tokens)
-- ✅ **Headers de seguridad** (X-Frame-Options, X-XSS-Protection, etc.)
-- ✅ **Componente SafeHTML** para renderizar HTML dinámico seguro
-
-**📚 Documentación de Seguridad:**
-- Ver `frontend/SECURITY_README_FRONTEND.md` para guía completa
-- Ver `frontend/IMPLEMENTACION_FASE1_COMPLETA.md` para detalles técnicos
-- Ver `RIESGOS_SEGURIDAD_PAGOS.md` para análisis de riesgos
+```
+fagsol/
+├── backend/                 # Django Backend
+│   ├── apps/               # Aplicaciones Django
+│   │   ├── core/          # Modelos base (UserProfile, InstructorApplication)
+│   │   ├── users/         # Usuarios y permisos
+│   │   ├── courses/       # Cursos, módulos, lecciones
+│   │   └── payments/      # Pagos y transacciones
+│   ├── config/            # Configuración Django
+│   ├── domain/            # Entidades y reglas de negocio
+│   ├── application/       # Casos de uso
+│   ├── infrastructure/    # Servicios y repositorios
+│   └── presentation/      # Views, serializers, URLs
+│
+├── frontend/              # Next.js Frontend
+│   ├── src/
+│   │   ├── app/          # Rutas de Next.js
+│   │   ├── features/     # Módulos por funcionalidad
+│   │   │   ├── auth/    # Autenticación
+│   │   │   ├── dashboard/ # Dashboards
+│   │   │   ├── academy/  # Cursos y catálogo
+│   │   │   ├── admin/    # Panel admin
+│   │   │   └── instructor/ # Panel instructor
+│   │   └── shared/       # Componentes y servicios compartidos
+│   └── public/           # Archivos estáticos
+│
+├── docker-compose.yml     # Orquestación Docker
+├── .env.example          # Variables de entorno de ejemplo
+└── README.md            # Este archivo
+```
 
 ---
 
-## 📊 Base de Datos
+## 📚 **DOCUMENTACIÓN**
 
-El sistema utiliza PostgreSQL con el siguiente modelo principal:
+### **Documentos Principales:**
+- **[CONTEXTO_PROYECTO.md](./CONTEXTO_PROYECTO.md)** - Contexto completo del proyecto
+- **[DOCKER_SETUP.md](./DOCKER_SETUP.md)** - Guía completa de Docker
+- **[CHANGELOG.md](./CHANGELOG.md)** - Registro de cambios
 
-- **User:** Usuarios del sistema (estudiantes, profesores, admins)
-- **Course:** Cursos principales
-- **Module:** Módulos comprables individualmente
-- **Lesson:** Lecciones dentro de cada módulo
-- **Payment:** Registro de pagos
-- **Enrollment:** Matrículas de usuarios en módulos
-- **Evaluation:** Evaluaciones y exámenes
-- **Certificate:** Certificados emitidos
+### **Documentos de Funcionalidades:**
+- **[Futura Fases/Instructors/PLAN_FLUJO_INSTRUCTORES.md](./Futura%20Fases/Instructors/PLAN_FLUJO_INSTRUCTORES.md)** - Flujo de instructores
+- **[Futura Fases/Instructors/GUIA_USO_SISTEMA_INSTRUCTORES.md](./Futura%20Fases/Instructors/GUIA_USO_SISTEMA_INSTRUCTORES.md)** - Guía de uso
+
+### **API Documentation:**
+- **Swagger UI:** http://localhost:8000/swagger/
+- **ReDoc:** http://localhost:8000/redoc/
 
 ---
 
-## 🧪 Testing
+## 🔌 **API ENDPOINTS**
 
-### Backend
+### **Autenticación:**
+- `POST /api/v1/auth/register/` - Registro de estudiantes
+- `POST /api/v1/auth/login/` - Inicio de sesión
+- `POST /api/v1/auth/logout/` - Cerrar sesión
+- `GET /api/v1/auth/me/` - Usuario actual
+- `POST /api/v1/auth/apply-instructor/` - Solicitar ser instructor
+
+### **Dashboard:**
+- `GET /api/v1/dashboard/stats/` - Estadísticas según rol
+- `GET /api/v1/dashboard/student/stats/` - Estadísticas de estudiante
+- `GET /api/v1/dashboard/instructor/stats/` - Estadísticas de instructor
+- `GET /api/v1/dashboard/admin/stats/` - Estadísticas de admin
+
+### **Admin:**
+- `GET /api/v1/admin/instructor-applications/` - Listar solicitudes
+- `POST /api/v1/admin/instructor-applications/{id}/approve/` - Aprobar
+- `POST /api/v1/admin/instructor-applications/{id}/reject/` - Rechazar
+
+### **Cursos:**
+- `GET /api/v1/courses/` - Listar cursos
+- `POST /api/v1/courses/create/` - Crear curso (instructor/admin)
+- `GET /api/v1/courses/{id}/` - Detalle de curso
+- `PUT /api/v1/courses/{id}/update/` - Actualizar curso
+
+**Ver Swagger para documentación completa:** http://localhost:8000/swagger/
+
+---
+
+## 👥 **SISTEMA DE ROLES**
+
+### **Estudiante (student):**
+- Ver cursos publicados
+- Inscribirse en cursos
+- Acceder a contenido
+- Solicitar ser instructor
+
+### **Instructor (instructor):**
+- Requiere aprobación de admin
+- Crear cursos (draft)
+- Gestionar sus cursos
+- Ver estadísticas
+
+### **Administrador (admin):**
+- Acceso completo
+- Aprobar/rechazar instructores
+- Aprobar/rechazar cursos
+- Gestionar usuarios
+
+---
+
+## 💻 **DESARROLLO**
+
+### **Comandos Útiles:**
+
+#### **Backend:**
 ```bash
-cd backend
+# Migraciones
+python manage.py makemigrations
+python manage.py migrate
+
+# Crear superusuario
+python manage.py createsuperuser
+
+# Shell de Django
+python manage.py shell
+
+# Tests
 python manage.py test
+
+# Comandos personalizados
+python manage.py fix_user_auth email@example.com
+python manage.py unlock_all_users
 ```
 
-### Frontend
+#### **Frontend:**
 ```bash
-cd frontend
-npm install
-npm test              # Ejecutar tests
-npm run test:watch    # Modo watch
-npm run test:coverage # Con cobertura
+# Desarrollo
+npm run dev
+
+# Build
+npm run build
+
+# Producción
+npm start
+
+# Tests
+npm test
+npm run test:e2e
 ```
 
-**Tests Implementados:**
-- ✅ Tests de sanitización HTML (`sanitize.test.ts`)
-- ✅ Tests de gestión de tokens (`tokenStorage.test.ts`)
-- ✅ Tests de autenticación (`useAuth.test.tsx`)
-
-**Cobertura Actual:**
-- Utilidades de seguridad: ✅ Testeadas
-- Hooks de autenticación: ✅ Testeados
-- Componentes críticos: En progreso
+### **Hot Reload:**
+- ✅ Frontend: Automático con Next.js
+- ✅ Backend: Auto-reload con `runserver`
 
 ---
 
-## 📦 Deployment
+## 🚢 **DESPLIEGUE**
 
-El proyecto está configurado para desplegarse en **Render**:
+### **Producción con Docker:**
+```bash
+# Build para producción
+docker-compose -f docker-compose.prod.yml build
 
-- **Frontend:** Render Static Site / Vercel
-- **Backend:** Render Web Service
-- **Base de datos:** Render PostgreSQL
+# Levantar en producción
+docker-compose -f docker-compose.prod.yml up -d
+```
 
----
+### **Variables de Entorno Importantes:**
+- `DEBUG=False` en producción
+- `SECRET_KEY` único y seguro
+- `ALLOWED_HOSTS` con tu dominio
+- `DB_PASSWORD` fuerte
+- Configurar HTTPS
 
-## 📚 Documentación Adicional
-
-### Seguridad
-- **`frontend/SECURITY_README_FRONTEND.md`** - Guía completa de seguridad frontend
-- **`frontend/IMPLEMENTACION_FASE1_COMPLETA.md`** - Detalles de implementación FASE 1
-- **`frontend/BACKEND_ENDPOINTS_REQUIRED.md`** - Endpoints backend requeridos
-- **`RIESGOS_SEGURIDAD_PAGOS.md`** - Análisis de riesgos con pagos reales
-
-### Desarrollo
-- **`SETUP_COMPLETO.md`** - Guía de instalación completa
-- **`ANALISIS_PROYECTO_FRONTEND.md`** - Análisis del proyecto frontend
-- **`backend/ARCHITECTURE.md`** - Arquitectura del backend
-- **`backend/ARQUITECTURA_COMPLETA.md`** - Arquitectura completa
+**Ver [DOCKER_SETUP.md](./DOCKER_SETUP.md) para más detalles**
 
 ---
 
-## 📝 Licencia
+## 🔐 **SEGURIDAD**
 
-Propiedad de **FagSol S.A.C.** - Todos los derechos reservados.
-
----
-
-## 👨‍💻 Desarrollador
-
-**Roniel Fernando Chambilla del Carpio**  
-Desarrollador Web Full Stack  
-Email: [tu-email]  
-LinkedIn: [tu-perfil]
+- ✅ JWT con refresh tokens
+- ✅ Rate limiting (Django AXES)
+- ✅ Validación de permisos en backend
+- ✅ Sanitización de inputs
+- ✅ CORS configurado
+- ✅ Tokens en sessionStorage (no localStorage)
 
 ---
 
-## 🗓️ Roadmap
+## 📊 **ESTADO DEL PROYECTO**
 
-### Fase 1 - Seguridad Frontend ✅ (Completado)
-- ✅ Tokens JWT seguros (sessionStorage)
-- ✅ Refresh token automático
-- ✅ Sanitización HTML (DOMPurify)
-- ✅ Content Security Policy (CSP)
-- ✅ Logout server-side
-- ✅ Tests unitarios de seguridad
-- ✅ Documentación completa de seguridad
+### **✅ Completado:**
+- Sistema de autenticación completo
+- Sistema de roles y permisos
+- Flujo de solicitud de instructor
+- Panel admin para gestionar solicitudes
+- Dashboard para todos los roles
+- Rutas específicas para instructores
+- UI mejorada
 
-### Fase 1.5 - Piloto (Actual)
-- Sistema básico de cursos modulares
-- Pagos con MercadoPago
-- Panel administrativo
-- Certificados básicos
+### **⏳ En Desarrollo:**
+- Sistema completo de cursos
+- Sistema de aprobación de cursos
+- Notificaciones por email
 
-### Fase 2 - Data Fetching ✅ (Completado)
-- ✅ Instalar y configurar SWR
-- ✅ Hooks de data fetching (useCourses, useCourse, useCourseBySlug, useEnrollments)
-- ✅ Migración de componentes a SWR (CatalogPage, CourseDetailPage, AcademyHomePage, CartContext)
-- ✅ Error handling y loading states
-- ✅ Backend mejorado: endpoint por slug, modelo Course extendido
+---
 
-### Fase 3 - Testing E2E (Próximo)
-- [ ] Configurar Playwright
-- [ ] Tests E2E de flujos críticos
-- [ ] Tests de acceso no autorizado
+## 🤝 **CONTRIBUIR**
 
-### Fase 4 - Observabilidad (Futuro)
-- [ ] Integrar Sentry
-- [ ] Error boundaries
-- [ ] Request-id correlation
+1. Fork el proyecto
+2. Crea una rama (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
-### Fase 5 - CI/CD (Futuro)
-- [ ] GitHub Actions
-- [ ] Linter + TypeScript check
-- [ ] Security scans automáticos
+---
 
-### Fase 6 - Expansión (Futuro)
-- Certificados con blockchain
-- Evaluaciones avanzadas
-- Foros de discusión
-- Aplicación móvil
-- Gamificación completa
-- Analytics avanzados
+## 📝 **LICENCIA**
 
+Este proyecto es propiedad de FagSol S.A.C.
+
+---
+
+## 📞 **CONTACTO**
+
+- **Email:** soporte@fagsol.com
+- **Website:** https://fagsol.com
+
+---
+
+## 🙏 **AGRADECIMIENTOS**
+
+- Django Community
+- Next.js Team
+- Todos los contribuidores
+
+---
+
+**Última actualización:** 2025-01-12

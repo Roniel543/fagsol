@@ -1,21 +1,3 @@
-# General
-.DS_Store
-*.log
-*.swp
-*.swo
-*~
-
-# Environment variables
-.env
-#.env.backup
-.env.local.example
-
-# IDEs
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
 # Python
 __pycache__/
 *.py[cod]
@@ -34,17 +16,15 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
+
+# Virtual environments
 venv/
 env/
 ENV/
-env.bak/
-venv.bak/
+.venv
 
 # Django
 *.log
@@ -53,7 +33,13 @@ db.sqlite3
 db.sqlite3-journal
 /media
 /staticfiles
-/static
+
+# Next.js
+.next/
+out/
+build/
+dist/
+.vercel
 
 # Node
 node_modules/
@@ -62,28 +48,39 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Next.js
-.next/
-out/
-next-env.d.ts
-.vercel
+# Environment
+.env
+.env.local
+.env.*.local
+.env.production
 
-# TypeScript
-*.tsbuildinfo
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
 
 # Testing
-/coverage
-.nyc_output
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+test-results/
+playwright-report/
+coverage/
+
+# Logs
+logs/
+*.log
 
 # Docker
-*.pid
-*.seed
-*.pid.lock
+.docker/
 
-# Production
-/build
+# OS
+Thumbs.db
 
-# Temp
-tmp/
-temp/
-
+# Temporary files
+*.tmp
+*.temp

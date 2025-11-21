@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 export { AnimatedCounter } from './AnimatedCounter';
 export { AuthBackground } from './AuthBackground';
 export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
@@ -116,6 +117,73 @@ export function Input({
     );
 }
 
+interface PasswordInputProps {
+    label?: string;
+    name: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder?: string;
+    required?: boolean;
+    error?: string;
+    className?: string;
+    showToggle?: boolean; // Si mostrar el botón de mostrar/ocultar
+}
+
+export function PasswordInput({
+    label,
+    name,
+    value,
+    onChange,
+    placeholder,
+    required = false,
+    error,
+    className = '',
+    showToggle = true,
+}: PasswordInputProps) {
+    const [showPassword, setShowPassword] = useState(false);
+
+    return (
+        <div className={className}>
+            {label && (
+                <label htmlFor={name} className="block text-sm font-medium text-primary-white mb-1">
+                    {label}
+                    {required && <span className="text-status-error ml-1">*</span>}
+                </label>
+            )}
+            <div className="relative">
+                <input
+                    id={name}
+                    name={name}
+                    type={showPassword ? 'text' : 'password'}
+                    value={value}
+                    onChange={onChange}
+                    placeholder={placeholder}
+                    required={required}
+                    className={`appearance-none relative block w-full px-4 py-3 pr-12 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
+                        } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`}
+                />
+                {showToggle && (
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-light-gray hover:text-primary-white transition-colors focus:outline-none"
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                    >
+                        {showPassword ? (
+                            <EyeOff className="w-5 h-5" />
+                        ) : (
+                            <Eye className="w-5 h-5" />
+                        )}
+                    </button>
+                )}
+            </div>
+            {error && (
+                <p className="mt-1 text-sm text-status-error">{error}</p>
+            )}
+        </div>
+    );
+}
+
 interface SelectProps {
     label?: string;
     name: string;
@@ -225,6 +293,106 @@ export function SidebarItem({ children, active = false, onClick, className = '' 
                 } ${className}`}
         >
             {children}
+        </div>
+    );
+}
+
+interface ModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    title: string;
+    message: string | React.ReactNode;
+    icon?: React.ReactNode;
+    confirmText?: string;
+    cancelText?: string;
+    onConfirm: () => void;
+    variant?: 'confirm' | 'warning' | 'danger' | 'success';
+    isLoading?: boolean;
+}
+
+export function Modal({
+    isOpen,
+    onClose,
+    title,
+    message,
+    icon,
+    confirmText = 'Confirmar',
+    cancelText = 'Cancelar',
+    onConfirm,
+    variant = 'confirm',
+    isLoading = false,
+}: ModalProps) {
+    if (!isOpen) return null;
+
+    const variantStyles = {
+        confirm: {
+            iconBg: 'bg-blue-100',
+            iconColor: 'text-blue-600',
+            confirmButton: 'primary',
+        },
+        warning: {
+            iconBg: 'bg-yellow-100',
+            iconColor: 'text-yellow-600',
+            confirmButton: 'primary',
+        },
+        danger: {
+            iconBg: 'bg-red-100',
+            iconColor: 'text-red-600',
+            confirmButton: 'danger',
+        },
+        success: {
+            iconBg: 'bg-green-100',
+            iconColor: 'text-green-600',
+            confirmButton: 'success',
+        },
+    };
+
+    const style = variantStyles[variant];
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+            <div
+                className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 animate-fade-in"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-6">
+                    {/* Icon and Title */}
+                    <div className="flex items-start space-x-4 mb-4">
+                        {icon && (
+                            <div className={`flex-shrink-0 ${style.iconBg} rounded-full p-3`}>
+                                <div className={style.iconColor}>
+                                    {icon}
+                                </div>
+                            </div>
+                        )}
+                        <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
+                            <p className="text-gray-600 leading-relaxed">{message}</p>
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex justify-end space-x-3 mt-6">
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={onClose}
+                            disabled={isLoading}
+                        >
+                            {cancelText}
+                        </Button>
+                        <Button
+                            variant={style.confirmButton as any}
+                            size="sm"
+                            onClick={onConfirm}
+                            loading={isLoading}
+                            disabled={isLoading}
+                        >
+                            {confirmText}
+                        </Button>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

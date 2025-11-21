@@ -9,7 +9,13 @@ function CreateCoursePageContent() {
     const router = useRouter();
 
     const handleSuccess = () => {
-        router.push('/admin/courses');
+        // Redirigir según el rol del usuario
+        const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+        if (userRole === 'instructor') {
+            router.push('/instructor/courses');
+        } else {
+            router.push('/admin/courses');
+        }
     };
 
     return (
@@ -24,11 +30,17 @@ function CreateCoursePageContent() {
                             </h1>
                             <p className="text-gray-600">Completa el formulario para crear un nuevo curso</p>
                         </div>
-                        <Link href="/admin/courses">
-                            <Button variant="secondary" size="sm">
-                                Volver a Cursos
-                            </Button>
-                        </Link>
+                        {(() => {
+                            const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
+                            const backUrl = userRole === 'instructor' ? '/instructor/courses' : '/admin/courses';
+                            return (
+                                <Link href={backUrl}>
+                                    <Button variant="secondary" size="sm">
+                                        Volver a Cursos
+                                    </Button>
+                                </Link>
+                            );
+                        })()}
                     </div>
                 </div>
             </header>

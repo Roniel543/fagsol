@@ -1,6 +1,6 @@
 'use client';
 
-import { AuthBackground, Button, Input, Select } from '@/shared/components';
+import { AuthBackground, Button, Input, PasswordInput } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { RegisterRequest } from '@/shared/types';
 import Image from 'next/image';
@@ -14,8 +14,9 @@ export function RegisterForm() {
         password: '',
         first_name: '',
         last_name: '',
-        role: 'student'
+        role: 'student' // Siempre estudiante en registro público
     });
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -24,10 +25,17 @@ export function RegisterForm() {
     const router = useRouter();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value
-        });
+        const { name, value } = e.target;
+        
+        if (name === 'confirm_password') {
+            setConfirmPassword(value);
+        } else {
+            setFormData({
+                ...formData,
+                [name]: value
+            });
+        }
+        
         // Limpiar error cuando el usuario empiece a escribir
         if (error) setError('');
     };
@@ -36,6 +44,19 @@ export function RegisterForm() {
         e.preventDefault();
         setLoading(true);
         setError('');
+
+        // Validaciones del frontend
+        if (formData.password.length < 8) {
+            setError('La contraseña debe tener al menos 8 caracteres');
+            setLoading(false);
+            return;
+        }
+
+        if (formData.password !== confirmPassword) {
+            setError('Las contraseñas no coinciden');
+            setLoading(false);
+            return;
+        }
 
         try {
             const response = await register(formData);
@@ -55,10 +76,6 @@ export function RegisterForm() {
         }
     };
 
-    const roleOptions = [
-        { value: 'student', label: 'Estudiante' },
-        { value: 'instructor', label: 'Instructor' },
-    ];
 
     if (success) {
         return (
@@ -92,26 +109,26 @@ export function RegisterForm() {
             <AuthBackground variant="academy" />
 
             {/* Contenido */}
-            <div className="relative z-10 w-full max-w-md">
-                <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-950/95 to-black/95 backdrop-blur-xl rounded-2xl p-8 sm:p-10 border border-primary-orange/20 shadow-2xl shadow-primary-orange/10 animate-fade-in">
+            <div className="relative z-10 w-full max-w-lg">
+                <div className="bg-gradient-to-br from-zinc-900/95 via-zinc-950/95 to-black/95 backdrop-blur-xl rounded-2xl p-10 sm:p-12 border border-primary-orange/20 shadow-2xl shadow-primary-orange/10 animate-fade-in">
                     {/* Logo y Header */}
-                    <div className="text-center mb-8 animate-slide-down">
-                        <div className="flex justify-center mb-4">
+                    <div className="text-center mb-10 animate-slide-down">
+                        <div className="flex justify-center mb-6">
                             <Image
                                 src="/assets/logo_school.png"
                                 alt="FagSol Logo"
-                                width={80}
-                                height={80}
+                                width={120}
+                                height={120}
                                 className="object-contain"
                             />
                         </div>
-                        <h2 className="text-3xl sm:text-4xl font-bold mb-2">
+                        <h2 className="text-4xl sm:text-5xl font-bold mb-3">
                             <span className="text-primary-white">Crear </span>
                             <span className="bg-gradient-to-r from-primary-orange via-amber-500 to-primary-orange bg-clip-text text-transparent">
                                 Cuenta
                             </span>
                         </h2>
-                        <p className="text-sm text-gray-400 mt-2">
+                        <p className="text-base text-gray-400 mt-2">
                             FagSol Escuela Virtual
                         </p>
                     </div>
@@ -156,31 +173,32 @@ export function RegisterForm() {
                             </div>
 
                             <div>
-                                <Input
+                                <PasswordInput
                                     label="Contraseña"
-                                    type="password"
                                     name="password"
                                     value={formData.password}
                                     onChange={handleChange}
                                     placeholder="Mínimo 8 caracteres"
                                     required
+                                    error={error && formData.password.length < 8 ? error : undefined}
                                 />
                             </div>
 
                             <div>
-                                <Select
-                                    label="Tipo de Usuario"
-                                    name="role"
-                                    value={formData.role}
+                                <PasswordInput
+                                    label="Confirmar Contraseña"
+                                    name="confirm_password"
+                                    value={confirmPassword}
                                     onChange={handleChange}
-                                    options={roleOptions}
+                                    placeholder="Repite tu contraseña"
                                     required
+                                    error={error && formData.password !== confirmPassword && confirmPassword.length > 0 ? error : undefined}
                                 />
                             </div>
                         </div>
 
-                        {/* Mensaje de error */}
-                        {error && (
+                        {/* Mensaje de error general (solo si no es de validación de campos específicos) */}
+                        {error && formData.password.length >= 8 && formData.password === confirmPassword && (
                             <div className="bg-status-error/10 border border-status-error/30 text-status-error px-4 py-3 rounded-lg text-sm text-center animate-slide-down">
                                 {error}
                             </div>
@@ -197,17 +215,30 @@ export function RegisterForm() {
                             {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
                         </Button>
 
-                        {/* Link de login */}
-                        <div className="text-center pt-4 border-t border-gray-800">
-                            <p className="text-sm text-gray-400">
-                                ¿Ya tienes cuenta?{' '}
-                                <Link
-                                    href="/auth/login"
-                                    className="font-medium text-primary-orange hover:text-amber-500 transition-colors duration-200"
-                                >
-                                    Inicia sesión aquí
-                                </Link>
-                            </p>
+                        {/* Links adicionales */}
+                        <div className="space-y-3 pt-4 border-t border-gray-800">
+                            <div className="text-center">
+                                <p className="text-sm text-gray-400">
+                                    ¿Ya tienes cuenta?{' '}
+                                    <Link
+                                        href="/auth/login"
+                                        className="font-medium text-primary-orange hover:text-amber-500 transition-colors duration-200"
+                                    >
+                                        Inicia sesión aquí
+                                    </Link>
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-gray-400">
+                                    ¿Quieres ser instructor?{' '}
+                                    <Link
+                                        href="/auth/become-instructor"
+                                        className="font-medium text-primary-orange hover:text-amber-500 transition-colors duration-200"
+                                    >
+                                        Solicita aquí
+                                    </Link>
+                                </p>
+                            </div>
                         </div>
                     </form>
                 </div>

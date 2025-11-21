@@ -10,10 +10,13 @@ import { useAuth } from './useAuth';
  * Hook para obtener estadísticas del dashboard según el rol
  */
 export function useDashboard() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, loading } = useAuth();
+
+    // Esperar a que termine la verificación de autenticación antes de hacer la petición
+    const shouldFetch = !loading && isAuthenticated;
 
     const { data, error, isLoading, mutate } = useSWR<DashboardStatsResponse>(
-        isAuthenticated ? 'dashboard-stats' : null,
+        shouldFetch ? 'dashboard-stats' : null,
         async () => {
             return await getDashboardStats();
         },
@@ -21,6 +24,8 @@ export function useDashboard() {
             revalidateOnFocus: false,
             revalidateOnReconnect: true,
             dedupingInterval: 60000, // Cache por 1 minuto
+            // No revalidar si aún está cargando la autenticación
+            revalidateIfStale: !loading,
         }
     );
 
@@ -37,6 +42,27 @@ export function useDashboard() {
         return data && 'enrollments' in data && 'progress' in data && 'recent_courses' in data;
     };
 
+    // Log error para debugging
+    if (error) {
+        console.error('Error en useDashboard:', error);
+    }
+
+    // Determinar si hay error
+    const hasError = !!error || (data && !data.success);
+    
+    // Obtener mensaje de error
+    let errorMessage: string | null = null;
+    if (error) {
+        errorMessage = error instanceof Error ? error.message : 'Error al cargar estadísticas';
+    } else if (data && !data.success) {
+        // Si data.data es un objeto con message (caso de error del backend)
+        if (data.data && typeof data.data === 'object' && 'message' in data.data) {
+            errorMessage = (data.data as { message: string }).message;
+        } else {
+            errorMessage = 'Error al cargar estadísticas';
+        }
+    }
+
     return {
         stats: data?.data || null,
         isAdminStats: data?.data ? isAdminStats(data.data) : false,
@@ -45,9 +71,9 @@ export function useDashboard() {
         adminStats: data?.data && isAdminStats(data.data) ? data.data as AdminStats : null,
         instructorStats: data?.data && isInstructorStats(data.data) ? data.data as InstructorStats : null,
         studentStats: data?.data && isStudentStats(data.data) ? data.data as StudentStats : null,
-        isLoading,
-        isError: !!error,
-        error,
+        isLoading: isLoading || loading,
+        isError: hasError,
+        error: errorMessage ? new Error(errorMessage) : null,
         mutate,
     };
 }

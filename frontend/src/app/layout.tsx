@@ -3,6 +3,7 @@ import { CartProvider } from '@/shared/contexts/CartContext'
 import { ToastProvider } from '@/shared/components/Toast'
 import type { Metadata } from 'next'
 import { Sora } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 
 const sora = Sora({
@@ -24,6 +25,12 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${sora.className} min-h-screen bg-cover bg-center bg-no-repeat`}>
+        {/* Pre-cargar SDK de Mercado Pago para optimizar checkout */}
+        <Script
+          src="https://sdk.mercadopago.com/js/v2"
+          strategy="afterInteractive"
+          crossOrigin="anonymous"
+        />
         <div className="min-h-screen bg-primary-black ">
           <AuthProvider>
             <CartProvider>

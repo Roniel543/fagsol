@@ -5,33 +5,41 @@ services:
   db:
     image: postgres:15-alpine
     container_name: fagsol_db
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:fagsol_db}
-      POSTGRES_USER: ${DB_USER:postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:postgres}
+      POSTGRES_DB: ${DB_NAME:-fagsol_db}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=es_ES.UTF-8"
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U fagsol_user" ]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-fagsol_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    networks:
+      - fagsol_network
 
   # Redis (para Celery y caché)
   redis:
     image: redis:7-alpine
     container_name: fagsol_redis
+    restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - fagsol_network
 
   # Django Backend
   backend:
@@ -39,53 +47,74 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: fagsol_backend
-    command: python manage.py runserver 0.0.0.0:8000
+    restart: unless-stopped
+    command: >
+      sh -c "
+        echo 'Esperando a que la base de datos esté lista...' &&
+        python manage.py wait_for_db --max-attempts=30 --delay=2 &&
+        echo 'Aplicando migraciones...' &&
+        python manage.py migrate &&
+        echo 'Recolectando archivos estáticos...' &&
+        python manage.py collectstatic --noinput || true &&
+        echo 'Iniciando servidor Django...' &&
+        python manage.py runserver 0.0.0.0:8000
+      "
     volumes:
       - ./backend:/app
       - backend_static:/app/staticfiles
       - backend_media:/app/media
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     environment:
       - DEBUG=${DEBUG:-True}
       - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this-in-production}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,0.0.0.0}
       - DB_ENGINE=${DB_ENGINE:-django.db.backends.postgresql}
-      - DB_NAME=${DB_NAME:fagsol_db}
-      - DB_USER=${DB_USER:postgres}
-      - DB_PASSWORD=${DB_PASSWORD:postgres}
+      - DB_NAME=${DB_NAME:-fagsol_db}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_URL=redis://redis:6379/0
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000,http://frontend:3000}
       - MERCADOPAGO_ACCESS_TOKEN=${MERCADOPAGO_ACCESS_TOKEN:-}
       - MERCADOPAGO_WEBHOOK_SECRET=${MERCADOPAGO_WEBHOOK_SECRET:-}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+      - EMAIL_BACKEND=${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+      - EMAIL_HOST=${EMAIL_HOST:-}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-True}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD-SHELL", "python manage.py check || exit 1" ]
+      test: ["CMD-SHELL", "python manage.py check || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 40s
+    networks:
+      - fagsol_network
 
-  # Celery Worker
+  # Celery Worker (opcional, para tareas asíncronas)
   celery:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: fagsol_celery
-    command: celery -A config worker -l info
+    restart: unless-stopped
+    command: celery -A config worker -l info --concurrency=2
     volumes:
       - ./backend:/app
+      - backend_media:/app/media
     environment:
       - DEBUG=${DEBUG:-True}
-      - SECRET_KEY=${SECRET_KEY}
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-change-this-in-production}
       - DB_ENGINE=${DB_ENGINE:-django.db.backends.postgresql}
       - DB_NAME=${DB_NAME:-fagsol_db}
       - DB_USER=${DB_USER:-postgres}
@@ -97,30 +126,8 @@ services:
       - db
       - redis
       - backend
-
-  # Celery Beat (tareas programadas)
-  celery-beat:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: fagsol_celery_beat
-    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    volumes:
-      - ./backend:/app
-    environment:
-      - DEBUG=${DEBUG:-True}
-      - SECRET_KEY=${SECRET_KEY}
-      - DB_ENGINE=${DB_ENGINE:-django.db.backends.postgresql}
-      - DB_NAME=${DB_NAME:-fagsol_db}
-      - DB_USER=${DB_USER:-postgres}
-      - DB_PASSWORD=${DB_PASSWORD:-postgres}
-      - DB_HOST=db
-      - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/0
-    depends_on:
-      - db
-      - redis
-      - backend
+    networks:
+      - fagsol_network
 
   # Next.js Frontend
   frontend:
@@ -128,26 +135,38 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: fagsol_frontend
+    restart: unless-stopped
     command: npm run dev -- -H 0.0.0.0
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
       - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
       - NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY=${NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY:-}
       - NODE_ENV=development
+      - WATCHPACK_POLLING=true
     depends_on:
       backend:
         condition: service_healthy
+    networks:
+      - fagsol_network
+    stdin_open: true
+    tty: true
 
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   backend_static:
+    driver: local
   backend_media:
+    driver: local
 
-
+networks:
+  fagsol_network:
+    driver: bridge

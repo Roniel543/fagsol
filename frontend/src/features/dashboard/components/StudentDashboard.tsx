@@ -2,6 +2,7 @@
 
 import { Button, LoadingSpinner } from '@/shared/components';
 import { useDashboard } from '@/shared/hooks/useDashboard';
+import { useAuth } from '@/shared/hooks/useAuth';
 import { PaymentsDashboard } from './PaymentsDashboard';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -10,9 +11,11 @@ import { useState } from 'react';
 export function StudentDashboard() {
     const router = useRouter();
     const { studentStats, isLoading, isError } = useDashboard();
+    const { loading: authLoading } = useAuth();
     const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
 
-    if (isLoading) {
+    // Mostrar loading mientras se verifica la autenticación o se cargan las estadísticas
+    if (authLoading || isLoading) {
         return (
             <div className="flex items-center justify-center py-12">
                 <LoadingSpinner size="lg" />
@@ -23,8 +26,34 @@ export function StudentDashboard() {
 
     if (isError || !studentStats) {
         return (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                Error al cargar las estadísticas
+            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+                <div className="flex items-start">
+                    <svg className="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-red-800 mb-2">Error al cargar las estadísticas</h3>
+                        <p className="text-red-700 mb-4">
+                            No se pudieron cargar las estadísticas del dashboard. Por favor, intenta recargar la página.
+                        </p>
+                        <div className="flex gap-3">
+                            <Button 
+                                variant="primary" 
+                                size="sm"
+                                onClick={() => window.location.reload()}
+                            >
+                                Recargar Página
+                            </Button>
+                            <Button 
+                                variant="secondary" 
+                                size="sm"
+                                onClick={() => router.push('/academy/catalog')}
+                            >
+                                Explorar Cursos
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

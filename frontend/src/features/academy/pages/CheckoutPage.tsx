@@ -63,41 +63,41 @@ function CheckoutPageContent() {
 	// Obtener public key de Mercado Pago desde variables de entorno
 	const mercadoPagoPublicKey = process.env.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || '';
 
-	// Cargar script de Mercado Pago Bricks
+	// Verificar si el SDK de Mercado Pago ya está cargado (pre-cargado desde layout)
 	useEffect(() => {
-		if (scriptLoadedRef.current || !mercadoPagoPublicKey) {
+		if (!mercadoPagoPublicKey) {
 			return;
 		}
 
-		// Verificar si el script ya existe
-		const existingScript = document.querySelector('script[src*="mercadopago"]');
-		if (existingScript) {
-			scriptLoadedRef.current = true;
+		// Verificar si el SDK ya está disponible
+		const checkSDK = () => {
 			if (typeof window !== 'undefined' && window.MercadoPago) {
+				scriptLoadedRef.current = true;
 				setIsBrickReady(true);
+				return true;
 			}
+			return false;
+		};
+
+		// Verificar inmediatamente
+		if (checkSDK()) {
 			return;
 		}
 
-		// Cargar script de Mercado Pago Bricks
-		const script = document.createElement('script');
-		script.src = 'https://sdk.mercadopago.com/js/v2';
-		script.async = true;
-		script.crossOrigin = 'anonymous';
-		script.onload = () => {
-			scriptLoadedRef.current = true;
-			setTimeout(() => {
-				if (typeof window !== 'undefined' && window.MercadoPago) {
-					setIsBrickReady(true);
-				} else {
-					setError('Error al cargar el SDK de Mercado Pago');
+		// Si no está disponible, esperar a que se cargue (máximo 5 segundos)
+		let attempts = 0;
+		const maxAttempts = 50; // 50 intentos * 100ms = 5 segundos máximo
+		const interval = setInterval(() => {
+			attempts++;
+			if (checkSDK() || attempts >= maxAttempts) {
+				clearInterval(interval);
+				if (attempts >= maxAttempts && !window.MercadoPago) {
+					setError('Error al cargar el SDK de Mercado Pago. Verifica tu conexión a internet.');
 				}
-			}, 200);
-		};
-		script.onerror = () => {
-			setError('Error al cargar el SDK de Mercado Pago. Verifica tu conexión a internet.');
-		};
-		document.head.appendChild(script);
+			}
+		}, 100);
+
+		return () => clearInterval(interval);
 	}, [mercadoPagoPublicKey]);
 
 	// Inicializar CardPayment Brick cuando esté listo
@@ -189,8 +189,19 @@ function CheckoutPageContent() {
 						style: {
 							theme: 'dark',
 							customVariables: {
-								baseColor: '#FF6B35', // primary-orange
+								baseColor: '#F5A623', // primary-orange del sistema de diseño
+								baseColorFirstVariant: '#F5A623',
+								baseColorSecondVariant: '#F5A623',
+								errorColor: '#FF6B6B', // status-error
+								successColor: '#2D9B7F', // status-success
+								outlinePrimaryColor: '#F5A623',
+								outlineSecondaryColor: '#282828', // secondary-medium-gray
+								borderRadius: '8px',
+								fontFamily: 'var(--font-soraa), system-ui, sans-serif',
 							},
+						},
+						texts: {
+							fontType: 'custom',
 						},
 					},
 				},
@@ -207,15 +218,14 @@ function CheckoutPageContent() {
 				}
 	}, [isBrickReady, paymentIntent, mercadoPagoPublicKey, form.email, processingPayment, clearCart, router, showToast]);
 
-	
-	// Crear payment intent al cargar (si hay items en el carrito)
+	// Crear payment intent al cargar (paralelo con la carga del SDK)
 	useEffect(() => {
 		if (itemCount === 0) {
 			router.push('/academy/cart');
 			return;
 		}
 
-		// Crear payment intent con el backend
+		// Crear payment intent con el backend (no espera al SDK)
 		const createIntent = async () => {
 			setLoadingIntent(true);
 			setError(null);
@@ -251,7 +261,7 @@ function CheckoutPageContent() {
 				<AcademyHeader />
 				<main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
 					<div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
-						<div className="rounded-xl border border-red-500/50 bg-red-500/10 p-6 text-red-400">
+						<div className="rounded-xl border border-status-error/50 bg-status-error/10 p-6 text-status-error">
 							⚠️ Clave pública de Mercado Pago no configurada. Configura NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
 						</div>
 					</div>
@@ -266,20 +276,20 @@ function CheckoutPageContent() {
 			<main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
 				<div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
 					<div className="flex items-center justify-between">
-						<Link href="/academy/cart" className="text-primary-orange inline-flex items-center gap-2 text-sm hover:underline">
+						<Link href="/academy/cart" className="text-primary-orange inline-flex items-center gap-2 text-sm hover:text-primary-orange/80 transition-colors">
 							<ArrowLeft className="w-4 h-4" /> Volver al carrito
 						</Link>
-						<div className="text-xs text-gray-400 flex items-center gap-2">
-							<ShieldCheck className="w-4 h-4 text-green-500" /> Pago 100% seguro
+						<div className="text-xs text-secondary-light-gray flex items-center gap-2">
+							<ShieldCheck className="w-4 h-4 text-status-success" /> Pago 100% seguro
 						</div>
 					</div>
 
 					{error && (
-						<div className="mt-4 rounded-xl border border-red-500/50 bg-red-500/10 p-4 flex items-start gap-3">
-							<AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+						<div className="mt-4 rounded-xl border border-status-error/50 bg-status-error/10 p-4 flex items-start gap-3">
+							<AlertCircle className="w-5 h-5 text-status-error flex-shrink-0 mt-0.5" />
 							<div className="flex-1">
-								<p className="text-red-400 font-medium">Error</p>
-								<p className="text-red-300 text-sm mt-1">{error}</p>
+								<p className="text-status-error font-medium">Error</p>
+								<p className="text-status-error/80 text-sm mt-1">{error}</p>
 							</div>
 						</div>
 					)}
@@ -290,8 +300,8 @@ function CheckoutPageContent() {
 							<h1 className="text-2xl sm:text-3xl font-bold">Checkout</h1>
 
 							<div className="mt-6 space-y-5">
-								<div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
-									<h2 className="font-semibold">Datos de contacto</h2>
+								<div className="rounded-xl border border-secondary-medium-gray bg-secondary-dark-gray/60 p-6">
+									<h2 className="font-semibold text-primary-white">Datos de contacto</h2>
 									<div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
 										<Input
 											label="Nombre completo"
@@ -322,17 +332,17 @@ function CheckoutPageContent() {
 								</div>
 
 								{loadingIntent ? (
-									<div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
+									<div className="rounded-xl border border-secondary-medium-gray bg-secondary-dark-gray/60 p-6">
 										<div className="flex items-center justify-center py-8">
 											<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-orange"></div>
-											<span className="ml-3 text-gray-300">Validando cursos y calculando total...</span>
+											<span className="ml-3 text-secondary-light-gray">Validando cursos y calculando total...</span>
 										</div>
 									</div>
 								) : paymentIntent ? (
-									<div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
-										<h2 className="font-semibold mb-4">Pagar con Mercado Pago</h2>
+									<div className="rounded-xl border border-secondary-medium-gray bg-secondary-dark-gray/60 p-6">
+										<h2 className="font-semibold mb-4 text-primary-white">Pagar con Mercado Pago</h2>
 										{!isValid && (
-											<div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
+											<div className="mb-4 p-3 bg-status-warning/10 border border-status-warning/30 rounded-lg text-status-warning text-sm">
 												Completa los datos de contacto primero
 											</div>
 										)}
@@ -341,7 +351,7 @@ function CheckoutPageContent() {
 												{!isBrickReady && (
 													<div className="flex items-center justify-center py-8">
 														<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-orange"></div>
-														<span className="ml-3 text-gray-300">Cargando formulario de pago...</span>
+														<span className="ml-3 text-secondary-light-gray">Cargando formulario de pago...</span>
 													</div>
 												)}
 											</div>
@@ -356,7 +366,7 @@ function CheckoutPageContent() {
 										)}
 									</div>
 								) : (
-									<div className="rounded-xl border border-red-500/50 bg-red-500/10 p-6 text-red-400">
+									<div className="rounded-xl border border-status-error/50 bg-status-error/10 p-6 text-status-error">
 										No se pudo crear la intención de pago. Por favor, intenta nuevamente.
 									</div>
 								)}
@@ -365,31 +375,31 @@ function CheckoutPageContent() {
 
 						{/* Columna derecha: resumen */}
 						<div className="lg:col-span-1">
-							<div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 sticky top-6">
-								<h3 className="text-lg font-semibold">Resumen del pedido</h3>
+							<div className="rounded-xl border border-secondary-medium-gray bg-secondary-dark-gray/60 p-6 sticky top-6">
+								<h3 className="text-lg font-semibold text-primary-white">Resumen del pedido</h3>
 
 								{loadingIntent ? (
 									<div className="mt-4 flex items-center justify-center py-8">
 										<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-orange"></div>
-										<span className="ml-2 text-sm text-gray-400">Cargando...</span>
+										<span className="ml-2 text-sm text-secondary-light-gray">Cargando...</span>
 									</div>
 								) : paymentIntent ? (
 									<>
-										<div className="mt-4 space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+										<div className="mt-4 space-y-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide">
 											{paymentIntent.items.map((item) => {
 												const cartItem = cartItemsWithDetails.find(ci => ci.course.id === item.course_id);
 												return (
 													<div key={item.course_id} className="flex items-center gap-3">
-														<div className="relative w-14 h-14 rounded-md overflow-hidden bg-zinc-800 flex-shrink-0">
+														<div className="relative w-14 h-14 rounded-md overflow-hidden bg-secondary-medium-gray flex-shrink-0">
 															{cartItem?.course.thumbnailUrl ? (
 																<Image src={cartItem.course.thumbnailUrl} alt={item.course_title} fill className="object-cover" />
 															) : (
-																<div className="w-full h-full bg-zinc-800" />
+																<div className="w-full h-full bg-secondary-medium-gray" />
 															)}
 														</div>
 														<div className="flex-1 min-w-0">
-															<div className="text-sm font-medium line-clamp-2">{item.course_title}</div>
-															<div className="text-xs text-gray-400">
+															<div className="text-sm font-medium line-clamp-2 text-primary-white">{item.course_title}</div>
+															<div className="text-xs text-secondary-light-gray">
 																{cartItem?.course.hours || 0}h • {cartItem?.course.lessons || 0} lecciones
 															</div>
 														</div>
@@ -400,27 +410,33 @@ function CheckoutPageContent() {
 										</div>
 
 										<div className="mt-4 space-y-2 text-sm">
-											<div className="flex items-center justify-between text-gray-400">
+											<div className="flex items-center justify-between text-secondary-light-gray">
 												<span>Subtotal ({itemCount} {itemCount === 1 ? 'curso' : 'cursos'})</span>
 												<span>S/ {paymentIntent.total.toFixed(2)}</span>
 											</div>
-											<div className="border-t border-zinc-800 pt-3 flex items-center justify-between text-lg font-bold">
-												<span>Total</span>
+											<div className="border-t border-secondary-medium-gray pt-3 flex items-center justify-between text-lg font-bold">
+												<span className="text-primary-white">Total</span>
 												<span className="text-primary-orange">S/ {paymentIntent.total.toFixed(2)}</span>
 											</div>
 										</div>
 									</>
 								) : (
-									<div className="mt-4 text-sm text-gray-400">
+									<div className="mt-4 text-sm text-secondary-light-gray">
 										No se pudo cargar el resumen del pedido.
 									</div>
 								)}
 
-								<div className="mt-4 text-xs text-gray-400 space-y-1">
-									<p>✓ Acceso de por vida</p>
-									<p>✓ Certificado de finalización</p>
-									<p>✓ Política de reembolso 7 días</p>
-									<p className="mt-2 text-gray-500">* El total es calculado y validado por el servidor</p>
+								<div className="mt-4 text-xs text-secondary-light-gray space-y-1">
+									<p className="flex items-center gap-1">
+										<span className="text-status-success">✓</span> Acceso de por vida
+									</p>
+									<p className="flex items-center gap-1">
+										<span className="text-status-success">✓</span> Certificado de finalización
+									</p>
+									<p className="flex items-center gap-1">
+										<span className="text-status-success">✓</span> Política de reembolso 7 días
+									</p>
+									<p className="mt-2 text-secondary-light-gray/70">* El total es calculado y validado por el servidor</p>
 								</div>
 							</div>
 						</div>

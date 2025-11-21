@@ -46,7 +46,7 @@ export function Footer() {
             links: [
                 { name: 'Fagsol Academy', href: '/academy' },
                 { name: 'Cursos Disponibles', href: '/academy/cursos' },
-                { name: 'Conviértete en Instructor', href: '#enseña' },
+                { name: 'Conviértete en Instructor', href: '/auth/become-instructor' },
                 { name: 'Certificaciones', href: '/academy/certificaciones' },
                 { name: 'Preguntas Frecuentes', href: '/faq' }
             ]

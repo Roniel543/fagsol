@@ -1,6 +1,7 @@
 'use client';
 
 import { DollarSign, FileText, Users, Headphones } from 'lucide-react';
+import Link from 'next/link';
 
 export function TeacherSection() {
     const benefits = [
@@ -68,9 +69,12 @@ export function TeacherSection() {
                             ))}
                         </div>
 
-                        <button className="px-8 py-4 bg-primary-orange hover:bg-primary-orange/90 text-primary-black font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/30">
+                        <Link
+                            href="/auth/become-instructor"
+                            className="inline-block px-8 py-4 bg-primary-orange hover:bg-primary-orange/90 text-primary-black font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/30"
+                        >
                             Comienza a Enseñar Hoy
-                        </button>
+                        </Link>
                     </div>
 
                     {/* Right Content - Stats */}

@@ -299,4 +299,44 @@ export const authAPI = {
     getCurrentUser: async (): Promise<AuthResponse> => {
         return apiRequest<AuthResponse>(API_CONFIG.ENDPOINTS.ME) as Promise<AuthResponse>;
     },
+
+    applyToBeInstructor: async (data: {
+        professional_title?: string;
+        experience_years?: number;
+        specialization?: string;
+        bio?: string;
+        portfolio_url?: string;
+        motivation: string;
+        cv_file?: File;
+    }): Promise<ApiResponse> => {
+        const formData = new FormData();
+        
+        if (data.professional_title) formData.append('professional_title', data.professional_title);
+        if (data.experience_years !== undefined) formData.append('experience_years', data.experience_years.toString());
+        if (data.specialization) formData.append('specialization', data.specialization);
+        if (data.bio) formData.append('bio', data.bio);
+        if (data.portfolio_url) formData.append('portfolio_url', data.portfolio_url);
+        formData.append('motivation', data.motivation);
+        if (data.cv_file) formData.append('cv_file', data.cv_file);
+
+        // Para FormData, no usar Content-Type: application/json
+        const token = getAccessToken();
+        const headers: HeadersInit = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_CONFIG.BASE_URL}/auth/apply-instructor/`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || 'Error al enviar solicitud');
+        }
+
+        return await response.json();
+    },
 };
