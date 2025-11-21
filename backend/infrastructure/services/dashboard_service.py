@@ -249,15 +249,18 @@ class DashboardService:
         """
         try:
             # Enrollments del estudiante
-            student_enrollments = Enrollment.objects.filter(user=user)
+            student_enrollments = Enrollment.objects.filter(user=user).select_related('course')
             total_enrollments = student_enrollments.count()
             active_enrollments = student_enrollments.filter(status='active').count()
             completed_enrollments = student_enrollments.filter(status='completed').count()
             
-            # Progreso promedio
-            avg_progress = student_enrollments.aggregate(
-                avg=Avg('completion_percentage')
-            )['avg'] or 0.00
+            # Progreso promedio (solo si hay enrollments)
+            if total_enrollments > 0:
+                avg_progress = student_enrollments.aggregate(
+                    avg=Avg('completion_percentage')
+                )['avg'] or 0.00
+            else:
+                avg_progress = 0.00
             
             # Certificados obtenidos
             certificates_count = Certificate.objects.filter(user=user).count()
@@ -271,31 +274,43 @@ class DashboardService:
             
             # Cursos recientes (últimos 5)
             recent_enrollments = student_enrollments.order_by('-enrolled_at')[:5]
-            recent_courses_data = [
-                {
-                    'id': enrollment.course.id,
-                    'title': enrollment.course.title,
-                    'slug': enrollment.course.slug,
-                    'thumbnail_url': enrollment.course.thumbnail_url or '',
-                    'progress': float(enrollment.completion_percentage),
-                    'status': enrollment.status,
-                    'enrolled_at': enrollment.enrolled_at.isoformat(),
-                }
-                for enrollment in recent_enrollments
-            ]
+            recent_courses_data = []
+            for enrollment in recent_enrollments:
+                try:
+                    recent_courses_data.append({
+                        'id': enrollment.course.id if enrollment.course else '',
+                        'title': enrollment.course.title if enrollment.course else 'Curso eliminado',
+                        'slug': enrollment.course.slug if enrollment.course else '',
+                        'thumbnail_url': enrollment.course.thumbnail_url if enrollment.course and enrollment.course.thumbnail_url else '',
+                        'progress': float(enrollment.completion_percentage),
+                        'status': enrollment.status,
+                        'enrolled_at': enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else '',
+                    })
+                except Exception as e:
+                    logger.warning(f"Error al procesar enrollment {enrollment.id}: {str(e)}")
+                    continue
             
             # Cursos completados
             completed_courses_data = []
-            completed_enrollments_list = student_enrollments.filter(status='completed')
-            for enrollment in completed_enrollments_list[:5]:
-                completed_courses_data.append({
-                    'id': enrollment.course.id,
-                    'title': enrollment.course.title,
-                    'slug': enrollment.course.slug,
-                    'thumbnail_url': enrollment.course.thumbnail_url or '',
-                    'completed_at': enrollment.completed_at.isoformat() if enrollment.completed_at else None,
-                    'has_certificate': hasattr(enrollment, 'certificate'),
-                })
+            completed_enrollments_list = student_enrollments.filter(status='completed')[:5]
+            for enrollment in completed_enrollments_list:
+                try:
+                    has_cert = Certificate.objects.filter(
+                        user=user,
+                        course=enrollment.course
+                    ).exists() if enrollment.course else False
+                    
+                    completed_courses_data.append({
+                        'id': enrollment.course.id if enrollment.course else '',
+                        'title': enrollment.course.title if enrollment.course else 'Curso eliminado',
+                        'slug': enrollment.course.slug if enrollment.course else '',
+                        'thumbnail_url': enrollment.course.thumbnail_url if enrollment.course and enrollment.course.thumbnail_url else '',
+                        'completed_at': enrollment.completed_at.isoformat() if enrollment.completed_at else None,
+                        'has_certificate': has_cert,
+                    })
+                except Exception as e:
+                    logger.warning(f"Error al procesar enrollment completado {enrollment.id}: {str(e)}")
+                    continue
             
             stats = {
                 'enrollments': {
@@ -314,11 +329,11 @@ class DashboardService:
                 'completed_courses': completed_courses_data,
             }
             
-            logger.info(f"Estadísticas de estudiante obtenidas para usuario {user.id}")
+            logger.info(f"Estadísticas de estudiante obtenidas para usuario {user.id}: {total_enrollments} enrollments")
             return True, stats, ""
             
         except Exception as e:
-            logger.error(f"Error al obtener estadísticas de estudiante: {str(e)}")
+            logger.error(f"Error al obtener estadísticas de estudiante para usuario {user.id}: {str(e)}", exc_info=True)
             return False, None, f"Error al obtener estadísticas: {str(e)}"
     
     def get_dashboard_stats(self, user) -> Tuple[bool, Optional[Dict], str]:

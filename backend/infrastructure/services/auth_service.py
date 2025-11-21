@@ -27,17 +27,29 @@ class AuthService:
             request: Objeto request de Django (requerido para AxesBackend)
         """
         try:
-            from django.contrib.auth.models import User
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            # Normalizar email (lowercase, strip)
+            email = email.lower().strip() if email else ''
             
             # Intentar autenticar primero con email como username
+            # (esto funciona si el usuario fue creado con username=email)
             user = authenticate(request=request, username=email, password=password)
             
-            # Si no funciona, buscar usuario por email y autenticar con su username
+            # Si no funciona, buscar usuario por email y autenticar con su username real
             if not user:
                 try:
                     user_obj = User.objects.get(email=email)
+                    # Intentar autenticar con el username real del usuario
                     user = authenticate(request=request, username=user_obj.username, password=password)
                 except User.DoesNotExist:
+                    user = None
+                except Exception as e:
+                    # Log del error para debugging
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f'Error al buscar usuario por email {email}: {str(e)}')
                     user = None
             
             if user and user.is_active:
@@ -68,24 +80,67 @@ class AuthService:
                     }
                 }
             else:
-                return {
-                    'success': False,
-                    'message': 'Credenciales inválidas'
-                }
+                # Log para debugging (sin exponer información sensible)
+                import logging
+                logger = logging.getLogger(__name__)
+                if user and not user.is_active:
+                    logger.warning(f'Intento de login con usuario inactivo: {email}')
+                    return {
+                        'success': False,
+                        'message': 'Tu cuenta está desactivada. Contacta al administrador.'
+                    }
+                else:
+                    logger.warning(f'Intento de login con credenciales inválidas para: {email}')
+                    return {
+                        'success': False,
+                        'message': 'Credenciales inválidas. Verifica tu email y contraseña.'
+                    }
                 
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Error en autenticación para {email}: {str(e)}', exc_info=True)
             return {
                 'success': False,
                 'message': f'Error en autenticación: {str(e)}'
             }
 
-    def register(self, email: str, password: str, first_name: str, last_name: str, role: str = 'student') -> dict:
+    def register(self, email: str, password: str, first_name: str, last_name: str, role: str = 'student', confirm_password: str = None) -> dict:
         """
         Registra un nuevo usuario
-        Nota: No permite registrar usuarios con rol 'admin' por seguridad
+        IMPORTANTE: El registro público solo permite estudiantes.
+        Para ser instructor, se debe solicitar aprobación mediante el proceso correspondiente.
         """
         try:
-            from django.contrib.auth.models import User
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            
+            # Normalizar email
+            email = email.lower().strip() if email else ''
+            
+            # Validar confirmación de contraseña si se proporciona
+            if confirm_password and password != confirm_password:
+                return {
+                    'success': False,
+                    'message': 'Las contraseñas no coinciden'
+                }
+            
+            # Validar longitud mínima de contraseña
+            if len(password) < 8:
+                return {
+                    'success': False,
+                    'message': 'La contraseña debe tener al menos 8 caracteres'
+                }
+            
+            # Forzar role='student' siempre, rechazar cualquier otro rol
+            if role != 'student':
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f'Intento de registro con rol no permitido: {role} para email: {email}')
+                return {
+                    'success': False,
+                    'message': 'El registro público solo permite estudiantes. Para ser instructor, solicita aprobación después de registrarte.'
+                }
             
             # Validar que no se intente registrar como admin (seguridad adicional)
             if role == 'admin':
@@ -94,6 +149,9 @@ class AuthService:
                     'message': 'No se puede registrar como administrador. Los administradores deben ser creados por otros administradores.'
                 }
             
+            # Forzar role='student' para seguridad adicional
+            role = 'student'
+            
             # Verificar si el usuario ya existe
             if User.objects.filter(email=email).exists():
                 return {
@@ -101,25 +159,20 @@ class AuthService:
                     'message': 'El email ya está registrado'
                 }
             
-            # Crear usuario
+            # Crear usuario (usar email como username para consistencia)
             user = User.objects.create_user(
-                username=email,
+                username=email,  # Usar email como username
                 email=email,
                 password=password,
                 first_name=first_name,
                 last_name=last_name
             )
             
-            # Crear perfil
+            # Crear perfil (siempre como estudiante)
             profile = UserProfile.objects.create(
                 user=user,
-                role=role
+                role='student'  # Siempre estudiante en registro público
             )
-            
-            # Si es instructor, establecer estado pendiente de aprobación (FASE 1)
-            if role == 'instructor':
-                profile.instructor_status = 'pending_approval'
-                profile.save()
             
             # Generar tokens JWT
             refresh = RefreshToken.for_user(user)

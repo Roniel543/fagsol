@@ -13,6 +13,11 @@ import logging
 logger = logging.getLogger('apps')
 
 
+def generate_course_id():
+    """Genera un ID único para Course"""
+    return f"c_{uuid.uuid4().hex[:16]}"
+
+
 def generate_module_id():
     """Genera un ID único para Module"""
     return f"m_{uuid.uuid4().hex[:16]}"

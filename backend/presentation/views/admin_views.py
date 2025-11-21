@@ -18,6 +18,8 @@ from apps.core.models import UserProfile
 from apps.users.permissions import IsAdmin, has_perm, get_user_role, ROLE_ADMIN
 from infrastructure.services.instructor_approval_service import InstructorApprovalService
 from infrastructure.services.course_approval_service import CourseApprovalService
+from infrastructure.services.instructor_application_service import InstructorApplicationService
+from apps.core.models import InstructorApplication
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
@@ -1002,5 +1004,224 @@ def reject_course(request, course_id):
         return Response({
             'success': False,
             'message': 'Error interno al rechazar curso'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todas las solicitudes de instructor. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter('status', openapi.IN_QUERY, description='Filtrar por estado (pending, approved, rejected)', type=openapi.TYPE_STRING),
+    ],
+    responses={
+        200: openapi.Response(
+            description='Lista de solicitudes',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': [
+                        {
+                            'id': 1,
+                            'user': {
+                                'id': 1,
+                                'email': 'user@example.com',
+                                'first_name': 'Juan',
+                                'last_name': 'Pérez'
+                            },
+                            'specialization': 'Metalurgia',
+                            'experience_years': 5,
+                            'status': 'pending',
+                            'created_at': '2025-01-12T10:00:00Z'
+                        }
+                    ]
+                }
+            }
+        ),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Solicitudes de Instructor']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_instructor_applications(request):
+    """
+    Lista todas las solicitudes de instructor
+    GET /api/v1/admin/instructor-applications/
+    
+    Query params:
+    - status: Filtrar por estado (pending, approved, rejected)
+    """
+    try:
+        status_filter = request.query_params.get('status', None)
+        
+        # Obtener solicitudes
+        applications = InstructorApplication.objects.select_related('user', 'reviewed_by').all()
+        
+        if status_filter:
+            applications = applications.filter(status=status_filter)
+        
+        # Serializar datos
+        data = []
+        for app in applications:
+            data.append({
+                'id': app.id,
+                'user': {
+                    'id': app.user.id,
+                    'email': app.user.email,
+                    'first_name': app.user.first_name,
+                    'last_name': app.user.last_name,
+                },
+                'professional_title': app.professional_title,
+                'experience_years': app.experience_years,
+                'specialization': app.specialization,
+                'bio': app.bio,
+                'portfolio_url': app.portfolio_url,
+                'motivation': app.motivation,
+                'status': app.status,
+                'status_display': app.get_status_display(),
+                'reviewed_by': {
+                    'id': app.reviewed_by.id,
+                    'email': app.reviewed_by.email
+                } if app.reviewed_by else None,
+                'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None,
+                'rejection_reason': app.rejection_reason,
+                'created_at': app.created_at.isoformat(),
+                'updated_at': app.updated_at.isoformat(),
+            })
+        
+        return Response({
+            'success': True,
+            'data': data,
+            'count': len(data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing instructor applications: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar solicitudes'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Aprueba una solicitud de instructor. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter('id', openapi.IN_PATH, description='ID de la solicitud', type=openapi.TYPE_INTEGER),
+    ],
+    responses={
+        200: openapi.Response(description='Solicitud aprobada exitosamente'),
+        400: openapi.Response(description='La solicitud ya fue procesada'),
+        404: openapi.Response(description='Solicitud no encontrada'),
+        403: openapi.Response(description='No autorizado'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Solicitudes de Instructor']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def approve_instructor_application(request, id):
+    """
+    Aprueba una solicitud de instructor
+    POST /api/v1/admin/instructor-applications/{id}/approve/
+    """
+    try:
+        service = InstructorApplicationService()
+        success, application, error_message = service.approve_application(
+            application_id=id,
+            admin_user=request.user
+        )
+        
+        if not success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no existe' in error_message.lower() else status.HTTP_400_BAD_REQUEST
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status_code)
+        
+        return Response({
+            'success': True,
+            'message': 'Solicitud aprobada exitosamente. El usuario ahora es instructor.',
+            'data': {
+                'id': application.id,
+                'user_id': application.user.id,
+                'status': application.status
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error approving instructor application {id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error interno al aprobar solicitud'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Rechaza una solicitud de instructor. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter('id', openapi.IN_PATH, description='ID de la solicitud', type=openapi.TYPE_INTEGER),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'rejection_reason': openapi.Schema(type=openapi.TYPE_STRING, description='Razón del rechazo (opcional)'),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Solicitud rechazada exitosamente'),
+        400: openapi.Response(description='La solicitud ya fue procesada'),
+        404: openapi.Response(description='Solicitud no encontrada'),
+        403: openapi.Response(description='No autorizado'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Solicitudes de Instructor']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def reject_instructor_application(request, id):
+    """
+    Rechaza una solicitud de instructor
+    POST /api/v1/admin/instructor-applications/{id}/reject/
+    
+    Body (opcional):
+    {
+        "rejection_reason": "Razón del rechazo"
+    }
+    """
+    try:
+        rejection_reason = request.data.get('rejection_reason', '')
+        
+        service = InstructorApplicationService()
+        success, application, error_message = service.reject_application(
+            application_id=id,
+            admin_user=request.user,
+            rejection_reason=rejection_reason
+        )
+        
+        if not success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no existe' in error_message.lower() else status.HTTP_400_BAD_REQUEST
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status_code)
+        
+        return Response({
+            'success': True,
+            'message': 'Solicitud rechazada exitosamente',
+            'data': {
+                'id': application.id,
+                'status': application.status
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error rejecting instructor application {id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error interno al rechazar solicitud'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

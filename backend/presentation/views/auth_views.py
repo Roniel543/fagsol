@@ -8,6 +8,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.http import JsonResponse
 from infrastructure.services.auth_service import AuthService
+from infrastructure.services.instructor_application_service import InstructorApplicationService
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -94,14 +95,15 @@ def login(request):
         required=['email', 'password', 'first_name', 'last_name'],
         properties={
             'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL, description='Email del usuario'),
-            'password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD, description='Contraseña del usuario'),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD, description='Contraseña del usuario (mínimo 8 caracteres)'),
+            'confirm_password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD, description='Confirmación de contraseña (opcional, pero recomendado)'),
             'first_name': openapi.Schema(type=openapi.TYPE_STRING, description='Nombre del usuario'),
             'last_name': openapi.Schema(type=openapi.TYPE_STRING, description='Apellido del usuario'),
             'role': openapi.Schema(
                 type=openapi.TYPE_STRING,
-                enum=['instructor', 'student'],
+                enum=['student'],
                 default='student',
-                description='Rol del usuario (por defecto: student). Nota: No se permite registrar como admin desde este endpoint.'
+                description='IMPORTANTE: El registro público solo permite estudiantes. Cualquier otro rol será rechazado. Para ser instructor, solicita aprobación después de registrarte.'
             ),
         }
     ),
@@ -123,9 +125,13 @@ def register(request):
         # 1. Obtener datos del request
         email = request.data.get('email')
         password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
         first_name = request.data.get('first_name')
         last_name = request.data.get('last_name')
-        role = request.data.get('role', 'student')
+        
+        # IMPORTANTE: El registro público solo permite estudiantes
+        # Ignorar cualquier 'role' enviado y forzar 'student'
+        role = 'student'
         
         # 2. Validar datos requeridos
         if not all([email, password, first_name, last_name]):
@@ -135,15 +141,16 @@ def register(request):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # 3. Validar que no se intente registrar como admin (seguridad)
-        if role == 'admin':
+        # (Aunque ya forzamos role='student', esto es una capa adicional de seguridad)
+        if request.data.get('role') == 'admin':
             return Response({
                 'success': False,
                 'message': 'No se puede registrar como administrador. Los administradores deben ser creados por otros administradores.'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # 4. Usar el servicio de autenticación
+        # 4. Usar el servicio de autenticación (siempre con role='student')
         auth_service = AuthService()
-        result = auth_service.register(email, password, first_name, last_name, role)
+        result = auth_service.register(email, password, first_name, last_name, role, confirm_password=confirm_password)
         
         # 5. Retornar respuesta según el resultado
         if result['success']:
@@ -342,4 +349,113 @@ def get_current_user(request):
         return Response({
             'success': False,
             'message': 'Error al obtener información del usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Solicita convertirse en instructor. Requiere autenticación.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['motivation'],
+        properties={
+            'professional_title': openapi.Schema(type=openapi.TYPE_STRING, description='Título profesional (opcional)'),
+            'experience_years': openapi.Schema(type=openapi.TYPE_INTEGER, description='Años de experiencia (opcional, default: 0)'),
+            'specialization': openapi.Schema(type=openapi.TYPE_STRING, description='Especialidad (opcional)'),
+            'bio': openapi.Schema(type=openapi.TYPE_STRING, description='Biografía (opcional)'),
+            'portfolio_url': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_URI, description='URL del portfolio (opcional)'),
+            'motivation': openapi.Schema(type=openapi.TYPE_STRING, description='Motivación para ser instructor (requerido)'),
+        }
+    ),
+    responses={
+        201: openapi.Response(
+            description='Solicitud creada exitosamente',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'message': 'Solicitud enviada. Te notificaremos cuando sea revisada.',
+                    'data': {
+                        'id': 1,
+                        'status': 'pending'
+                    }
+                }
+            }
+        ),
+        400: openapi.Response(description='Datos inválidos o ya tienes una solicitud pendiente'),
+        401: openapi.Response(description='No autenticado'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Autenticación']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def apply_to_be_instructor(request):
+    """
+    Solicitud para convertirse en instructor
+    POST /api/v1/auth/apply-instructor/
+    
+    Requiere autenticación (usuario debe estar registrado)
+    """
+    try:
+        # 1. Obtener datos del request
+        professional_title = request.data.get('professional_title', '')
+        experience_years = request.data.get('experience_years', 0)
+        specialization = request.data.get('specialization', '')
+        bio = request.data.get('bio', '')
+        portfolio_url = request.data.get('portfolio_url', '')
+        motivation = request.data.get('motivation', '')
+        cv_file = request.FILES.get('cv_file', None)
+        
+        # 2. Validar que motivation esté presente
+        if not motivation or not motivation.strip():
+            return Response({
+                'success': False,
+                'message': 'La motivación es requerida. Cuéntanos por qué quieres ser instructor.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 3. Validar experience_years
+        try:
+            experience_years = int(experience_years) if experience_years else 0
+        except (ValueError, TypeError):
+            experience_years = 0
+        
+        # 4. Usar el servicio para crear la solicitud
+        service = InstructorApplicationService()
+        success, application, error_message = service.create_application(
+            user=request.user,
+            professional_title=professional_title,
+            experience_years=experience_years,
+            specialization=specialization,
+            bio=bio,
+            portfolio_url=portfolio_url,
+            motivation=motivation,
+            cv_file=cv_file
+        )
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 5. Retornar respuesta exitosa
+        return Response({
+            'success': True,
+            'message': 'Solicitud enviada. Te notificaremos cuando sea revisada.',
+            'data': {
+                'id': application.id,
+                'status': application.status,
+                'created_at': application.created_at.isoformat()
+            }
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('apps')
+        logger.error(f'Error en apply_to_be_instructor: {str(e)}', exc_info=True)
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor',
+            'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

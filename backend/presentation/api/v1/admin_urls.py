@@ -19,6 +19,9 @@ from presentation.views.admin_views import (
     list_all_courses_admin,
     approve_course,
     reject_course,
+    list_instructor_applications,
+    approve_instructor_application,
+    reject_instructor_application,
 )
 
 urlpatterns = [
@@ -48,5 +51,10 @@ urlpatterns = [
     path('courses/', list_all_courses_admin, name='admin_list_all_courses'),
     path('courses/<str:course_id>/approve/', approve_course, name='admin_approve_course'),
     path('courses/<str:course_id>/reject/', reject_course, name='admin_reject_course'),
+    
+    # Gestión de solicitudes de instructor
+    path('instructor-applications/', list_instructor_applications, name='admin_list_instructor_applications'),
+    path('instructor-applications/<int:id>/approve/', approve_instructor_application, name='admin_approve_instructor_application'),
+    path('instructor-applications/<int:id>/reject/', reject_instructor_application, name='admin_reject_instructor_application'),
 ]
 

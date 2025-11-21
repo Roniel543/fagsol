@@ -291,6 +291,14 @@ AXES_LOCKOUT_URL = None
 AXES_RESET_ON_SUCCESS = True
 AXES_IP_WHITELIST = []
 
+# Configuración de bloqueo: Por USUARIO específico, NO por IP
+# Esto evita que un usuario bloquee a todos los demás de la misma IP
+# IMPORTANTE: Bloquear solo por usuario, no por IP para evitar bloqueos globales
+AXES_LOCKOUT_BY_COMBINATION_USER_AND_IP = False  # No bloquear por combinación usuario+IP
+AXES_LOCKOUT_BY_USER_OR_IP = False  # No bloquear por usuario O IP (evita bloqueos globales)
+AXES_LOCKOUT_BY_USER = True  # Bloquear SOLO por usuario específico
+AXES_LOCKOUT_BY_IP = False  # NO bloquear por IP (evita que un usuario bloquee a todos)
+
 # Authentication backends (incluir Axes)
 AUTHENTICATION_BACKENDS = [
     'axes.backends.AxesStandaloneBackend',  # Axes debe ir primero

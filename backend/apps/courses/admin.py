@@ -15,6 +15,13 @@ class CourseAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('title',)}
     ordering = ['-created_at']
     
+    def save_model(self, request, obj, form, change):
+        """Asegura que el ID se genere si no existe"""
+        if not obj.id:
+            from .models import generate_course_id
+            obj.id = generate_course_id()
+        super().save_model(request, obj, form, change)
+    
     fieldsets = (
         ('Información Básica', {
             'fields': ('id', 'title', 'slug', 'description', 'short_description')
