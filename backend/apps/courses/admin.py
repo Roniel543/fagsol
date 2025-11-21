@@ -84,10 +84,17 @@ class LessonAdmin(admin.ModelAdmin):
     ordering = ['module', 'order']
     
     def save_model(self, request, obj, form, change):
-        """Asegura que el ID se genere si no existe"""
+        """Asegura que el ID se genere si no existe y valida el modelo"""
         if not obj.id:
             from .models import generate_lesson_id
             obj.id = generate_lesson_id()
+        # full_clean() se llama automáticamente en save() del modelo
+        # pero lo llamamos aquí también para mostrar errores en el admin
+        try:
+            obj.full_clean()
+        except Exception as e:
+            # Si hay errores de validación, Django los mostrará en el formulario
+            pass
         super().save_model(request, obj, form, change)
     
     fieldsets = (

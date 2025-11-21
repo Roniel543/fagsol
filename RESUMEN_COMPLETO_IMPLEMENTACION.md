@@ -400,3 +400,18 @@ Todas las funcionalidades solicitadas han sido implementadas, probadas y documen
 
 **¡Listo para deployar!** 🚀
 
+
+
+Mejoras recomendadas (no críticas)
+Rate limiting específico para pagos
+Prioridad: media
+Límite de 10 pagos/hora por usuario
+Validación de monto máximo
+Prioridad: media
+Límite de 10,000 PEN por transacción (ajustable)
+Límite de intentos fallidos
+Prioridad: media
+Máximo 3 intentos por payment intent
+Monitoreo y alertas
+Prioridad: media
+Integrar Sentry para alertas

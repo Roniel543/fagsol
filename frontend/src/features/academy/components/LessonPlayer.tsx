@@ -93,11 +93,26 @@ export function LessonPlayer({ lesson, enrollmentId, onProgressUpdate }: LessonP
                 {lesson.lesson_type === 'video' && lesson.content_url && (
                     <div className="aspect-video bg-black rounded-lg overflow-hidden mb-6">
                         <iframe
-                            src={lesson.content_url}
+                            src={(() => {
+                                // Asegurar que la URL tenga parámetros necesarios para Vimeo
+                                let videoUrl = lesson.content_url;
+                                if (videoUrl.includes('player.vimeo.com')) {
+                                    // Si no tiene parámetros, agregarlos
+                                    if (!videoUrl.includes('?')) {
+                                        videoUrl += '?autoplay=0&loop=0&muted=0';
+                                    }
+                                    // Asegurar que tenga el parámetro dnt (do not track) para mejor compatibilidad
+                                    if (!videoUrl.includes('dnt=')) {
+                                        videoUrl += (videoUrl.includes('?') ? '&' : '?') + 'dnt=1';
+                                    }
+                                }
+                                return videoUrl;
+                            })()}
                             className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                             allowFullScreen
                             title={lesson.title}
+                            frameBorder="0"
                         />
                     </div>
                 )}

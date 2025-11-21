@@ -5,8 +5,12 @@ Modelos de Cursos - FagSol Escuela Virtual
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 import uuid
+import logging
+
+logger = logging.getLogger('apps')
 
 
 def generate_module_id():
@@ -247,3 +251,49 @@ class Lesson(models.Model):
     
     def __str__(self):
         return f"{self.module.title} - {self.title} ({self.id})"
+    
+    def clean(self):
+        """
+        Valida y convierte URLs de video automáticamente
+        FASE 1: Conversión automática de URLs de Vimeo
+        """
+        # Solo procesar si es tipo video y tiene content_url
+        if self.lesson_type == 'video' and self.content_url:
+            try:
+                # Importar servicio (evitar import circular)
+                from infrastructure.services.video_url_service import video_url_service
+                
+                # Validar y convertir URL
+                success, converted_url, error_message = video_url_service.validate_and_convert(
+                    self.content_url,
+                    self.lesson_type
+                )
+                
+                if not success:
+                    raise ValidationError({
+                        'content_url': error_message
+                    })
+                
+                # Si se convirtió, actualizar la URL
+                if converted_url and converted_url != self.content_url:
+                    logger.info(
+                        f"URL de video convertida automáticamente para lección {self.id}: "
+                        f"{self.content_url} -> {converted_url}"
+                    )
+                    self.content_url = converted_url
+                    
+            except ImportError as e:
+                logger.error(f"Error al importar video_url_service: {str(e)}")
+                # No fallar si el servicio no está disponible (desarrollo)
+            except Exception as e:
+                logger.error(f"Error al validar URL de video: {str(e)}")
+                raise ValidationError({
+                    'content_url': f'Error al validar URL de video: {str(e)}'
+                })
+    
+    def save(self, *args, **kwargs):
+        """
+        Sobrescribe save para llamar clean() automáticamente
+        """
+        self.full_clean()  # Llama a clean() y valida todos los campos
+        super().save(*args, **kwargs)
