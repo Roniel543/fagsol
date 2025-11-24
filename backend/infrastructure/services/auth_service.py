@@ -17,9 +17,81 @@ class AuthService:
     def __init__(self):
         pass
 
+    def _check_axes_lockout(self, email: str, username: str = None) -> dict:
+        """
+        Verifica si el usuario está bloqueado por AXES y retorna información detallada
+        
+        Returns:
+            dict con información del bloqueo o None si no está bloqueado
+        """
+        try:
+            from axes.models import AccessAttempt
+            from django.conf import settings
+            from datetime import timedelta
+            
+            failure_limit = getattr(settings, 'AXES_FAILURE_LIMIT', 5)
+            cooloff_time = getattr(settings, 'AXES_COOLOFF_TIME', 1)
+            
+            # Buscar intentos por email y username
+            # Necesitamos obtener el que tenga el mayor número de fallos
+            attempts = AccessAttempt.objects.filter(
+                username__in=[email, username] if username else [email]
+            ).order_by('-failures_since_start', '-attempt_time')
+            
+            if not attempts.exists():
+                return None
+            
+            # Obtener el AccessAttempt con más fallos (puede haber múltiples)
+            latest_attempt = attempts.first()
+            failures = latest_attempt.failures_since_start
+            
+            # Si hay múltiples AccessAttempt, sumar los fallos (pero esto no debería pasar si está bien configurado)
+            # Por ahora, solo usamos el que tiene más fallos
+            remaining_attempts = max(0, failure_limit - failures)
+            
+            # Verificar si está bloqueado
+            if failures >= failure_limit:
+                # Calcular tiempo de desbloqueo
+                lockout_time = latest_attempt.attempt_time
+                unlock_time = lockout_time + timedelta(hours=cooloff_time)
+                now = datetime.now(latest_attempt.attempt_time.tzinfo) if latest_attempt.attempt_time.tzinfo else datetime.now()
+                
+                if unlock_time > now:
+                    minutes_remaining = int((unlock_time - now).total_seconds() / 60)
+                    return {
+                        'is_locked': True,
+                        'failures': failures,
+                        'limit': failure_limit,
+                        'unlock_time': unlock_time,
+                        'minutes_remaining': minutes_remaining,
+                        'is_permanent': False
+                    }
+                else:
+                    # El bloqueo expiró, pero aún hay intentos fallidos
+                    return {
+                        'is_locked': False,
+                        'failures': failures,
+                        'limit': failure_limit,
+                        'remaining_attempts': remaining_attempts
+                    }
+            else:
+                # No está bloqueado, pero hay intentos fallidos
+                return {
+                    'is_locked': False,
+                    'failures': failures,
+                    'limit': failure_limit,
+                    'remaining_attempts': remaining_attempts
+                }
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f'Error al verificar bloqueo AXES: {str(e)}')
+            return None
+
     def login(self, email: str, password: str, request=None) -> dict:
         """
         Autentica un usuario y retorna tokens JWT
+        Incluye detección de bloqueos AXES y feedback progresivo
         
         Args:
             email: Email del usuario
@@ -33,24 +105,93 @@ class AuthService:
             # Normalizar email (lowercase, strip)
             email = email.lower().strip() if email else ''
             
-            # Intentar autenticar primero con email como username
-            # (esto funciona si el usuario fue creado con username=email)
-            user = authenticate(request=request, username=email, password=password)
+            # Verificar bloqueo ANTES de intentar autenticar
+            lockout_info = self._check_axes_lockout(email)
+            if lockout_info and lockout_info.get('is_locked'):
+                minutes = lockout_info.get('minutes_remaining', 0)
+                hours = minutes // 60
+                mins = minutes % 60
+                
+                if hours > 0:
+                    time_str = f"{hours} hora{'s' if hours > 1 else ''} y {mins} minuto{'s' if mins != 1 else ''}"
+                else:
+                    time_str = f"{mins} minuto{'s' if mins != 1 else ''}"
+                
+                return {
+                    'success': False,
+                    'message': f'Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta nuevamente en {time_str}.',
+                    'is_locked': True,
+                    'lockout_info': {
+                        'minutes_remaining': minutes,
+                        'is_permanent': False
+                    }
+                }
             
-            # Si no funciona, buscar usuario por email y autenticar con su username real
+            # IMPORTANTE: Buscar el usuario PRIMERO para evitar múltiples llamadas a authenticate()
+            # que incrementarían el contador de AXES dos veces
+            user_obj = None
+            username_to_try = email  # Por defecto, usar email
+            
+            try:
+                user_obj = User.objects.get(email=email)
+                # Si el usuario existe, usar su username real (que debería ser igual al email)
+                # pero si por alguna razón es diferente, usar el username real
+                username_to_try = user_obj.username if user_obj.username else email
+            except User.DoesNotExist:
+                # Usuario no existe, usar email de todas formas (para no revelar si existe)
+                user_obj = None
+                username_to_try = email
+            
+            # Intentar autenticar SOLO UNA VEZ con el username correcto
+            user = authenticate(request=request, username=username_to_try, password=password)
+            
+            # Verificar bloqueo DESPUÉS del intento fallido
             if not user:
-                try:
-                    user_obj = User.objects.get(email=email)
-                    # Intentar autenticar con el username real del usuario
-                    user = authenticate(request=request, username=user_obj.username, password=password)
-                except User.DoesNotExist:
-                    user = None
-                except Exception as e:
-                    # Log del error para debugging
-                    import logging
-                    logger = logging.getLogger(__name__)
-                    logger.error(f'Error al buscar usuario por email {email}: {str(e)}')
-                    user = None
+                lockout_info = self._check_axes_lockout(email, user_obj.username if 'user_obj' in locals() else None)
+                
+                if lockout_info and lockout_info.get('is_locked'):
+                    minutes = lockout_info.get('minutes_remaining', 0)
+                    hours = minutes // 60
+                    mins = minutes % 60
+                    
+                    if hours > 0:
+                        time_str = f"{hours} hora{'s' if hours > 1 else ''} y {mins} minuto{'s' if mins != 1 else ''}"
+                    else:
+                        time_str = f"{mins} minuto{'s' if mins != 1 else ''}"
+                    
+                    return {
+                        'success': False,
+                        'message': f'Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta nuevamente en {time_str}.',
+                        'is_locked': True,
+                        'lockout_info': {
+                            'minutes_remaining': minutes,
+                            'is_permanent': False
+                        }
+                    }
+                elif lockout_info:
+                    # No está bloqueado, pero hay intentos fallidos - mostrar advertencia
+                    # IMPORTANTE: failures ya incluye el intento actual que acaba de fallar
+                    # Por lo tanto, el mensaje debe reflejar el estado actual correcto
+                    remaining = lockout_info.get('remaining_attempts', 0)
+                    failures = lockout_info.get('failures', 0)  # Este ya incluye el intento actual
+                    limit = lockout_info.get('limit', 5)
+                    
+                    # El mensaje es correcto: failures ya incluye el intento actual
+                    if remaining > 0:
+                        message = f'Credenciales incorrectas. Has fallado {failures} de {limit} intentos permitidos. Te quedan {remaining} intento{"s" if remaining > 1 else ""} antes del bloqueo temporal.'
+                    else:
+                        message = f'Credenciales incorrectas. Has alcanzado el límite de {limit} intentos fallidos. Tu cuenta será bloqueada temporalmente en el próximo intento fallido.'
+                    
+                    return {
+                        'success': False,
+                        'message': message,
+                        'is_locked': False,
+                        'lockout_info': {
+                            'remaining_attempts': remaining,
+                            'failures': failures,
+                            'limit': limit
+                        }
+                    }
             
             if user and user.is_active:
                 # Generar tokens JWT
@@ -90,6 +231,7 @@ class AuthService:
                         'message': 'Tu cuenta está desactivada. Contacta al administrador.'
                     }
                 else:
+                    # Si no hay información de bloqueo, mensaje genérico
                     logger.warning(f'Intento de login con credenciales inválidas para: {email}')
                     return {
                         'success': False,

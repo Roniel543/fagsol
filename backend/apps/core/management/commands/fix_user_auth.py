@@ -122,4 +122,4 @@ class Command(BaseCommand):
 
         except Exception as e:
             raise CommandError(f'Error al corregir usuario: {str(e)}')
-
+    

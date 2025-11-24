@@ -1,6 +1,7 @@
 'use client';
 
 import { sanitizeHTML } from '@/shared/utils/sanitize';
+import { useEffect, useState } from 'react';
 
 interface SafeHTMLProps {
     html: string | null | undefined;
@@ -13,9 +14,22 @@ interface SafeHTMLProps {
  * Previene ataques XSS al sanitizar todo el contenido HTML
  */
 export function SafeHTML({ html, className, tag: Tag = 'div' }: SafeHTMLProps) {
+    const [sanitized, setSanitized] = useState<string>('');
+
+    useEffect(() => {
+        if (!html) {
+            setSanitized('');
+            return;
+        }
+
+        sanitizeHTML(html).then(setSanitized);
+    }, [html]);
+
     if (!html) return null;
 
-    const sanitized = sanitizeHTML(html);
+    if (!sanitized) {
+        return <Tag className={className} />;
+    }
 
     return (
         <Tag

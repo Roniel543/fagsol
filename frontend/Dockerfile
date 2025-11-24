@@ -1,6 +1,6 @@
 # Dockerfile para Next.js Frontend - FagSol Escuela Virtual
 
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Instalar dependencias necesarias
 RUN apk add --no-cache libc6-compat

@@ -5,7 +5,7 @@ import { useToast } from '@/shared/components/Toast';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useRequestCourseReview } from '@/shared/hooks/useCourses';
 import { CreateCourseRequest, UpdateCourseRequest, getCourseById } from '@/shared/services/courses';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface CourseFormProps {
     courseId?: string; // Si existe, es edición; si no, es creación
@@ -46,14 +46,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
     const { requestReview, isRequesting } = useRequestCourseReview();
     const { showToast } = useToast();
 
-    // Cargar curso si es edición
-    useEffect(() => {
-        if (courseId) {
-            loadCourse();
-        }
-    }, [courseId]);
-
-    const loadCourse = async () => {
+    const loadCourse = useCallback(async () => {
         try {
             setLoadingCourse(true);
             const response = await getCourseById(courseId!);
@@ -87,7 +80,14 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
         } finally {
             setLoadingCourse(false);
         }
-    };
+    }, [courseId]);
+
+    // Cargar curso si es edición
+    useEffect(() => {
+        if (courseId) {
+            loadCourse();
+        }
+    }, [courseId, loadCourse]);
 
     const validateField = (name: string, value: any): string => {
         switch (name) {

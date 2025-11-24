@@ -54,9 +54,9 @@ export default function CourseLearnPage() {
     const selectedLesson = useMemo(() => {
         if (!content || !selectedLessonId) return null;
 
-        for (const module of content.modules) {
-            const lesson = module.lessons.find((l) => l.id === selectedLessonId);
-            if (lesson) return { ...lesson, moduleTitle: module.title };
+        for (const courseModule of content.modules) {
+            const lesson = courseModule.lessons.find((l) => l.id === selectedLessonId);
+            if (lesson) return { ...lesson, moduleTitle: courseModule.title };
         }
         return null;
     }, [content, selectedLessonId]);
@@ -204,14 +204,14 @@ export default function CourseLearnPage() {
                             <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-4 sticky top-6 max-h-[calc(100vh-8rem)] overflow-y-auto">
                                 <h2 className="font-semibold text-lg mb-4">Contenido del Curso</h2>
                                 <div className="space-y-4">
-                                    {content.modules.map((module) => (
-                                        <div key={module.id} className="space-y-2">
-                                            <h3 className="font-medium text-primary-orange">{module.title}</h3>
-                                            {module.description && (
-                                                <p className="text-xs text-gray-400 mb-2">{module.description}</p>
+                                    {content.modules.map((courseModule) => (
+                                        <div key={courseModule.id} className="space-y-2">
+                                            <h3 className="font-medium text-primary-orange">{courseModule.title}</h3>
+                                            {courseModule.description && (
+                                                <p className="text-xs text-gray-400 mb-2">{courseModule.description}</p>
                                             )}
                                             <ul className="space-y-1">
-                                                {module.lessons.map((lesson) => {
+                                                {courseModule.lessons.map((lesson) => {
                                                     const isSelected = selectedLessonId === lesson.id;
                                                     const lessonProgress = courseProgress?.lessons_progress[lesson.id];
                                                     const isCompleted = lessonProgress?.is_completed || false;

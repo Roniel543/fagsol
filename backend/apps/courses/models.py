@@ -28,6 +28,11 @@ def generate_lesson_id():
     return f"l_{uuid.uuid4().hex[:16]}"
 
 
+def generate_material_id():
+    """Genera un ID único para Material"""
+    return f"mat_{uuid.uuid4().hex[:16]}"
+
+
 class Course(models.Model):
     """
     Modelo de Curso
@@ -301,4 +306,82 @@ class Lesson(models.Model):
         Sobrescribe save para llamar clean() automáticamente
         """
         self.full_clean()  # Llama a clean() y valida todos los campos
+        super().save(*args, **kwargs)
+
+
+class Material(models.Model):
+    """
+    Modelo de Material (recursos complementarios del curso)
+    Puede ser un video de Vimeo o un enlace externo
+    """
+    MATERIAL_TYPE_CHOICES = [
+        ('video', 'Video Vimeo'),
+        ('link', 'Enlace Externo'),
+    ]
+    
+    # Identificación
+    id = models.CharField(max_length=50, primary_key=True, unique=True, default=generate_material_id, help_text="ID único del material")
+    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='materials', verbose_name="Curso")
+    
+    # Asociación opcional a módulo o lección
+    module = models.ForeignKey(Module, on_delete=models.SET_NULL, null=True, blank=True, related_name='materials', verbose_name="Módulo (opcional)")
+    lesson = models.ForeignKey(Lesson, on_delete=models.SET_NULL, null=True, blank=True, related_name='materials', verbose_name="Lección (opcional)")
+    
+    # Información básica
+    title = models.CharField(max_length=200, verbose_name="Título")
+    description = models.TextField(blank=True, verbose_name="Descripción")
+    
+    # Tipo y contenido
+    material_type = models.CharField(max_length=20, choices=MATERIAL_TYPE_CHOICES, default='video', verbose_name="Tipo")
+    url = models.URLField(verbose_name="URL", help_text="URL del video de Vimeo o enlace externo")
+    
+    # Orden y estado
+    order = models.IntegerField(default=0, verbose_name="Orden")
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    
+    # Metadatos
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Fecha de actualización")
+    
+    class Meta:
+        db_table = 'materials'
+        verbose_name = 'Material'
+        verbose_name_plural = 'Materiales'
+        ordering = ['course', 'order']
+        indexes = [
+            models.Index(fields=['course', 'order']),
+            models.Index(fields=['module']),
+            models.Index(fields=['lesson']),
+        ]
+    
+    def __str__(self):
+        return f"{self.course.title} - {self.title} ({self.id})"
+    
+    def clean(self):
+        """
+        Valida URLs de Vimeo automáticamente
+        """
+        if self.material_type == 'video' and self.url:
+            try:
+                from infrastructure.services.video_url_service import video_url_service
+                success, converted_url, error_message = video_url_service.validate_and_convert(self.url)
+                if success and converted_url:
+                    self.url = converted_url
+                elif not success:
+                    raise ValidationError({
+                        'url': error_message or 'URL de Vimeo inválida'
+                    })
+            except ImportError as e:
+                logger.error(f"Error al importar video_url_service: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error al validar URL de video: {str(e)}")
+                raise ValidationError({
+                    'url': f'Error al validar URL de video: {str(e)}'
+                })
+    
+    def save(self, *args, **kwargs):
+        """
+        Sobrescribe save para llamar clean() automáticamente
+        """
+        self.full_clean()
         super().save(*args, **kwargs)

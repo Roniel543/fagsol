@@ -21,12 +21,43 @@ class Command(BaseCommand):
             default=None,
             help='Desbloquear por IP específica (opcional)'
         )
+        parser.add_argument(
+            '--clear-all',
+            action='store_true',
+            help='Limpiar TODOS los AccessAttempt de la base de datos (útil cuando hay bloqueos persistentes)'
+        )
 
     def handle(self, *args, **options):
         self.stdout.write(self.style.SUCCESS(f'\n=== DESBLOQUEANDO USUARIOS ===\n'))
 
         try:
             from django.conf import settings
+            
+            # Si se solicita limpiar todo, hacerlo primero
+            if options.get('clear_all'):
+                total = AccessAttempt.objects.count()
+                if total > 0:
+                    # Desbloquear por todas las IPs y usernames antes de eliminar
+                    all_attempts = AccessAttempt.objects.all()
+                    ips_to_reset = set()
+                    usernames_to_reset = set()
+                    
+                    for attempt in all_attempts:
+                        if attempt.ip_address:
+                            ips_to_reset.add(attempt.ip_address)
+                        if attempt.username:
+                            usernames_to_reset.add(attempt.username)
+                    
+                    for ip in ips_to_reset:
+                        reset(ip=ip)
+                    for username in usernames_to_reset:
+                        reset(username=username)
+                    
+                    AccessAttempt.objects.all().delete()
+                    self.stdout.write(self.style.SUCCESS(f'✓ Eliminados {total} AccessAttempt de la base de datos'))
+                else:
+                    self.stdout.write(self.style.SUCCESS('✓ No hay AccessAttempt para eliminar'))
+                return
             
             # Obtener todos los intentos que han alcanzado el límite de fallos
             # Un usuario está bloqueado si failures_since_start >= AXES_FAILURE_LIMIT
@@ -35,19 +66,29 @@ class Command(BaseCommand):
                 failures_since_start__gte=failure_limit
             )
             
-            if not locked_attempts.exists():
+            # También buscar todos los AccessAttempt (no solo los que superan el límite)
+            # porque a veces AXES bloquea antes de llegar al límite
+            all_attempts = AccessAttempt.objects.all()
+            
+            if not locked_attempts.exists() and not all_attempts.exists():
                 self.stdout.write(self.style.SUCCESS('✓ No hay usuarios bloqueados'))
                 return
-
-            self.stdout.write(f'Encontrados {locked_attempts.count()} bloqueos (con {failure_limit}+ intentos fallidos):\n')
+            
+            # Si hay intentos pero no superan el límite, mostrar información
+            if not locked_attempts.exists() and all_attempts.exists():
+                self.stdout.write(self.style.WARNING(f'⚠ Encontrados {all_attempts.count()} AccessAttempt (no superan el límite de {failure_limit})'))
+                self.stdout.write('Desbloqueando de todas formas para asegurar...')
+                attempts = all_attempts
+            else:
+                attempts = locked_attempts
+                self.stdout.write(f'Encontrados {attempts.count()} bloqueos (con {failure_limit}+ intentos fallidos):\n')
 
             # Desbloquear por IP si se especifica
             ip_to_unlock = options.get('by_ip')
             if ip_to_unlock:
-                attempts = locked_attempts.filter(ip_address=ip_to_unlock)
+                attempts = attempts.filter(ip_address=ip_to_unlock)
                 self.stdout.write(f'Desbloqueando bloqueos de IP: {ip_to_unlock}')
             else:
-                attempts = locked_attempts
                 self.stdout.write('Desbloqueando TODOS los usuarios bloqueados...')
             
             # Mostrar información de los bloqueos

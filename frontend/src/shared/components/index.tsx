@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
 export { AnimatedCounter } from './AnimatedCounter';
 export { AuthBackground } from './AuthBackground';
 export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
@@ -191,6 +191,7 @@ interface SelectProps {
     onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
     options: { value: string; label: string }[];
     required?: boolean;
+    disabled?: boolean;
     error?: string;
     className?: string;
 }
@@ -202,6 +203,7 @@ export function Select({
     onChange,
     options,
     required = false,
+    disabled = false,
     error,
     className = '',
 }: SelectProps) {
@@ -219,8 +221,9 @@ export function Select({
                 value={value}
                 onChange={onChange}
                 required={required}
+                disabled={disabled}
                 className={`block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-                    } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`}
+                    } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 {options.map((option) => (
                     <option key={option.value} value={option.value} className="bg-secondary-dark-gray">

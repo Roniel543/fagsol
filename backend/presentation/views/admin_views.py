@@ -14,6 +14,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
+from django.db.models import Q
+from django.db import models
 from apps.core.models import UserProfile
 from apps.users.permissions import IsAdmin, has_perm, get_user_role, ROLE_ADMIN
 from infrastructure.services.instructor_approval_service import InstructorApprovalService
@@ -1223,5 +1225,1761 @@ def reject_instructor_application(request, id):
         return Response({
             'success': False,
             'message': 'Error interno al rechazar solicitud'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========== GESTIÓN DE USUARIOS (CRUD) ==========
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todos los usuarios con filtros opcionales. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter(
+            'role',
+            openapi.IN_QUERY,
+            description='Filtro por rol (student, teacher, admin)',
+            type=openapi.TYPE_STRING,
+            enum=['student', 'teacher', 'admin'],
+            required=False
+        ),
+        openapi.Parameter(
+            'is_active',
+            openapi.IN_QUERY,
+            description='Filtro por estado activo (true/false)',
+            type=openapi.TYPE_BOOLEAN,
+            required=False
+        ),
+        openapi.Parameter(
+            'search',
+            openapi.IN_QUERY,
+            description='Búsqueda por nombre, email',
+            type=openapi.TYPE_STRING,
+            required=False
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            description='Lista de usuarios',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': [
+                        {
+                            'id': 1,
+                            'email': 'user@example.com',
+                            'first_name': 'Juan',
+                            'last_name': 'Pérez',
+                            'role': 'student',
+                            'is_active': True,
+                            'created_at': '2025-01-12T10:00:00Z'
+                        }
+                    ],
+                    'count': 1
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Usuarios']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_users(request):
+    """
+    Lista todos los usuarios con filtros opcionales.
+    GET /api/v1/admin/users/?role=student&is_active=true&search=juan
+    """
+    try:
+        from infrastructure.database.models import User
+        
+        # Filtros
+        queryset = User.objects.all()
+        
+        # Filtro por rol
+        role = request.query_params.get('role', None)
+        if role:
+            queryset = queryset.filter(role=role)
+        
+        # Filtro por estado activo
+        is_active = request.query_params.get('is_active', None)
+        if is_active is not None:
+            is_active_bool = is_active.lower() == 'true'
+            queryset = queryset.filter(is_active=is_active_bool)
+        
+        # Búsqueda por nombre o email
+        search = request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(first_name__icontains=search) |
+                Q(last_name__icontains=search) |
+                Q(email__icontains=search)
+            )
+        
+        # Ordenar por fecha de creación (más recientes primero)
+        queryset = queryset.order_by('-created_at')
+        
+        # Serializar usuarios
+        users_data = []
+        for user in queryset:
+            users_data.append({
+                'id': user.id,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'role': user.role,
+                'is_active': user.is_active,
+                'is_email_verified': user.is_email_verified,
+                'created_at': user.created_at.isoformat() if user.created_at else None,
+                'last_login': user.last_login.isoformat() if user.last_login else None,
+            })
+        
+        return Response({
+            'success': True,
+            'data': users_data,
+            'count': len(users_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing users: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar usuarios'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene el detalle de un usuario específico. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Detalle del usuario'),
+        404: openapi.Response(description='Usuario no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Usuarios']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def get_user_detail(request, user_id):
+    """
+    Obtiene el detalle de un usuario específico.
+    GET /api/v1/admin/users/{user_id}/
+    """
+    try:
+        from infrastructure.database.models import User
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Usuario no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'is_active': user.is_active,
+            'is_email_verified': user.is_email_verified,
+            'phone': user.phone,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'updated_at': user.updated_at.isoformat() if user.updated_at else None,
+            'last_login': user.last_login.isoformat() if user.last_login else None,
+        }
+        
+        return Response({
+            'success': True,
+            'data': user_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error getting user detail {user_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al obtener usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Crea un nuevo usuario. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email', 'password', 'first_name', 'last_name', 'role'],
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD),
+            'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+            'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+            'role': openapi.Schema(type=openapi.TYPE_STRING, enum=['student', 'teacher', 'admin']),
+            'phone': openapi.Schema(type=openapi.TYPE_STRING),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={
+        201: openapi.Response(description='Usuario creado exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Usuarios']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def create_user(request):
+    """
+    Crea un nuevo usuario.
+    POST /api/v1/admin/users/
+    """
+    try:
+        from infrastructure.database.models import User
+        from django.contrib.auth.hashers import make_password
+        
+        email = request.data.get('email', '').lower().strip()
+        password = request.data.get('password', '')
+        first_name = request.data.get('first_name', '').strip()
+        last_name = request.data.get('last_name', '').strip()
+        role = request.data.get('role', 'student')
+        phone = request.data.get('phone', '').strip() or None
+        is_active = request.data.get('is_active', True)
+        
+        # Validaciones
+        if not email or not password or not first_name or not last_name:
+            return Response({
+                'success': False,
+                'message': 'Email, contraseña, nombre y apellido son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if role not in ['student', 'teacher', 'admin']:
+            return Response({
+                'success': False,
+                'message': 'Rol inválido. Debe ser: student, teacher o admin'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verificar si el email ya existe
+        if User.objects.filter(email=email).exists():
+            return Response({
+                'success': False,
+                'message': 'El email ya está registrado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Crear usuario
+        username = email  # Usar email como username
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            phone=phone,
+            is_active=is_active
+        )
+        
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'is_active': user.is_active,
+            'created_at': user.created_at.isoformat() if user.created_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Usuario creado exitosamente',
+            'data': user_data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f'Error creating user: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al crear usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='put',
+    operation_description='Actualiza un usuario existente. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'email': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_EMAIL),
+            'first_name': openapi.Schema(type=openapi.TYPE_STRING),
+            'last_name': openapi.Schema(type=openapi.TYPE_STRING),
+            'role': openapi.Schema(type=openapi.TYPE_STRING, enum=['student', 'teacher', 'admin']),
+            'phone': openapi.Schema(type=openapi.TYPE_STRING),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+            'password': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_PASSWORD),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Usuario actualizado exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        404: openapi.Response(description='Usuario no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Usuarios']
+)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def update_user(request, user_id):
+    """
+    Actualiza un usuario existente.
+    PUT /api/v1/admin/users/{user_id}/
+    """
+    try:
+        from infrastructure.database.models import User
+        from django.contrib.auth.hashers import make_password
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Usuario no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Actualizar campos si están presentes
+        if 'email' in request.data:
+            email = request.data.get('email', '').lower().strip()
+            if email and email != user.email:
+                # Verificar si el nuevo email ya existe
+                if User.objects.filter(email=email).exclude(id=user_id).exists():
+                    return Response({
+                        'success': False,
+                        'message': 'El email ya está registrado'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                user.email = email
+                user.username = email  # Actualizar username también
+        
+        if 'first_name' in request.data:
+            user.first_name = request.data.get('first_name', '').strip()
+        
+        if 'last_name' in request.data:
+            user.last_name = request.data.get('last_name', '').strip()
+        
+        if 'role' in request.data:
+            role = request.data.get('role', '')
+            if role not in ['student', 'teacher', 'admin']:
+                return Response({
+                    'success': False,
+                    'message': 'Rol inválido. Debe ser: student, teacher o admin'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            user.role = role
+        
+        if 'phone' in request.data:
+            user.phone = request.data.get('phone', '').strip() or None
+        
+        if 'is_active' in request.data:
+            user.is_active = request.data.get('is_active', True)
+        
+        if 'password' in request.data and request.data.get('password'):
+            # Actualizar contraseña
+            user.set_password(request.data.get('password'))
+        
+        user.save()
+        
+        user_data = {
+            'id': user.id,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'role': user.role,
+            'is_active': user.is_active,
+            'phone': user.phone,
+            'updated_at': user.updated_at.isoformat() if user.updated_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Usuario actualizado exitosamente',
+            'data': user_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error updating user {user_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al actualizar usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description='Elimina (desactiva) un usuario. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Usuario eliminado exitosamente'),
+        404: openapi.Response(description='Usuario no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Usuarios']
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def delete_user(request, user_id):
+    """
+    Elimina (desactiva) un usuario (soft delete).
+    DELETE /api/v1/admin/users/{user_id}/
+    """
+    try:
+        from infrastructure.database.models import User
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Usuario no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Soft delete: desactivar usuario
+        user.is_active = False
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Usuario eliminado exitosamente'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error deleting user {user_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al eliminar usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Activa un usuario. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Usuario activado exitosamente'),
+        404: openapi.Response(description='Usuario no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Usuarios']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def activate_user(request, user_id):
+    """
+    Activa un usuario.
+    POST /api/v1/admin/users/{user_id}/activate/
+    """
+    try:
+        from infrastructure.database.models import User
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Usuario no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        user.is_active = True
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Usuario activado exitosamente',
+            'data': {
+                'id': user.id,
+                'is_active': user.is_active
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error activating user {user_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al activar usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Desactiva un usuario. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Usuario desactivado exitosamente'),
+        404: openapi.Response(description='Usuario no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Usuarios']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def deactivate_user(request, user_id):
+    """
+    Desactiva un usuario.
+    POST /api/v1/admin/users/{user_id}/deactivate/
+    """
+    try:
+        from infrastructure.database.models import User
+        
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Usuario no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        user.is_active = False
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Usuario desactivado exitosamente',
+            'data': {
+                'id': user.id,
+                'is_active': user.is_active
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error deactivating user {user_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al desactivar usuario'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========== GESTIÓN DE MÓDULOS ==========
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todos los módulos de un curso. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Lista de módulos'),
+        404: openapi.Response(description='Curso no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Módulos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_course_modules(request, course_id):
+    """
+    Lista todos los módulos de un curso.
+    GET /api/v1/admin/courses/{course_id}/modules/
+    """
+    try:
+        from apps.courses.models import Course, Module
+        
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Curso no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        modules = Module.objects.filter(course=course).order_by('order')
+        
+        modules_data = []
+        for module in modules:
+            modules_data.append({
+                'id': module.id,
+                'title': module.title,
+                'description': module.description,
+                'price': float(module.price),
+                'is_purchasable': module.is_purchasable,
+                'order': module.order,
+                'is_active': module.is_active,
+                'lessons_count': module.lessons.count(),
+                'created_at': module.created_at.isoformat() if module.created_at else None,
+                'updated_at': module.updated_at.isoformat() if module.updated_at else None,
+            })
+        
+        return Response({
+            'success': True,
+            'data': modules_data,
+            'count': len(modules_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing modules for course {course_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar módulos'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Crea un nuevo módulo para un curso. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['title', 'order'],
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING),
+            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'price': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'is_purchasable': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+            'order': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={
+        201: openapi.Response(description='Módulo creado exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        404: openapi.Response(description='Curso no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Módulos']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def create_module(request, course_id):
+    """
+    Crea un nuevo módulo para un curso.
+    POST /api/v1/admin/courses/{course_id}/modules/
+    """
+    try:
+        from apps.courses.models import Course, Module
+        from decimal import Decimal
+        
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Curso no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        title = request.data.get('title', '').strip()
+        description = request.data.get('description', '').strip()
+        price = Decimal(str(request.data.get('price', 0)))
+        is_purchasable = request.data.get('is_purchasable', False)
+        order = request.data.get('order', 0)
+        is_active = request.data.get('is_active', True)
+        
+        if not title:
+            return Response({
+                'success': False,
+                'message': 'El título es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        module = Module.objects.create(
+            course=course,
+            title=title,
+            description=description,
+            price=price,
+            is_purchasable=is_purchasable,
+            order=order,
+            is_active=is_active
+        )
+        
+        module_data = {
+            'id': module.id,
+            'title': module.title,
+            'description': module.description,
+            'price': float(module.price),
+            'is_purchasable': module.is_purchasable,
+            'order': module.order,
+            'is_active': module.is_active,
+            'lessons_count': 0,
+            'created_at': module.created_at.isoformat() if module.created_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Módulo creado exitosamente',
+            'data': module_data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f'Error creating module for course {course_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al crear módulo'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='put',
+    operation_description='Actualiza un módulo existente. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING),
+            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'price': openapi.Schema(type=openapi.TYPE_NUMBER),
+            'is_purchasable': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+            'order': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Módulo actualizado exitosamente'),
+        404: openapi.Response(description='Módulo no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Módulos']
+)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def update_module(request, module_id):
+    """
+    Actualiza un módulo existente.
+    PUT /api/v1/admin/modules/{module_id}/
+    """
+    try:
+        from apps.courses.models import Module
+        from decimal import Decimal
+        
+        try:
+            module = Module.objects.get(id=module_id)
+        except Module.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Módulo no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        if 'title' in request.data:
+            module.title = request.data.get('title', '').strip()
+        
+        if 'description' in request.data:
+            module.description = request.data.get('description', '').strip()
+        
+        if 'price' in request.data:
+            module.price = Decimal(str(request.data.get('price', 0)))
+        
+        if 'is_purchasable' in request.data:
+            module.is_purchasable = request.data.get('is_purchasable', False)
+        
+        if 'order' in request.data:
+            module.order = request.data.get('order', 0)
+        
+        if 'is_active' in request.data:
+            module.is_active = request.data.get('is_active', True)
+        
+        module.save()
+        
+        module_data = {
+            'id': module.id,
+            'title': module.title,
+            'description': module.description,
+            'price': float(module.price),
+            'is_purchasable': module.is_purchasable,
+            'order': module.order,
+            'is_active': module.is_active,
+            'lessons_count': module.lessons.count(),
+            'updated_at': module.updated_at.isoformat() if module.updated_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Módulo actualizado exitosamente',
+            'data': module_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error updating module {module_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al actualizar módulo'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description='Elimina un módulo. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Módulo eliminado exitosamente'),
+        404: openapi.Response(description='Módulo no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Módulos']
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def delete_module(request, module_id):
+    """
+    Elimina un módulo.
+    DELETE /api/v1/admin/modules/{module_id}/
+    """
+    try:
+        from apps.courses.models import Module
+        
+        try:
+            module = Module.objects.get(id=module_id)
+        except Module.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Módulo no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        module.delete()
+        
+        return Response({
+            'success': True,
+            'message': 'Módulo eliminado exitosamente'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error deleting module {module_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al eliminar módulo'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========== GESTIÓN DE LECCIONES ==========
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todas las lecciones de un módulo. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Lista de lecciones'),
+        404: openapi.Response(description='Módulo no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Lecciones']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_module_lessons(request, module_id):
+    """
+    Lista todas las lecciones de un módulo.
+    GET /api/v1/admin/modules/{module_id}/lessons/
+    """
+    try:
+        from apps.courses.models import Module, Lesson
+        
+        try:
+            module = Module.objects.get(id=module_id)
+        except Module.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Módulo no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        lessons = Lesson.objects.filter(module=module).order_by('order')
+        
+        lessons_data = []
+        for lesson in lessons:
+            lessons_data.append({
+                'id': lesson.id,
+                'title': lesson.title,
+                'description': lesson.description,
+                'lesson_type': lesson.lesson_type,
+                'content_url': lesson.content_url,
+                'content_text': lesson.content_text,
+                'duration_minutes': lesson.duration_minutes,
+                'order': lesson.order,
+                'is_active': lesson.is_active,
+                'created_at': lesson.created_at.isoformat() if lesson.created_at else None,
+                'updated_at': lesson.updated_at.isoformat() if lesson.updated_at else None,
+            })
+        
+        return Response({
+            'success': True,
+            'data': lessons_data,
+            'count': len(lessons_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing lessons for module {module_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar lecciones'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Crea una nueva lección para un módulo. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['title', 'lesson_type', 'order'],
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING),
+            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'lesson_type': openapi.Schema(type=openapi.TYPE_STRING, enum=['video', 'document', 'quiz', 'text']),
+            'content_url': openapi.Schema(type=openapi.TYPE_STRING),
+            'content_text': openapi.Schema(type=openapi.TYPE_STRING),
+            'duration_minutes': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'order': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={
+        201: openapi.Response(description='Lección creada exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        404: openapi.Response(description='Módulo no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Lecciones']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def create_lesson(request, module_id):
+    """
+    Crea una nueva lección para un módulo.
+    POST /api/v1/admin/modules/{module_id}/lessons/
+    """
+    try:
+        from apps.courses.models import Module, Lesson
+        
+        try:
+            module = Module.objects.get(id=module_id)
+        except Module.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Módulo no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        title = request.data.get('title', '').strip()
+        description = request.data.get('description', '').strip()
+        lesson_type = request.data.get('lesson_type', 'video')
+        content_url = request.data.get('content_url', '').strip() or None
+        content_text = request.data.get('content_text', '').strip()
+        duration_minutes = request.data.get('duration_minutes', 0)
+        order = request.data.get('order', 0)
+        is_active = request.data.get('is_active', True)
+        
+        if not title:
+            return Response({
+                'success': False,
+                'message': 'El título es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if lesson_type not in ['video', 'document', 'quiz', 'text']:
+            return Response({
+                'success': False,
+                'message': 'Tipo de lección inválido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        lesson = Lesson.objects.create(
+            module=module,
+            title=title,
+            description=description,
+            lesson_type=lesson_type,
+            content_url=content_url,
+            content_text=content_text,
+            duration_minutes=duration_minutes,
+            order=order,
+            is_active=is_active
+        )
+        
+        lesson_data = {
+            'id': lesson.id,
+            'title': lesson.title,
+            'description': lesson.description,
+            'lesson_type': lesson.lesson_type,
+            'content_url': lesson.content_url,
+            'content_text': lesson.content_text,
+            'duration_minutes': lesson.duration_minutes,
+            'order': lesson.order,
+            'is_active': lesson.is_active,
+            'created_at': lesson.created_at.isoformat() if lesson.created_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Lección creada exitosamente',
+            'data': lesson_data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f'Error creating lesson for module {module_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al crear lección'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='put',
+    operation_description='Actualiza una lección existente. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING),
+            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'lesson_type': openapi.Schema(type=openapi.TYPE_STRING, enum=['video', 'document', 'quiz', 'text']),
+            'content_url': openapi.Schema(type=openapi.TYPE_STRING),
+            'content_text': openapi.Schema(type=openapi.TYPE_STRING),
+            'duration_minutes': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'order': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Lección actualizada exitosamente'),
+        404: openapi.Response(description='Lección no encontrada'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Lecciones']
+)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def update_lesson(request, lesson_id):
+    """
+    Actualiza una lección existente.
+    PUT /api/v1/admin/lessons/{lesson_id}/
+    """
+    try:
+        from apps.courses.models import Lesson
+        
+        try:
+            lesson = Lesson.objects.get(id=lesson_id)
+        except Lesson.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Lección no encontrada'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        if 'title' in request.data:
+            lesson.title = request.data.get('title', '').strip()
+        
+        if 'description' in request.data:
+            lesson.description = request.data.get('description', '').strip()
+        
+        if 'lesson_type' in request.data:
+            lesson_type = request.data.get('lesson_type', 'video')
+            if lesson_type not in ['video', 'document', 'quiz', 'text']:
+                return Response({
+                    'success': False,
+                    'message': 'Tipo de lección inválido'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            lesson.lesson_type = lesson_type
+        
+        if 'content_url' in request.data:
+            lesson.content_url = request.data.get('content_url', '').strip() or None
+        
+        if 'content_text' in request.data:
+            lesson.content_text = request.data.get('content_text', '').strip()
+        
+        if 'duration_minutes' in request.data:
+            lesson.duration_minutes = request.data.get('duration_minutes', 0)
+        
+        if 'order' in request.data:
+            lesson.order = request.data.get('order', 0)
+        
+        if 'is_active' in request.data:
+            lesson.is_active = request.data.get('is_active', True)
+        
+        lesson.save()
+        
+        lesson_data = {
+            'id': lesson.id,
+            'title': lesson.title,
+            'description': lesson.description,
+            'lesson_type': lesson.lesson_type,
+            'content_url': lesson.content_url,
+            'content_text': lesson.content_text,
+            'duration_minutes': lesson.duration_minutes,
+            'order': lesson.order,
+            'is_active': lesson.is_active,
+            'updated_at': lesson.updated_at.isoformat() if lesson.updated_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Lección actualizada exitosamente',
+            'data': lesson_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error updating lesson {lesson_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al actualizar lección'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description='Elimina una lección. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Lección eliminada exitosamente'),
+        404: openapi.Response(description='Lección no encontrada'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Lecciones']
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def delete_lesson(request, lesson_id):
+    """
+    Elimina una lección.
+    DELETE /api/v1/admin/lessons/{lesson_id}/
+    """
+    try:
+        from apps.courses.models import Lesson
+        
+        try:
+            lesson = Lesson.objects.get(id=lesson_id)
+        except Lesson.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Lección no encontrada'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        lesson.delete()
+        
+        return Response({
+            'success': True,
+            'message': 'Lección eliminada exitosamente'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error deleting lesson {lesson_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al eliminar lección'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========== GESTIÓN DE MATERIALES ==========
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todos los materiales de un curso. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter(
+            'material_type',
+            openapi.IN_QUERY,
+            description='Filtro por tipo (video, link)',
+            type=openapi.TYPE_STRING,
+            enum=['video', 'link'],
+            required=False
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Lista de materiales'),
+        404: openapi.Response(description='Curso no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Materiales']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_course_materials(request, course_id):
+    """
+    Lista todos los materiales de un curso.
+    GET /api/v1/admin/courses/{course_id}/materials/?material_type=video
+    """
+    try:
+        from apps.courses.models import Course, Material
+        
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Curso no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        queryset = Material.objects.filter(course=course)
+        
+        # Filtro por tipo
+        material_type = request.query_params.get('material_type', None)
+        if material_type:
+            queryset = queryset.filter(material_type=material_type)
+        
+        materials = queryset.order_by('order')
+        
+        materials_data = []
+        for material in materials:
+            materials_data.append({
+                'id': material.id,
+                'title': material.title,
+                'description': material.description,
+                'material_type': material.material_type,
+                'url': material.url,
+                'order': material.order,
+                'is_active': material.is_active,
+                'module_id': material.module.id if material.module else None,
+                'module_title': material.module.title if material.module else None,
+                'lesson_id': material.lesson.id if material.lesson else None,
+                'lesson_title': material.lesson.title if material.lesson else None,
+                'created_at': material.created_at.isoformat() if material.created_at else None,
+                'updated_at': material.updated_at.isoformat() if material.updated_at else None,
+            })
+        
+        return Response({
+            'success': True,
+            'data': materials_data,
+            'count': len(materials_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing materials for course {course_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar materiales'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Crea un nuevo material para un curso. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['title', 'material_type', 'url', 'order'],
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING),
+            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'material_type': openapi.Schema(type=openapi.TYPE_STRING, enum=['video', 'link']),
+            'url': openapi.Schema(type=openapi.TYPE_STRING),
+            'module_id': openapi.Schema(type=openapi.TYPE_STRING),
+            'lesson_id': openapi.Schema(type=openapi.TYPE_STRING),
+            'order': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={
+        201: openapi.Response(description='Material creado exitosamente'),
+        400: openapi.Response(description='Datos inválidos'),
+        404: openapi.Response(description='Curso no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Materiales']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def create_material(request, course_id):
+    """
+    Crea un nuevo material para un curso.
+    POST /api/v1/admin/courses/{course_id}/materials/
+    """
+    try:
+        from apps.courses.models import Course, Material, Module, Lesson
+        
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Curso no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        title = request.data.get('title', '').strip()
+        description = request.data.get('description', '').strip()
+        material_type = request.data.get('material_type', 'video')
+        url = request.data.get('url', '').strip()
+        module_id = request.data.get('module_id', None)
+        lesson_id = request.data.get('lesson_id', None)
+        order = request.data.get('order', 0)
+        is_active = request.data.get('is_active', True)
+        
+        if not title:
+            return Response({
+                'success': False,
+                'message': 'El título es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not url:
+            return Response({
+                'success': False,
+                'message': 'La URL es requerida'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if material_type not in ['video', 'link']:
+            return Response({
+                'success': False,
+                'message': 'Tipo de material inválido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        module = None
+        if module_id:
+            try:
+                module = Module.objects.get(id=module_id, course=course)
+            except Module.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Módulo no encontrado'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        lesson = None
+        if lesson_id:
+            try:
+                lesson = Lesson.objects.get(id=lesson_id)
+                if module and lesson.module != module:
+                    return Response({
+                        'success': False,
+                        'message': 'La lección no pertenece al módulo especificado'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except Lesson.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Lección no encontrada'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        material = Material.objects.create(
+            course=course,
+            module=module,
+            lesson=lesson,
+            title=title,
+            description=description,
+            material_type=material_type,
+            url=url,
+            order=order,
+            is_active=is_active
+        )
+        
+        material_data = {
+            'id': material.id,
+            'title': material.title,
+            'description': material.description,
+            'material_type': material.material_type,
+            'url': material.url,
+            'order': material.order,
+            'is_active': material.is_active,
+            'module_id': material.module.id if material.module else None,
+            'lesson_id': material.lesson.id if material.lesson else None,
+            'created_at': material.created_at.isoformat() if material.created_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Material creado exitosamente',
+            'data': material_data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f'Error creating material for course {course_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al crear material'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='put',
+    operation_description='Actualiza un material existente. Solo accesible para administradores.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'title': openapi.Schema(type=openapi.TYPE_STRING),
+            'description': openapi.Schema(type=openapi.TYPE_STRING),
+            'material_type': openapi.Schema(type=openapi.TYPE_STRING, enum=['video', 'link']),
+            'url': openapi.Schema(type=openapi.TYPE_STRING),
+            'module_id': openapi.Schema(type=openapi.TYPE_STRING),
+            'lesson_id': openapi.Schema(type=openapi.TYPE_STRING),
+            'order': openapi.Schema(type=openapi.TYPE_INTEGER),
+            'is_active': openapi.Schema(type=openapi.TYPE_BOOLEAN),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Material actualizado exitosamente'),
+        404: openapi.Response(description='Material no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Materiales']
+)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def update_material(request, material_id):
+    """
+    Actualiza un material existente.
+    PUT /api/v1/admin/materials/{material_id}/
+    """
+    try:
+        from apps.courses.models import Material, Module, Lesson
+        
+        try:
+            material = Material.objects.get(id=material_id)
+        except Material.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Material no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        if 'title' in request.data:
+            material.title = request.data.get('title', '').strip()
+        
+        if 'description' in request.data:
+            material.description = request.data.get('description', '').strip()
+        
+        if 'material_type' in request.data:
+            material_type = request.data.get('material_type', 'video')
+            if material_type not in ['video', 'link']:
+                return Response({
+                    'success': False,
+                    'message': 'Tipo de material inválido'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            material.material_type = material_type
+        
+        if 'url' in request.data:
+            material.url = request.data.get('url', '').strip()
+        
+        if 'module_id' in request.data:
+            module_id = request.data.get('module_id', None)
+            if module_id:
+                try:
+                    module = Module.objects.get(id=module_id, course=material.course)
+                    material.module = module
+                except Module.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'message': 'Módulo no encontrado'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                material.module = None
+        
+        if 'lesson_id' in request.data:
+            lesson_id = request.data.get('lesson_id', None)
+            if lesson_id:
+                try:
+                    lesson = Lesson.objects.get(id=lesson_id)
+                    if material.module and lesson.module != material.module:
+                        return Response({
+                            'success': False,
+                            'message': 'La lección no pertenece al módulo especificado'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                    material.lesson = lesson
+                except Lesson.DoesNotExist:
+                    return Response({
+                        'success': False,
+                        'message': 'Lección no encontrada'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                material.lesson = None
+        
+        if 'order' in request.data:
+            material.order = request.data.get('order', 0)
+        
+        if 'is_active' in request.data:
+            material.is_active = request.data.get('is_active', True)
+        
+        material.save()
+        
+        material_data = {
+            'id': material.id,
+            'title': material.title,
+            'description': material.description,
+            'material_type': material.material_type,
+            'url': material.url,
+            'order': material.order,
+            'is_active': material.is_active,
+            'module_id': material.module.id if material.module else None,
+            'lesson_id': material.lesson.id if material.lesson else None,
+            'updated_at': material.updated_at.isoformat() if material.updated_at else None,
+        }
+        
+        return Response({
+            'success': True,
+            'message': 'Material actualizado exitosamente',
+            'data': material_data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error updating material {material_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al actualizar material'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='delete',
+    operation_description='Elimina un material. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Material eliminado exitosamente'),
+        404: openapi.Response(description='Material no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Materiales']
+)
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def delete_material(request, material_id):
+    """
+    Elimina un material.
+    DELETE /api/v1/admin/materials/{material_id}/
+    """
+    try:
+        from apps.courses.models import Material
+        
+        try:
+            material = Material.objects.get(id=material_id)
+        except Material.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Material no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        material.delete()
+        
+        return Response({
+            'success': True,
+            'message': 'Material eliminado exitosamente'
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error deleting material {material_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al eliminar material'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========== GESTIÓN DE ALUMNOS INSCRITOS ==========
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todos los alumnos inscritos en un curso con su progreso. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter(
+            'status',
+            openapi.IN_QUERY,
+            description='Filtro por estado (active, completed, expired, cancelled)',
+            type=openapi.TYPE_STRING,
+            enum=['active', 'completed', 'expired', 'cancelled'],
+            required=False
+        ),
+        openapi.Parameter(
+            'search',
+            openapi.IN_QUERY,
+            description='Búsqueda por nombre o email',
+            type=openapi.TYPE_STRING,
+            required=False
+        ),
+    ],
+    responses={
+        200: openapi.Response(description='Lista de alumnos inscritos'),
+        404: openapi.Response(description='Curso no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Alumnos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_course_students(request, course_id):
+    """
+    Lista todos los alumnos inscritos en un curso.
+    GET /api/v1/admin/courses/{course_id}/students/?status=active&search=nombre
+    """
+    try:
+        from apps.courses.models import Course
+        from apps.users.models import Enrollment
+        
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Curso no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        queryset = Enrollment.objects.filter(course=course).select_related('user')
+        
+        # Filtro por estado
+        status_filter = request.query_params.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Búsqueda por nombre o email
+        search_query = request.query_params.get('search', None)
+        if search_query:
+            queryset = queryset.filter(
+                models.Q(user__first_name__icontains=search_query) |
+                models.Q(user__last_name__icontains=search_query) |
+                models.Q(user__email__icontains=search_query)
+            )
+        
+        enrollments = queryset.order_by('-enrolled_at')
+        
+        students_data = []
+        for enrollment in enrollments:
+            students_data.append({
+                'enrollment_id': enrollment.id,
+                'user_id': enrollment.user.id,
+                'user_email': enrollment.user.email,
+                'user_first_name': enrollment.user.first_name,
+                'user_last_name': enrollment.user.last_name,
+                'status': enrollment.status,
+                'completed': enrollment.completed,
+                'completion_percentage': float(enrollment.completion_percentage),
+                'enrolled_at': enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None,
+                'completed_at': enrollment.completed_at.isoformat() if enrollment.completed_at else None,
+                'expires_at': enrollment.expires_at.isoformat() if enrollment.expires_at else None,
+            })
+        
+        return Response({
+            'success': True,
+            'data': students_data,
+            'count': len(students_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error listing students for course {course_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al listar alumnos'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene el detalle de progreso de un alumno en un curso. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(description='Detalle de progreso del alumno'),
+        404: openapi.Response(description='Enrollment no encontrado'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Alumnos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def get_student_progress(request, course_id, enrollment_id):
+    """
+    Obtiene el detalle de progreso de un alumno en un curso.
+    GET /api/v1/admin/courses/{course_id}/students/{enrollment_id}/progress/
+    """
+    try:
+        from apps.courses.models import Course, Module, Lesson
+        from apps.users.models import Enrollment, LessonProgress
+        
+        try:
+            course = Course.objects.get(id=course_id)
+        except Course.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Curso no encontrado'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        try:
+            enrollment = Enrollment.objects.get(id=enrollment_id, course=course)
+        except Enrollment.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Inscripción no encontrada'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Obtener módulos del curso
+        modules = Module.objects.filter(course=course).order_by('order')
+        
+        # Obtener progreso de lecciones
+        lesson_progresses = LessonProgress.objects.filter(
+            enrollment=enrollment
+        ).select_related('lesson')
+        
+        progress_dict = {lp.lesson.id: lp for lp in lesson_progresses}
+        
+        modules_data = []
+        total_lessons = 0
+        completed_lessons = 0
+        
+        for module in modules:
+            lessons = Lesson.objects.filter(module=module, is_active=True).order_by('order')
+            lessons_data = []
+            
+            for lesson in lessons:
+                total_lessons += 1
+                lesson_progress = progress_dict.get(lesson.id)
+                is_completed = lesson_progress.is_completed if lesson_progress else False
+                progress_percentage = float(lesson_progress.progress_percentage) if lesson_progress else 0.0
+                
+                if is_completed:
+                    completed_lessons += 1
+                
+                lessons_data.append({
+                    'id': lesson.id,
+                    'title': lesson.title,
+                    'lesson_type': lesson.lesson_type,
+                    'order': lesson.order,
+                    'is_completed': is_completed,
+                    'progress_percentage': progress_percentage,
+                    'completed_at': lesson_progress.completed_at.isoformat() if lesson_progress and lesson_progress.completed_at else None,
+                })
+            
+            modules_data.append({
+                'id': module.id,
+                'title': module.title,
+                'order': module.order,
+                'lessons': lessons_data,
+                'lessons_count': len(lessons),
+                'completed_lessons': sum(1 for l in lessons_data if l['is_completed']),
+            })
+        
+        overall_progress = (completed_lessons / total_lessons * 100) if total_lessons > 0 else 0
+        
+        return Response({
+            'success': True,
+            'data': {
+                'enrollment': {
+                    'id': enrollment.id,
+                    'status': enrollment.status,
+                    'completed': enrollment.completed,
+                    'completion_percentage': float(enrollment.completion_percentage),
+                    'enrolled_at': enrollment.enrolled_at.isoformat() if enrollment.enrolled_at else None,
+                    'completed_at': enrollment.completed_at.isoformat() if enrollment.completed_at else None,
+                },
+                'student': {
+                    'id': enrollment.user.id,
+                    'email': enrollment.user.email,
+                    'first_name': enrollment.user.first_name,
+                    'last_name': enrollment.user.last_name,
+                },
+                'course': {
+                    'id': course.id,
+                    'title': course.title,
+                },
+                'modules': modules_data,
+                'overall_progress': {
+                    'total_lessons': total_lessons,
+                    'completed_lessons': completed_lessons,
+                    'percentage': round(overall_progress, 2),
+                }
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error getting student progress for enrollment {enrollment_id}: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al obtener progreso del alumno'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

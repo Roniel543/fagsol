@@ -1,5 +1,6 @@
 'use client';
 
+import { AdminLayout } from '@/features/admin/components/layout/AdminLayout';
 import { ProtectedRoute } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { AdminDashboard } from './AdminDashboard';
@@ -34,6 +35,16 @@ function DashboardContentInner() {
         }
     };
 
+    // Si es admin, usar el layout con sidebar (sin requireAuth porque ya está protegido)
+    if (user.role === 'admin') {
+        return (
+            <AdminLayout requireAuth={false}>
+                {renderDashboard()}
+            </AdminLayout>
+        );
+    }
+
+    // Para otros roles, usar el layout tradicional
     return (
         <div className="min-h-screen bg-gray-50">
             <DashboardHeader onLogout={logout} />

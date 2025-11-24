@@ -4,6 +4,7 @@ import { Button, Card, LoadingSpinner, ProtectedRoute } from '@/shared/component
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useCourses } from '@/shared/hooks/useCourses';
 import { deleteCourse } from '@/shared/services/courses';
+import { BookOpen, Edit, Eye, FileText, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -132,55 +133,83 @@ function CoursesAdminPageContent() {
                                         {courses.map((course) => (
                                             <li key={course.id}>
                                                 <div className="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center space-x-4 flex-1">
+                                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                                        <div className="flex items-start space-x-4 flex-1 min-w-0">
                                                             {course.thumbnailUrl && (
                                                                 <img
                                                                     src={course.thumbnailUrl}
                                                                     alt={course.title}
-                                                                    className="h-16 w-16 object-cover rounded"
+                                                                    className="h-16 w-16 object-cover rounded flex-shrink-0"
                                                                 />
                                                             )}
                                                             <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center space-x-2">
+                                                                <div className="flex flex-wrap items-center gap-2">
                                                                     <h3 className="text-lg font-medium text-gray-900 truncate">
                                                                         {course.title}
                                                                     </h3>
                                                                     {getStatusBadge(course)}
                                                                 </div>
-                                                                <p className="text-sm text-gray-500 truncate mt-1">
+                                                                <p className="text-sm text-gray-500 line-clamp-2 mt-1">
                                                                     {course.subtitle || course.description}
                                                                 </p>
-                                                                <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                                                                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                                                                     <span>Precio: S/ {course.price}</span>
-                                                                    <span>•</span>
+                                                                    <span className="hidden sm:inline">•</span>
                                                                     <span>Categoría: {course.category}</span>
-                                                                    <span>•</span>
+                                                                    <span className="hidden sm:inline">•</span>
                                                                     <span>Nivel: {course.level}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                        <div className="flex items-center space-x-2 ml-4">
-                                                            <Link href={`/academy/course/${course.slug}`}>
-                                                                <Button variant="secondary" size="sm">
-                                                                    Ver
-                                                                </Button>
-                                                            </Link>
-                                                            <Link href={`/admin/courses/${course.id}/edit`}>
-                                                                <Button variant="primary" size="sm">
-                                                                    Editar
-                                                                </Button>
-                                                            </Link>
-                                                            {user?.role === 'admin' && (
-                                                                <Button
-                                                                    variant="danger"
-                                                                    size="sm"
-                                                                    onClick={() => handleDelete(course.id)}
-                                                                    disabled={deletingId === course.id}
-                                                                >
-                                                                    {deletingId === course.id ? 'Eliminando...' : 'Eliminar'}
-                                                                </Button>
-                                                            )}
+                                                        <div className="flex flex-col sm:flex-row gap-2 lg:flex-col lg:items-end lg:min-w-[200px]">
+                                                            {/* Botones principales */}
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <Link href={`/academy/course/${course.slug}`} className="flex-shrink-0">
+                                                                    <Button variant="secondary" size="sm" className="w-full sm:w-auto">
+                                                                        <Eye className="w-4 h-4 mr-1" />
+                                                                        Ver
+                                                                    </Button>
+                                                                </Link>
+                                                                <Link href={`/admin/courses/${course.id}/edit`} className="flex-shrink-0">
+                                                                    <Button variant="primary" size="sm" className="w-full sm:w-auto">
+                                                                        <Edit className="w-4 h-4 mr-1" />
+                                                                        Editar
+                                                                    </Button>
+                                                                </Link>
+                                                                {user?.role === 'admin' && (
+                                                                    <Button
+                                                                        variant="danger"
+                                                                        size="sm"
+                                                                        onClick={() => handleDelete(course.id)}
+                                                                        disabled={deletingId === course.id}
+                                                                        className="w-full sm:w-auto"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4 mr-1" />
+                                                                        {deletingId === course.id ? 'Eliminando...' : 'Eliminar'}
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                            {/* Enlaces de gestión */}
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <Link href={`/admin/courses/${course.id}/modules`} className="flex-shrink-0">
+                                                                    <Button variant="secondary" size="sm" className="text-xs w-full sm:w-auto">
+                                                                        <BookOpen className="w-3 h-3 mr-1" />
+                                                                        Módulos
+                                                                    </Button>
+                                                                </Link>
+                                                                <Link href={`/admin/courses/${course.id}/materials`} className="flex-shrink-0">
+                                                                    <Button variant="secondary" size="sm" className="text-xs w-full sm:w-auto">
+                                                                        <FileText className="w-3 h-3 mr-1" />
+                                                                        Materiales
+                                                                    </Button>
+                                                                </Link>
+                                                                <Link href={`/admin/courses/${course.id}/students`} className="flex-shrink-0">
+                                                                    <Button variant="secondary" size="sm" className="text-xs w-full sm:w-auto">
+                                                                        <Users className="w-3 h-3 mr-1" />
+                                                                        Alumnos
+                                                                    </Button>
+                                                                </Link>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

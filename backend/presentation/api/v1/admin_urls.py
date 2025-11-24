@@ -22,6 +22,32 @@ from presentation.views.admin_views import (
     list_instructor_applications,
     approve_instructor_application,
     reject_instructor_application,
+    # Gestión de usuarios (CRUD)
+    list_users,
+    get_user_detail,
+    create_user,
+    update_user,
+    delete_user,
+    activate_user,
+    deactivate_user,
+    # Gestión de módulos
+    list_course_modules,
+    create_module,
+    update_module,
+    delete_module,
+    # Gestión de lecciones
+    list_module_lessons,
+    create_lesson,
+    update_lesson,
+    delete_lesson,
+    # Gestión de materiales
+    list_course_materials,
+    create_material,
+    update_material,
+    delete_material,
+    # Gestión de alumnos inscritos
+    list_course_students,
+    get_student_progress,
 )
 
 urlpatterns = [
@@ -56,5 +82,36 @@ urlpatterns = [
     path('instructor-applications/', list_instructor_applications, name='admin_list_instructor_applications'),
     path('instructor-applications/<int:id>/approve/', approve_instructor_application, name='admin_approve_instructor_application'),
     path('instructor-applications/<int:id>/reject/', reject_instructor_application, name='admin_reject_instructor_application'),
+    
+    # Gestión de usuarios (CRUD)
+    path('users/', list_users, name='admin_list_users'),
+    path('users/<int:user_id>/', get_user_detail, name='admin_get_user_detail'),
+    path('users/create/', create_user, name='admin_create_user'),  # POST /admin/users/create/
+    path('users/<int:user_id>/update/', update_user, name='admin_update_user'),  # PUT /admin/users/{id}/update/
+    path('users/<int:user_id>/delete/', delete_user, name='admin_delete_user'),  # DELETE /admin/users/{id}/delete/
+    path('users/<int:user_id>/activate/', activate_user, name='admin_activate_user'),
+    path('users/<int:user_id>/deactivate/', deactivate_user, name='admin_deactivate_user'),
+    
+    # Gestión de módulos
+    path('courses/<str:course_id>/modules/', list_course_modules, name='admin_list_course_modules'),
+    path('courses/<str:course_id>/modules/create/', create_module, name='admin_create_module'),
+    path('modules/<str:module_id>/update/', update_module, name='admin_update_module'),
+    path('modules/<str:module_id>/delete/', delete_module, name='admin_delete_module'),
+    
+    # Gestión de lecciones
+    path('modules/<str:module_id>/lessons/', list_module_lessons, name='admin_list_module_lessons'),
+    path('modules/<str:module_id>/lessons/create/', create_lesson, name='admin_create_lesson'),
+    path('lessons/<str:lesson_id>/update/', update_lesson, name='admin_update_lesson'),
+    path('lessons/<str:lesson_id>/delete/', delete_lesson, name='admin_delete_lesson'),
+    
+    # Gestión de materiales
+    path('courses/<str:course_id>/materials/', list_course_materials, name='admin_list_course_materials'),
+    path('courses/<str:course_id>/materials/create/', create_material, name='admin_create_material'),
+    path('materials/<str:material_id>/update/', update_material, name='admin_update_material'),
+    path('materials/<str:material_id>/delete/', delete_material, name='admin_delete_material'),
+    
+    # Gestión de alumnos inscritos
+    path('courses/<str:course_id>/students/', list_course_students, name='admin_list_course_students'),
+    path('courses/<str:course_id>/students/<str:enrollment_id>/progress/', get_student_progress, name='admin_get_student_progress'),
 ]
 

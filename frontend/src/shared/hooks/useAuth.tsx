@@ -57,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     try {
                         const { refreshAccessToken } = await import('@/shared/services/api');
                         const newToken = await refreshAccessToken();
-                        
+
                         if (newToken) {
                             // Si se pudo refrescar, intentar obtener el usuario nuevamente
                             const retryResponse = await authAPI.getCurrentUser();
@@ -82,12 +82,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } catch (error) {
                 // Error al validar token (token expirado, inválido, etc.)
                 console.error('Error validating token:', error);
-                
+
                 // Intentar refrescar antes de limpiar
                 try {
                     const { refreshAccessToken } = await import('@/shared/services/api');
                     const newToken = await refreshAccessToken();
-                    
+
                     if (newToken) {
                         // Si se pudo refrescar, intentar obtener el usuario nuevamente
                         const retryResponse = await authAPI.getCurrentUser();
@@ -191,7 +191,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={value}>
+        <AuthContext.Provider value={value} >
             {children}
         </AuthContext.Provider>
     );

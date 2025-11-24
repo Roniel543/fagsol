@@ -1,6 +1,6 @@
-import { AuthProvider } from '@/shared/hooks/useAuth'
-import { CartProvider } from '@/shared/contexts/CartContext'
 import { ToastProvider } from '@/shared/components/Toast'
+import { CartProvider } from '@/shared/contexts/CartContext'
+import { AuthProvider } from '@/shared/hooks/useAuth'
 import type { Metadata } from 'next'
 import { Sora } from 'next/font/google'
 import Script from 'next/script'
@@ -15,6 +15,11 @@ const sora = Sora({
 export const metadata: Metadata = {
   title: 'FagSol S.A.C.',
   description: 'Soluciones Tecnológicas para tu empresa y negocio ',
+  icons: {
+    icon: '/assets/fav-fagsol.png',
+    apple: '/assets/fav-fagsol.png',
+    shortcut: '/assets/fav-fagsol.png',
+  },
 }
 
 export default function RootLayout({

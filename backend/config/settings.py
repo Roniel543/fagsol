@@ -280,24 +280,40 @@ if not DEBUG:
     CSRF_COOKIE_SECURE = True
 
 # ==================================
-# RATE LIMITING (Axes)
+# RATE LIMITING (Axes) - SEGURIDAD PARA PRODUCCIÓN
 # ==================================
 
 AXES_ENABLED = True
-AXES_FAILURE_LIMIT = 10  # 10 intentos fallidos (aumentado para desarrollo)
-AXES_COOLOFF_TIME = 0.5  # 30 minutos de bloqueo (reducido para desarrollo)
+
+# Configuración IDÉNTICA para desarrollo y producción
+# 5 intentos fallidos en ambos entornos para consistencia
+AXES_FAILURE_LIMIT = 5  # 5 intentos fallidos (estándar para apps con pagos)
+
+# Tiempo de bloqueo según ambiente
+if DEBUG:
+    AXES_COOLOFF_TIME = 0.5  # 30 minutos de bloqueo en desarrollo
+else:
+    AXES_COOLOFF_TIME = 1  # 1 hora de bloqueo en producción
+
 AXES_LOCKOUT_TEMPLATE = None
 AXES_LOCKOUT_URL = None
-AXES_RESET_ON_SUCCESS = True
+AXES_RESET_ON_SUCCESS = True  # Resetear contador al hacer login exitoso
 AXES_IP_WHITELIST = []
 
 # Configuración de bloqueo: Por USUARIO específico, NO por IP
-# Esto evita que un usuario bloquee a todos los demás de la misma IP
-# IMPORTANTE: Bloquear solo por usuario, no por IP para evitar bloqueos globales
+# IMPORTANTE: Estas configuraciones deben estar en este orden específico
+# para que AXES las interprete correctamente
 AXES_LOCKOUT_BY_COMBINATION_USER_AND_IP = False  # No bloquear por combinación usuario+IP
 AXES_LOCKOUT_BY_USER_OR_IP = False  # No bloquear por usuario O IP (evita bloqueos globales)
-AXES_LOCKOUT_BY_USER = True  # Bloquear SOLO por usuario específico
-AXES_LOCKOUT_BY_IP = False  # NO bloquear por IP (evita que un usuario bloquee a todos)
+AXES_LOCKOUT_BY_IP = False  # NO bloquear por IP (debe ir ANTES de LOCKOUT_BY_USER)
+AXES_LOCKOUT_BY_USER = True  # Bloquear SOLO por usuario específico (debe ir DESPUÉS)
+
+# Configuraciones adicionales para seguridad
+AXES_LOCKOUT_CALLABLE = None  # Sin callback personalizado de bloqueo
+AXES_VERBOSE = not DEBUG  # Logs detallados solo en producción
+AXES_DISABLE_ACCESS_LOG = False  # Mantener logs de acceso
+AXES_ENABLE_ACCESS_FAILURE_LOG = True  # Log de fallos de acceso
+AXES_ACCESS_FAILURE_LOG_PER_USER_LIMIT = 100  # Límite de logs por usuario
 
 # Authentication backends (incluir Axes)
 AUTHENTICATION_BACKENDS = [
