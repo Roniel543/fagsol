@@ -48,6 +48,7 @@ from presentation.views.admin_views import (
     # Gestión de alumnos inscritos
     list_course_students,
     get_student_progress,
+    get_course_status_counts,
 )
 
 urlpatterns = [
@@ -74,6 +75,7 @@ urlpatterns = [
     
     # Aprobación de cursos
     path('courses/pending/', list_pending_courses, name='admin_list_pending_courses'),
+    path('courses/status-counts/', get_course_status_counts, name='admin_course_status_counts'),
     path('courses/', list_all_courses_admin, name='admin_list_all_courses'),
     path('courses/<str:course_id>/approve/', approve_course, name='admin_approve_course'),
     path('courses/<str:course_id>/reject/', reject_course, name='admin_reject_course'),

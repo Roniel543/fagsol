@@ -2,17 +2,21 @@
 
 import { Button, Card, LoadingSpinner, ProtectedRoute } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
-import { useCourses } from '@/shared/hooks/useCourses';
+import { useAllCoursesAdmin, useCourseStatusCounts } from '@/shared/hooks/useCourses';
 import { deleteCourse } from '@/shared/services/courses';
-import { BookOpen, Edit, Eye, FileText, Trash2, Users } from 'lucide-react';
+import { BookOpen, Edit, Eye, FileText, Filter, Trash2, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+
+type StatusFilter = 'pending_review' | 'needs_revision' | 'published' | 'draft' | 'archived' | undefined;
 
 function CoursesAdminPageContent() {
     const router = useRouter();
-    const { user } = useAuth(); // Solo necesitamos user para verificar rol
-    const { courses, isLoading, mutate } = useCourses({ status: undefined }); // Obtener todos los cursos
+    const { user } = useAuth();
+    const [statusFilter, setStatusFilter] = useState<StatusFilter>(undefined);
+    const { courses, isLoading, mutate } = useAllCoursesAdmin(statusFilter);
+    const { counts, isLoading: isLoadingCounts } = useCourseStatusCounts();
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +31,7 @@ function CoursesAdminPageContent() {
         try {
             const result = await deleteCourse(courseId);
             if (result.success) {
-                // Revalidar la lista de cursos
+                // Revalidar la lista de cursos y contadores
                 mutate();
             } else {
                 setError(result.message || 'Error al eliminar el curso');
@@ -40,14 +44,13 @@ function CoursesAdminPageContent() {
     };
 
     const getStatusBadge = (course: any) => {
-        // El status puede venir del backend directamente o necesitamos obtenerlo
         const status = (course as any).status || 'draft';
         const colors = {
-            published: 'bg-green-100 text-green-800',
-            draft: 'bg-gray-100 text-gray-800',
-            pending_review: 'bg-yellow-100 text-yellow-800',
-            needs_revision: 'bg-orange-100 text-orange-800',
-            archived: 'bg-red-100 text-red-800',
+            published: 'bg-green-100 text-green-800 border border-green-300',
+            draft: 'bg-gray-100 text-gray-800 border border-gray-300',
+            pending_review: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
+            needs_revision: 'bg-orange-100 text-orange-800 border border-orange-300',
+            archived: 'bg-red-100 text-red-800 border border-red-300',
         };
         const labels = {
             published: 'Publicado',
@@ -63,6 +66,14 @@ function CoursesAdminPageContent() {
         );
     };
 
+    const filterButtons = [
+        { key: undefined as StatusFilter, label: 'Todos', count: counts.all },
+        { key: 'published' as StatusFilter, label: 'Publicados', count: counts.published },
+        { key: 'draft' as StatusFilter, label: 'Borradores', count: counts.draft },
+        { key: 'pending_review' as StatusFilter, label: 'Pendientes', count: counts.pending_review },
+        { key: 'needs_revision' as StatusFilter, label: 'Requieren Cambios', count: counts.needs_revision },
+        { key: 'archived' as StatusFilter, label: 'Archivados', count: counts.archived },
+    ];
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -109,6 +120,59 @@ function CoursesAdminPageContent() {
                         </div>
                     )}
 
+                    {/* Filtros */}
+                    <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Filter className="w-5 h-5 text-gray-600" />
+                            <h2 className="text-lg font-semibold text-gray-900">Filtrar por Estado</h2>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {filterButtons.map((filter) => (
+                                <button
+                                    key={filter.key || 'all'}
+                                    onClick={() => setStatusFilter(filter.key)}
+                                    className={`
+                                        px-4 py-2 rounded-lg text-sm font-medium transition-all
+                                        flex items-center gap-2
+                                        ${
+                                            statusFilter === filter.key
+                                                ? 'bg-blue-600 text-white shadow-md'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        }
+                                    `}
+                                    disabled={isLoadingCounts}
+                                >
+                                    <span>{filter.label}</span>
+                                    {!isLoadingCounts && (
+                                        <span
+                                            className={`
+                                                px-2 py-0.5 rounded-full text-xs font-bold
+                                                ${
+                                                    statusFilter === filter.key
+                                                        ? 'bg-blue-500 text-white'
+                                                        : 'bg-gray-200 text-gray-700'
+                                                }
+                                            `}
+                                        >
+                                            {filter.count}
+                                        </span>
+                                    )}
+                                    {statusFilter === filter.key && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setStatusFilter(undefined);
+                                            }}
+                                            className="ml-1 hover:bg-blue-700 rounded-full p-0.5"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Loading State */}
                     {isLoading && (
                         <div className="text-center py-12">
@@ -122,22 +186,51 @@ function CoursesAdminPageContent() {
                         <>
                             {courses.length === 0 ? (
                                 <Card className="p-8 text-center">
-                                    <p className="text-gray-600 mb-4">No hay cursos creados aún.</p>
-                                    <Link href="/admin/courses/new">
-                                        <Button variant="primary">Crear Primer Curso</Button>
-                                    </Link>
+                                    <p className="text-gray-900 mb-4">
+                                        {statusFilter
+                                            ? `No hay cursos con estado "${filterButtons.find((f) => f.key === statusFilter)?.label || statusFilter}".`
+                                            : 'No hay cursos creados aún.'}
+                                    </p>
+                                    {!statusFilter && (
+                                        <Link href="/admin/courses/new">
+                                            <Button variant="primary">Crear Primer Curso</Button>
+                                        </Link>
+                                    )}
+                                    {statusFilter && (
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => setStatusFilter(undefined)}
+                                        >
+                                            Ver Todos los Cursos
+                                        </Button>
+                                    )}
                                 </Card>
                             ) : (
                                 <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                                        <p className="text-sm text-gray-700">
+                                            Mostrando <span className="font-semibold">{courses.length}</span>{' '}
+                                            {courses.length === 1 ? 'curso' : 'cursos'}
+                                            {statusFilter && (
+                                                <>
+                                                    {' '}
+                                                    con estado{' '}
+                                                    <span className="font-semibold">
+                                                        "{filterButtons.find((f) => f.key === statusFilter)?.label}"
+                                                    </span>
+                                                </>
+                                            )}
+                                        </p>
+                                    </div>
                                     <ul className="divide-y divide-gray-200">
                                         {courses.map((course) => (
                                             <li key={course.id}>
                                                 <div className="px-4 py-4 sm:px-6 hover:bg-gray-50">
                                                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                                                         <div className="flex items-start space-x-4 flex-1 min-w-0">
-                                                            {course.thumbnailUrl && (
+                                                            {course.thumbnail_url && (
                                                                 <img
-                                                                    src={course.thumbnailUrl}
+                                                                    src={course.thumbnail_url}
                                                                     alt={course.title}
                                                                     className="h-16 w-16 object-cover rounded flex-shrink-0"
                                                                 />
@@ -150,14 +243,22 @@ function CoursesAdminPageContent() {
                                                                     {getStatusBadge(course)}
                                                                 </div>
                                                                 <p className="text-sm text-gray-500 line-clamp-2 mt-1">
-                                                                    {course.subtitle || course.description}
+                                                                    {course.short_description || course.description}
                                                                 </p>
                                                                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
                                                                     <span>Precio: S/ {course.price}</span>
-                                                                    <span className="hidden sm:inline">•</span>
-                                                                    <span>Categoría: {course.category}</span>
-                                                                    <span className="hidden sm:inline">•</span>
-                                                                    <span>Nivel: {course.level}</span>
+                                                                    {course.category && (
+                                                                        <>
+                                                                            <span className="hidden sm:inline">•</span>
+                                                                            <span>Categoría: {course.category}</span>
+                                                                        </>
+                                                                    )}
+                                                                    {course.level && (
+                                                                        <>
+                                                                            <span className="hidden sm:inline">•</span>
+                                                                            <span>Nivel: {course.level}</span>
+                                                                        </>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -234,4 +335,3 @@ export default function CoursesAdminPage() {
         </ProtectedRoute>
     );
 }
-

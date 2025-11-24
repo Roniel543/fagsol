@@ -316,10 +316,12 @@ frontend/src/
 - `/admin/courses/[id]/students` - Alumnos inscritos
 
 **Endpoints Backend:**
-- `GET /api/v1/admin/courses/` - Listar cursos
-- `POST /api/v1/admin/courses/` - Crear curso
-- `PUT /api/v1/admin/courses/{id}/` - Actualizar curso
-- `DELETE /api/v1/admin/courses/{id}/` - Eliminar curso
+- `GET /api/v1/admin/courses/` - Listar cursos (con filtros por estado)
+- `POST /api/v1/courses/create/` - Crear curso
+- `PUT /api/v1/courses/{id}/update/` - Actualizar curso
+- `DELETE /api/v1/courses/{id}/delete/` - Eliminar curso
+- `POST /api/v1/admin/courses/{id}/approve/` - Aprobar curso (solo admin)
+- `POST /api/v1/admin/courses/{id}/reject/` - Rechazar curso (solo admin)
 
 **Archivos Clave:**
 - `frontend/src/features/admin/pages/CoursesAdminPage.tsx`
@@ -784,7 +786,16 @@ Para problemas o preguntas sobre el proyecto, revisar:
 
 ---
 
-**Última actualización:** 2025-01-23  
-**Versión del documento:** 2.0  
-**Estado:** Panel de Administración Completado ✅
+## 📋 **DOCUMENTOS ADICIONALES**
+
+Para más detalles sobre verificaciones y mejoras recientes, consultar:
+- **`CONTEXTO_SESION_ACTUAL.md`** - Resumen completo de verificaciones y correcciones realizadas (2025-01-27)
+- **`VERIFICACION_CRUD_CURSOS.md`** - Verificación detallada del CRUD de cursos
+- **`ANALISIS_FLUJO_CONTENIDO_CURSOS.md`** - Análisis del flujo de contenido para estudiantes
+
+---
+
+**Última actualización:** 2025-01-27  
+**Versión del documento:** 2.1  
+**Estado:** Panel de Administración Completado ✅ | Verificaciones y Mejoras Completadas ✅
 

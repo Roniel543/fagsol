@@ -143,7 +143,7 @@ function CourseMaterialsPageContent() {
                     {materials.length === 0 ? (
                         <Card className="p-8 text-center bg-white border border-gray-200">
                             <Video className="w-16 h-16 mx-auto text-gray-500 mb-4" />
-                            <p className="text-gray-700 mb-4 font-medium">Este curso no tiene materiales aún.</p>
+                            <p className="text-gray-900 mb-4 font-medium">Este curso no tiene materiales aún.</p>
                             <Link href={`/admin/courses/${courseId}/materials/new`}>
                                 <Button variant="primary">
                                     <Plus className="w-4 h-4 mr-2" />

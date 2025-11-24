@@ -78,6 +78,7 @@ interface InputProps {
     required?: boolean;
     error?: string;
     className?: string;
+    variant?: 'dark' | 'light'; // Nueva prop para variante
 }
 
 export function Input({
@@ -90,13 +91,24 @@ export function Input({
     required = false,
     error,
     className = '',
+    variant = 'dark', // Por defecto dark para mantener compatibilidad
 }: InputProps) {
+    const isLight = variant === 'light';
+    const labelClasses = isLight 
+        ? 'block text-sm font-medium text-gray-900 mb-1'
+        : 'block text-sm font-medium text-primary-white mb-1';
+    const inputClasses = isLight
+        ? `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'
+            } placeholder-gray-400 text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`
+        : `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
+            } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`;
+    
     return (
         <div className={className}>
             {label && (
-                <label htmlFor={name} className="block text-sm font-medium text-primary-white mb-1">
+                <label htmlFor={name} className={labelClasses}>
                     {label}
-                    {required && <span className="text-status-error ml-1">*</span>}
+                    {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
             )}
             <input
@@ -107,11 +119,10 @@ export function Input({
                 onChange={onChange}
                 placeholder={placeholder}
                 required={required}
-                className={`appearance-none relative block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-                    } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`}
+                className={inputClasses}
             />
             {error && (
-                <p className="mt-1 text-sm text-status-error">{error}</p>
+                <p className="mt-1 text-sm text-red-600">{error}</p>
             )}
         </div>
     );
@@ -194,6 +205,7 @@ interface SelectProps {
     disabled?: boolean;
     error?: string;
     className?: string;
+    variant?: 'dark' | 'light'; // Nueva prop para variante
 }
 
 export function Select({
@@ -206,13 +218,24 @@ export function Select({
     disabled = false,
     error,
     className = '',
+    variant = 'dark', // Por defecto dark para mantener compatibilidad
 }: SelectProps) {
+    const isLight = variant === 'light';
+    const labelClasses = isLight 
+        ? 'block text-sm font-medium text-gray-900 mb-1'
+        : 'block text-sm font-medium text-primary-white mb-1';
+    const selectClasses = isLight
+        ? `block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'
+            } text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
+        : `block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
+            } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+    
     return (
         <div className={className}>
             {label && (
-                <label htmlFor={name} className="block text-sm font-medium text-primary-white mb-1">
+                <label htmlFor={name} className={labelClasses}>
                     {label}
-                    {required && <span className="text-status-error ml-1">*</span>}
+                    {required && <span className="text-red-500 ml-1">*</span>}
                 </label>
             )}
             <select
@@ -222,17 +245,16 @@ export function Select({
                 onChange={onChange}
                 required={required}
                 disabled={disabled}
-                className={`block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-                    } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={selectClasses}
             >
                 {options.map((option) => (
-                    <option key={option.value} value={option.value} className="bg-secondary-dark-gray">
+                    <option key={option.value} value={option.value} className={isLight ? 'bg-white text-gray-900' : 'bg-secondary-dark-gray'}>
                         {option.label}
                     </option>
                 ))}
             </select>
             {error && (
-                <p className="mt-1 text-sm text-status-error">{error}</p>
+                <p className="mt-1 text-sm text-red-600">{error}</p>
             )}
         </div>
     );

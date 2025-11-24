@@ -118,7 +118,7 @@ const nextConfig = {
               "img-src 'self' data: https: blob: https://images.unsplash.com https://*.unsplash.com",
               "font-src 'self' data:",
               "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://http2.mlstatic.com https://*.mlstatic.com https://api.mercadolibre.com", // Mercado Pago Bricks necesita mlstatic.com para assets
-              "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com",
+              "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://player.vimeo.com ",
               "object-src 'none'",
               "base-uri 'self'",
               "form-action 'self'",

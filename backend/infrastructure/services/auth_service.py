@@ -147,7 +147,9 @@ class AuthService:
             
             # Verificar bloqueo DESPUÉS del intento fallido
             if not user:
-                lockout_info = self._check_axes_lockout(email, user_obj.username if 'user_obj' in locals() else None)
+                # Obtener username solo si user_obj existe y no es None
+                username_for_lockout = user_obj.username if user_obj and user_obj.username else None
+                lockout_info = self._check_axes_lockout(email, username_for_lockout)
                 
                 if lockout_info and lockout_info.get('is_locked'):
                     minutes = lockout_info.get('minutes_remaining', 0)

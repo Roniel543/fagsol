@@ -10,12 +10,14 @@ import {
     getCourseById,
     getCourseBySlug,
     getCourseContent,
+    getCourseStatusCounts,
     getPendingCourses,
     listCourses,
     rejectCourse,
     requestCourseReview,
     type ApproveCourseRequest,
     type CourseActionResponse,
+    type CourseStatusCountsResponse,
     type CoursesWithReviewResponse,
     type ListCoursesParams,
     type RejectCourseRequest
@@ -186,6 +188,35 @@ export function useAllCoursesAdmin(
     return {
         courses: data?.data || [],
         count: data?.count || 0,
+        isLoading,
+        isError: error,
+        mutate,
+    };
+}
+
+/**
+ * Hook para obtener contadores de cursos por estado (Admin)
+ */
+export function useCourseStatusCounts() {
+    const { data, error, isLoading, mutate } = useSWR<CourseStatusCountsResponse>(
+        '/admin/courses/status-counts/',
+        () => getCourseStatusCounts(),
+        {
+            revalidateOnFocus: true,
+            revalidateOnReconnect: true,
+            refreshInterval: 0,
+        }
+    );
+
+    return {
+        counts: data?.data || {
+            all: 0,
+            published: 0,
+            draft: 0,
+            pending_review: 0,
+            needs_revision: 0,
+            archived: 0,
+        },
         isLoading,
         isError: error,
         mutate,

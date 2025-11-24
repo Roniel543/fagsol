@@ -280,6 +280,11 @@ class CourseApprovalService:
             Tuple[success, data, error_message]
         """
         try:
+            # Validar status_filter para prevenir inyección SQL
+            ALLOWED_STATUSES = ['pending_review', 'needs_revision', 'published', 'draft', 'archived']
+            if status_filter and status_filter not in ALLOWED_STATUSES:
+                return False, [], f"Estado de filtro inválido. Valores permitidos: {', '.join(ALLOWED_STATUSES)}"
+            
             # Query base
             # Si el filtro es 'archived', no filtrar por is_active (los archivados pueden estar inactivos)
             # Para otros estados, solo mostrar cursos activos
@@ -290,7 +295,7 @@ class CourseApprovalService:
                     is_active=True
                 ).select_related('created_by', 'reviewed_by')
             
-            # Aplicar filtro si existe
+            # Aplicar filtro si existe (ya validado arriba)
             if status_filter:
                 queryset = queryset.filter(status=status_filter)
             
@@ -310,6 +315,7 @@ class CourseApprovalService:
                     'is_active': course.is_active,
                     'category': course.category,
                     'level': course.level,
+                    'thumbnail_url': course.thumbnail_url,
                     'created_at': course.created_at.isoformat(),
                     'created_by': {
                         'id': course.created_by.id if course.created_by else None,
@@ -337,4 +343,31 @@ class CourseApprovalService:
         except Exception as e:
             logger.error(f"Error obteniendo cursos: {str(e)}")
             return False, [], f"Error interno al obtener cursos: {str(e)}"
+    
+    def get_course_status_counts(self) -> Tuple[bool, Dict[str, int], str]:
+        """
+        Obtiene contadores de cursos por estado
+        
+        Returns:
+            Tuple[success, counts_dict, error_message]
+        """
+        try:
+            from apps.courses.models import Course
+            
+            # Contadores: todos los estados cuentan solo cursos activos
+            # Para archived, también incluimos inactivos ya que es un estado de eliminación lógica
+            counts = {
+                'all': Course.objects.filter(is_active=True).count(),  # Solo activos
+                'published': Course.objects.filter(status='published', is_active=True).count(),
+                'draft': Course.objects.filter(status='draft', is_active=True).count(),
+                'pending_review': Course.objects.filter(status='pending_review', is_active=True).count(),
+                'needs_revision': Course.objects.filter(status='needs_revision', is_active=True).count(),
+                'archived': Course.objects.filter(status='archived').count(),  # Incluye inactivos (soft delete)
+            }
+            
+            return True, counts, ""
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo contadores de cursos: {str(e)}")
+            return False, {}, f"Error interno al obtener contadores: {str(e)}"
 

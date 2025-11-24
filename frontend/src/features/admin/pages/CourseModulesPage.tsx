@@ -111,9 +111,9 @@ function CourseModulesPageContent() {
                     {modules.length === 0 ? (
                         <Card className="p-8 text-center bg-white border border-gray-200">
                             <BookOpen className="w-16 h-16 mx-auto text-gray-500 mb-4" />
-                            <p className="text-gray-700 mb-4 font-medium">Este curso no tiene módulos aún.</p>
+                            <p className="text-gray-900 mb-4 font-medium">Este curso no tiene módulos aún.</p>
                             <Link href={`/admin/courses/${courseId}/modules/new`}>
-                                <Button variant="primary">
+                                <Button className="flex mx-auto" variant="primary">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Crear Primer Módulo
                                 </Button>
@@ -134,14 +134,14 @@ function CourseModulesPageContent() {
                                                         {module.title}
                                                     </h3>
                                                     {module.description && (
-                                                        <p className="text-sm text-gray-700 mt-1">
+                                                        <p className="text-sm text-gray-800 mt-1">
                                                             {module.description}
                                                         </p>
                                                     )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-4 mt-4 text-sm">
-                                                <span className="text-gray-700 font-medium">{module.lessons_count} lección{module.lessons_count !== 1 ? 'es' : ''}</span>
+                                                <span className="text-gray-900 font-medium">{module.lessons_count} lección{module.lessons_count !== 1 ? 'es' : ''}</span>
                                                 {module.is_purchasable && (
                                                     <span className="text-primary-orange font-semibold">
                                                         S/ {module.price.toFixed(2)} (separable)

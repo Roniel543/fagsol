@@ -255,14 +255,16 @@ def can_edit_course(user, course):
     
     # Instructores pueden editar sus propios cursos
     if user_role == ROLE_INSTRUCTOR:
+        # Verificar que el curso fue creado por este instructor
+        if course.created_by and course.created_by == user:
+            return True
         # Si el curso tiene un campo instructor/owner, verificar
         if hasattr(course, 'instructor') and course.instructor == user:
             return True
         if hasattr(course, 'owner') and course.owner == user:
             return True
-        # Por ahora, instructores pueden editar cualquier curso
-        # TODO: Implementar ownership cuando se agregue el campo
-        return True
+        # Si no tiene creador asignado, no permitir edición por instructor
+        return False
     
     return False
 

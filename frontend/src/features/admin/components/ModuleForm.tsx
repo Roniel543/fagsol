@@ -200,11 +200,12 @@ export function ModuleForm({ courseId, moduleId, onSuccess, onCancel }: ModuleFo
                         onChange={handleChange}
                         required
                         error={errors.title}
+                        variant="light"
                     />
                 </div>
 
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Descripción
                     </label>
                     <textarea
@@ -212,7 +213,7 @@ export function ModuleForm({ courseId, moduleId, onSuccess, onCancel }: ModuleFo
                         value={formData.description}
                         onChange={(e) => handleChange(e as any)}
                         rows={4}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
                     />
                 </div>
 
@@ -224,10 +225,11 @@ export function ModuleForm({ courseId, moduleId, onSuccess, onCancel }: ModuleFo
                     onChange={handleChange}
                     required
                     error={errors.order}
+                    variant="light"
                 />
 
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Precio (si se vende por separado)
                     </label>
                     <input
@@ -236,7 +238,7 @@ export function ModuleForm({ courseId, moduleId, onSuccess, onCancel }: ModuleFo
                         step="0.01"
                         value={(formData.price || 0).toString()}
                         onChange={handleChange}
-                        className={`w-full px-4 py-3 border ${errors.price ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent`}
+                        className={`w-full px-4 py-3 border ${errors.price ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent text-gray-900 bg-white placeholder-gray-400`}
                     />
                     {errors.price && (
                         <p className="mt-1 text-sm text-red-600">{errors.price}</p>
@@ -251,7 +253,7 @@ export function ModuleForm({ courseId, moduleId, onSuccess, onCancel }: ModuleFo
                         onChange={handleChange}
                         className="w-4 h-4 text-primary-orange border-gray-300 rounded focus:ring-primary-orange"
                     />
-                    <label className="text-sm font-medium text-gray-700">
+                    <label className="text-sm font-medium text-gray-900">
                         Se puede comprar por separado
                     </label>
                 </div>
@@ -265,7 +267,7 @@ export function ModuleForm({ courseId, moduleId, onSuccess, onCancel }: ModuleFo
                             onChange={handleChange}
                             className="w-4 h-4 text-primary-orange border-gray-300 rounded focus:ring-primary-orange"
                         />
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-gray-900">
                             Módulo activo
                         </label>
                     </div>

@@ -141,9 +141,9 @@ function ModuleLessonsPageContent() {
                     {lessons.length === 0 ? (
                         <Card className="p-8 text-center bg-white border border-gray-200">
                             <BookOpen className="w-16 h-16 mx-auto text-gray-500 mb-4" />
-                            <p className="text-gray-700 mb-4 font-medium">Este módulo no tiene lecciones aún.</p>
+                            <p className="text-gray-900 mb-4 font-medium">Este módulo no tiene lecciones aún.</p>
                             <Link href={`/admin/courses/${courseId}/modules/${moduleId}/lessons/new`}>
-                                <Button variant="primary">
+                                <Button variant="primary" className="flex mx-auto">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Crear Primera Lección
                                 </Button>

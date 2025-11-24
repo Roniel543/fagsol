@@ -119,10 +119,32 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
             newValue = value === '' ? 0 : parseInt(value);
         }
 
-        setFormData((prev) => ({
-            ...prev,
-            [name]: newValue,
-        }));
+        // Si se cambia el tipo de lección, limpiar campos que no corresponden
+        if (name === 'lesson_type') {
+            setFormData((prev) => {
+                const updated: any = {
+                    ...prev,
+                    [name]: newValue,
+                };
+                // Limpiar campos según el nuevo tipo
+                if (newValue === 'text') {
+                    updated.content_url = '';
+                    updated.duration_minutes = 0;
+                } else if (newValue === 'video') {
+                    updated.content_text = '';
+                } else {
+                    // document o quiz
+                    updated.content_text = '';
+                    updated.duration_minutes = 0;
+                }
+                return updated;
+            });
+        } else {
+            setFormData((prev) => ({
+                ...prev,
+                [name]: newValue,
+            }));
+        }
 
         const error = validateField(name, newValue);
         setErrors((prev) => ({
@@ -171,14 +193,20 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                     is_active: formData.is_active,
                 };
 
-                // Solo incluir campos según el tipo
+                // Solo incluir campos según el tipo y limpiar los que no corresponden
                 if (formData.lesson_type === 'video') {
                     updateData.content_url = formData.content_url || undefined;
                     updateData.duration_minutes = formData.duration_minutes || 0;
+                    updateData.content_text = undefined; // Limpiar si había texto
                 } else if (formData.lesson_type === 'text') {
                     updateData.content_text = formData.content_text || undefined;
+                    updateData.content_url = undefined; // Limpiar si había URL
+                    updateData.duration_minutes = undefined; // Limpiar duración
                 } else {
+                    // document o quiz
                     updateData.content_url = formData.content_url || undefined;
+                    updateData.content_text = undefined; // Limpiar si había texto
+                    updateData.duration_minutes = undefined; // Limpiar duración
                 }
 
                 await updateLesson(lessonId, updateData);
@@ -200,6 +228,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                 } else if (formData.lesson_type === 'text') {
                     createData.content_text = formData.content_text || undefined;
                 } else {
+                    // document o quiz
                     createData.content_url = formData.content_url || undefined;
                 }
 
@@ -246,11 +275,12 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                         onChange={handleChange}
                         required
                         error={errors.title}
+                        variant="light"
                     />
                 </div>
 
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Descripción
                     </label>
                     <textarea
@@ -258,7 +288,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                         value={formData.description}
                         onChange={handleChange}
                         rows={3}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
                     />
                 </div>
 
@@ -275,6 +305,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                         { value: 'text', label: 'Texto' },
                     ]}
                     error={errors.lesson_type}
+                    variant="light"
                 />
 
                 <Input
@@ -285,6 +316,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                     onChange={handleChange}
                     required
                     error={errors.order}
+                    variant="light"
                 />
 
                 {/* Campos según el tipo de lección */}
@@ -299,6 +331,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                                 onChange={handleChange}
                                 placeholder="https://vimeo.com/..."
                                 error={errors.content_url}
+                                variant="light"
                             />
                             <p className="text-xs text-gray-500 mt-1">
                                 Ingresa la URL completa del video de Vimeo
@@ -311,13 +344,14 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             value={(formData.duration_minutes || 0).toString()}
                             onChange={handleChange}
                             error={errors.duration_minutes}
+                            variant="light"
                         />
                     </>
                 )}
 
                 {formData.lesson_type === 'text' && (
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
                             Contenido de Texto
                         </label>
                         <textarea
@@ -325,7 +359,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             value={formData.content_text}
                             onChange={handleChange}
                             rows={8}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
                             placeholder="Escribe el contenido de la lección aquí..."
                         />
                     </div>
@@ -341,6 +375,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             onChange={handleChange}
                             placeholder="https://..."
                             error={errors.content_url}
+                            variant="light"
                         />
                     </div>
                 )}
@@ -354,7 +389,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             onChange={handleChange}
                             className="w-4 h-4 text-primary-orange border-gray-300 rounded focus:ring-primary-orange"
                         />
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-gray-900">
                             Lección activa
                         </label>
                     </div>

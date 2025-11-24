@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404
 from apps.courses.models import Course, Module, Lesson
 from apps.users.models import Enrollment
 from apps.users.permissions import (
-    can_view_course, can_access_course_content, IsAdminOrInstructor, IsAdmin
+    can_view_course, can_access_course_content, IsAdminOrInstructor, IsAdmin, is_admin
 )
 from infrastructure.services.course_service import CourseService
 from infrastructure.services.course_approval_service import CourseApprovalService
@@ -274,10 +274,18 @@ def get_course(request, course_id):
     """
     Obtiene los detalles de un curso
     GET /api/v1/courses/{course_id}/
+    
+    Los administradores pueden ver cursos archivados.
+    Los demás usuarios solo pueden ver cursos activos.
     """
     try:
         # Obtener curso
-        course = get_object_or_404(Course, id=course_id, is_active=True)
+        # Los administradores pueden ver cualquier curso (incluso archivados)
+        # Los demás usuarios solo pueden ver cursos activos
+        if request.user.is_authenticated and is_admin(request.user):
+            course = get_object_or_404(Course, id=course_id)
+        else:
+            course = get_object_or_404(Course, id=course_id, is_active=True)
         
         # Obtener módulos
         modules = []

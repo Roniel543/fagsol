@@ -48,9 +48,9 @@ function CreateCoursePageContent() {
             {/* Main Content */}
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                 <div className="px-4 py-6 sm:px-0">
-                    <Card className="p-8">
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-8">
                         <CourseForm onSuccess={handleSuccess} />
-                    </Card>
+                    </div>
                 </div>
             </main>
         </div>

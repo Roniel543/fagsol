@@ -267,12 +267,13 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         placeholder="Ej: Introducción a Python"
                         required
                         error={errors.title}
+                        variant="light"
                     />
                 </div>
 
                 {/* Descripción Corta */}
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Descripción Corta
                     </label>
                     <textarea
@@ -282,7 +283,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         placeholder="Breve descripción que aparecerá en el catálogo (máx. 500 caracteres)"
                         rows={2}
                         maxLength={500}
-                        className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm"
+                        className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-gray-900 bg-white"
                     />
                     <p className="mt-1 text-xs text-gray-500">
                         {formData.short_description?.length || 0}/500 caracteres
@@ -291,7 +292,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
 
                 {/* Descripción Completa */}
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Descripción Completa <span className="text-red-500">*</span>
                     </label>
                     <textarea
@@ -302,7 +303,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         rows={6}
                         required
                         className={`block w-full px-4 py-3 border ${errors.description ? 'border-red-300' : 'border-gray-300'
-                            } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`}
+                            } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-gray-900 bg-white`}
                     />
                     {errors.description && (
                         <p className="mt-1 text-sm text-red-600">{errors.description}</p>
@@ -320,6 +321,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         placeholder="0.00"
                         required
                         error={errors.price}
+                        variant="light"
                     />
                 </div>
 
@@ -333,6 +335,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         onChange={handleChange}
                         placeholder="Opcional"
                         error={errors.discount_price}
+                        variant="light"
                     />
                 </div>
 
@@ -351,6 +354,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                 { value: 'published', label: 'Publicado' },
                                 { value: 'archived', label: 'Archivado' },
                             ]}
+                            variant="light"
                         />
                     </div>
                 )}
@@ -363,6 +367,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         value={formData.category || ''}
                         onChange={handleChange}
                         placeholder="Ej: Programación"
+                        variant="light"
                     />
                 </div>
 
@@ -378,6 +383,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             { value: 'intermediate', label: 'Intermedio' },
                             { value: 'advanced', label: 'Avanzado' },
                         ]}
+                        variant="light"
                     />
                 </div>
 
@@ -391,6 +397,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         onChange={handleChange}
                         placeholder="0"
                         error={errors.hours}
+                        variant="light"
                     />
                 </div>
 
@@ -404,6 +411,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         onChange={handleChange}
                         placeholder="https://ejemplo.com/imagen.jpg"
                         error={errors.thumbnail_url}
+                        variant="light"
                     />
                 </div>
 
@@ -417,12 +425,13 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         onChange={handleChange}
                         placeholder="https://ejemplo.com/banner.jpg"
                         error={errors.banner_url}
+                        variant="light"
                     />
                 </div>
 
                 {/* Tags */}
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Tags (separados por comas)
                     </label>
                     <input
@@ -430,7 +439,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         value={formData.tags?.join(', ') || ''}
                         onChange={handleTagsChange}
                         placeholder="python, programación, web"
-                        className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm"
+                        className="block w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-gray-900 bg-white placeholder-gray-400"
                     />
                     <p className="mt-1 text-xs text-gray-500">
                         {formData.tags?.length || 0} tags
@@ -471,7 +480,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                 {/* Estado del curso (solo para instructores) */}
                 {courseId && user?.role === 'instructor' && (
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">Estado actual:</span>
+                        <span className="text-sm font-medium text-gray-700">Estado actual:</span>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${currentStatus === 'draft' ? 'bg-gray-100 text-gray-800' :
                             currentStatus === 'pending_review' ? 'bg-yellow-100 text-yellow-800' :
                                 currentStatus === 'needs_revision' ? 'bg-orange-100 text-orange-800' :

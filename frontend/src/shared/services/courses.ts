@@ -248,6 +248,9 @@ export async function deleteCourse(courseId: string): Promise<{ success: boolean
  * Interfaz para curso con información de revisión
  */
 export interface CourseWithReview extends BackendCourse {
+    category?: string;
+    level?: string;
+    is_active?: boolean;
     reviewed_by?: {
         id: number;
         email: string;
@@ -339,6 +342,33 @@ export async function getAllCoursesAdmin(
         method: 'GET',
     });
     return response as unknown as CoursesWithReviewResponse;
+}
+
+/**
+ * Tipo para contadores de cursos por estado
+ */
+export interface CourseStatusCounts {
+    all: number;
+    published: number;
+    draft: number;
+    pending_review: number;
+    needs_revision: number;
+    archived: number;
+}
+
+export interface CourseStatusCountsResponse {
+    success: boolean;
+    data: CourseStatusCounts;
+}
+
+/**
+ * Obtiene contadores de cursos por estado (Admin)
+ */
+export async function getCourseStatusCounts(): Promise<CourseStatusCountsResponse> {
+    const response = await apiRequest<CourseStatusCountsResponse>('/admin/courses/status-counts/', {
+        method: 'GET',
+    });
+    return response as unknown as CourseStatusCountsResponse;
 }
 
 /**

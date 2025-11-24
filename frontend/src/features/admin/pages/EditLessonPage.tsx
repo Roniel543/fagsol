@@ -49,9 +49,9 @@ function EditLessonPageContent() {
             </div>
 
             {/* Main Content */}
-            <Card className="p-8">
+            <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-lg">
                 <LessonForm moduleId={moduleId} lessonId={lessonId} onSuccess={handleSuccess} />
-            </Card>
+            </div>
         </div>
     );
 }

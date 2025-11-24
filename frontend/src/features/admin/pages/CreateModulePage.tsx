@@ -47,9 +47,9 @@ function CreateModulePageContent() {
             </div>
 
             {/* Main Content */}
-            <Card className="p-8">
+            <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-lg">
                 <ModuleForm courseId={courseId} onSuccess={handleSuccess} />
-            </Card>
+            </div>
         </div>
     );
 }

@@ -840,7 +840,10 @@ def list_all_courses_admin(request):
     GET /api/v1/admin/courses/?status=pending_review
     """
     try:
+        # Obtener y sanitizar el filtro de estado
         status_filter = request.query_params.get('status', None)
+        if status_filter:
+            status_filter = status_filter.strip().lower()  # Normalizar
         
         service = CourseApprovalService()
         success, data, error_message = service.get_all_courses(status_filter=status_filter)
@@ -862,6 +865,62 @@ def list_all_courses_admin(request):
         return Response({
             'success': False,
             'message': 'Error al listar cursos'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene contadores de cursos por estado. Solo accesible para administradores.',
+    responses={
+        200: openapi.Response(
+            description='Contadores de cursos por estado',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': {
+                        'all': 50,
+                        'published': 35,
+                        'draft': 10,
+                        'pending_review': 3,
+                        'needs_revision': 2,
+                        'archived': 5
+                    }
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Cursos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def get_course_status_counts(request):
+    """
+    Obtiene contadores de cursos por estado.
+    GET /api/v1/admin/courses/status-counts/
+    """
+    try:
+        service = CourseApprovalService()
+        success, counts, error_message = service.get_course_status_counts()
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({
+            'success': True,
+            'data': counts
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error getting course status counts: {str(e)}')
+        return Response({
+            'success': False,
+            'message': 'Error al obtener contadores de cursos'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -2182,6 +2241,26 @@ def create_lesson(request, module_id):
                 'message': 'Tipo de lección inválido'
             }, status=status.HTTP_400_BAD_REQUEST)
         
+        # Convertir URL de Vimeo automáticamente si es tipo video
+        if lesson_type == 'video' and content_url:
+            try:
+                from infrastructure.services.video_url_service import video_url_service
+                success, converted_url, error_message = video_url_service.validate_and_convert(
+                    content_url,
+                    lesson_type='video',
+                    add_params=True
+                )
+                if success and converted_url:
+                    content_url = converted_url
+                elif not success:
+                    return Response({
+                        'success': False,
+                        'message': error_message or 'URL de video inválida'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+                logger.error(f'Error converting video URL: {str(e)}')
+                # Continuar con la URL original si hay error en la conversión
+        
         lesson = Lesson.objects.create(
             module=module,
             title=title,
@@ -2280,7 +2359,27 @@ def update_lesson(request, lesson_id):
             lesson.lesson_type = lesson_type
         
         if 'content_url' in request.data:
-            lesson.content_url = request.data.get('content_url', '').strip() or None
+            content_url = request.data.get('content_url', '').strip() or None
+            # Convertir URL de Vimeo automáticamente si es tipo video
+            if lesson.lesson_type == 'video' and content_url:
+                try:
+                    from infrastructure.services.video_url_service import video_url_service
+                    success, converted_url, error_message = video_url_service.validate_and_convert(
+                        content_url,
+                        lesson_type='video',
+                        add_params=True
+                    )
+                    if success and converted_url:
+                        content_url = converted_url
+                    elif not success:
+                        return Response({
+                            'success': False,
+                            'message': error_message or 'URL de video inválida'
+                        }, status=status.HTTP_400_BAD_REQUEST)
+                except Exception as e:
+                    logger.error(f'Error converting video URL: {str(e)}')
+                    # Continuar con la URL original si hay error en la conversión
+            lesson.content_url = content_url
         
         if 'content_text' in request.data:
             lesson.content_text = request.data.get('content_text', '').strip()

@@ -266,11 +266,12 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                         onChange={handleChange}
                         required
                         error={errors.title}
+                        variant="light"
                     />
                 </div>
 
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Descripción
                     </label>
                     <textarea
@@ -278,7 +279,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                         value={formData.description}
                         onChange={handleChange}
                         rows={3}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent text-gray-900 bg-white placeholder-gray-400"
                     />
                 </div>
 
@@ -293,6 +294,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                         { value: 'link', label: 'Enlace Externo' },
                     ]}
                     error={errors.material_type}
+                    variant="light"
                 />
 
                 <Input
@@ -303,6 +305,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                     onChange={handleChange}
                     required
                     error={errors.order}
+                    variant="light"
                 />
 
                 <div className="md:col-span-2">
@@ -315,6 +318,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                         placeholder={formData.material_type === 'video' ? 'https://vimeo.com/...' : 'https://...'}
                         required
                         error={errors.url}
+                        variant="light"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                         {formData.material_type === 'video'
@@ -332,6 +336,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                         { value: '', label: 'Sin módulo específico' },
                         ...modules.map(m => ({ value: m.id, label: m.title })),
                     ]}
+                    variant="light"
                 />
 
                 <Select
@@ -344,6 +349,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                         { value: '', label: 'Sin lección específica' },
                         ...(selectedModuleId ? lessons.map(l => ({ value: l.id, label: l.title })) : []),
                     ]}
+                    variant="light"
                 />
 
                 {materialId && (
@@ -355,7 +361,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                             onChange={handleChange}
                             className="w-4 h-4 text-primary-orange border-gray-300 rounded focus:ring-primary-orange"
                         />
-                        <label className="text-sm font-medium text-gray-700">
+                        <label className="text-sm font-medium text-gray-900">
                             Material activo
                         </label>
                     </div>
