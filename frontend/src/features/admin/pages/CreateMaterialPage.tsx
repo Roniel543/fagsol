@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card } from '@/shared/components';
+import { Button } from '@/shared/components';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { MaterialForm } from '../components/MaterialForm';
@@ -17,12 +17,12 @@ function CreateMaterialPageContent() {
     if (!courseId) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Card className="p-8 text-center">
-                    <p className="text-red-600 mb-4">ID de curso no válido</p>
+                <div className="bg-white border border-gray-200 rounded-xl p-8 text-center shadow-sm">
+                    <p className="text-red-600 mb-4 font-medium">ID de curso no válido</p>
                     <Link href="/admin/courses">
                         <Button variant="primary">Volver a Cursos</Button>
                     </Link>
-                </Card>
+                </div>
             </div>
         );
     }
@@ -47,9 +47,9 @@ function CreateMaterialPageContent() {
             </div>
 
             {/* Main Content */}
-            <Card className="p-8">
+            <div className="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
                 <MaterialForm courseId={courseId} onSuccess={handleSuccess} />
-            </Card>
+            </div>
         </div>
     );
 }

@@ -185,7 +185,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
         return (
             <div className="flex items-center justify-center py-12">
                 <LoadingSpinner size="lg" />
-                <p className="ml-4 text-gray-600">Cargando usuario...</p>
+                <p className="ml-4 text-gray-700 font-medium">Cargando usuario...</p>
             </div>
         );
     }
@@ -193,7 +193,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                <div className="bg-red-50 border border-red-300 text-red-800 font-semibold px-4 py-3 rounded-lg">
                     {error}
                 </div>
             )}
@@ -207,6 +207,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                     onChange={handleChange}
                     required
                     error={errors.email}
+                    variant="light"
                 />
 
                 {(!userId || showPassword) && (
@@ -217,19 +218,20 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                         onChange={handleChange}
                         required={!userId}
                         error={errors.password}
+                        variant="light"
                     />
                 )}
 
                 {userId && !showPassword && (
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
                             Contraseña
                         </label>
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
-                            onClick={() => setShowPassword(true)}
+                        //onClick={() => setShowPassword(true)}
                         >
                             Cambiar Contraseña
                         </Button>
@@ -244,6 +246,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                     onChange={handleChange}
                     required
                     error={errors.first_name}
+                    variant="light"
                 />
 
                 <Input
@@ -254,6 +257,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                     onChange={handleChange}
                     required
                     error={errors.last_name}
+                    variant="light"
                 />
 
                 <Input
@@ -263,6 +267,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                     value={formData.phone || ''}
                     onChange={handleChange}
                     error={errors.phone}
+                    variant="light"
                 />
 
                 <Select
@@ -277,6 +282,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                         { value: 'admin', label: 'Administrador' },
                     ]}
                     error={errors.role}
+                    variant="light"
                 />
 
                 {userId && (
@@ -289,7 +295,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                                 onChange={handleChange}
                                 className="w-4 h-4 text-primary-orange border-gray-300 rounded focus:ring-primary-orange"
                             />
-                            <span className="text-sm font-medium text-gray-700">Usuario activo</span>
+                            <span className="text-sm font-semibold text-gray-900">Usuario activo</span>
                         </label>
                     </div>
                 )}

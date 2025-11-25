@@ -1,6 +1,7 @@
 'use client';
 
 import { LessonPlayer } from '@/features/academy/components/LessonPlayer';
+import { MaterialCard } from '@/features/academy/components/MaterialCard';
 import { Footer, LoadingSpinner, ProtectedRoute, useToast } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useCourseBySlug, useCourseContent } from '@/shared/hooks/useCourses';
@@ -258,7 +259,7 @@ export default function CourseLearnPage() {
                         </div>
 
                         {/* Contenido principal: Reproductor de lección */}
-                        <div className="lg:col-span-2">
+                        <div className="lg:col-span-2 space-y-6">
                             {selectedLesson ? (
                                 <LessonPlayer
                                     lesson={selectedLesson}
@@ -271,6 +272,23 @@ export default function CourseLearnPage() {
                             ) : (
                                 <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-8 text-center">
                                     <p className="text-gray-400">Selecciona una lección para comenzar</p>
+                                </div>
+                            )}
+
+                            {/* Sección de Materiales Complementarios */}
+                            {content.materials && content.materials.length > 0 && (
+                                <div className="bg-zinc-900/60 rounded-lg border border-zinc-800 p-6">
+                                    <h2 className="text-xl font-bold text-primary-white mb-4">
+                                        <span>Materiales Complementarios</span>
+                                    </h2>
+                                    <p className="text-sm text-gray-400 mb-4">
+                                        Recursos adicionales para complementar tu aprendizaje
+                                    </p>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        {content.materials.map((material) => (
+                                            <MaterialCard key={material.id} material={material} />
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>

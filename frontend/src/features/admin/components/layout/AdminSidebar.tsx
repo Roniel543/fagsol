@@ -4,8 +4,6 @@ import { Button } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import {
     BookOpen,
-    FileText,
-    GraduationCap,
     LayoutDashboard,
     LogOut,
     Menu,
@@ -40,16 +38,6 @@ const sidebarItems: SidebarItem[] = [
         href: '/admin/courses',
         icon: <BookOpen className="w-5 h-5" />,
     },
-    {
-        label: 'Materiales',
-        href: '/admin/materials',
-        icon: <FileText className="w-5 h-5" />,
-    },
-    {
-        label: 'Alumnos',
-        href: '/admin/students',
-        icon: <GraduationCap className="w-5 h-5" />,
-    },
 ];
 
 export function AdminSidebar() {
@@ -63,6 +51,13 @@ export function AdminSidebar() {
         if (href === '/dashboard') {
             return pathname === '/dashboard';
         }
+
+        // Para /admin/courses, activo si estás en cualquier ruta relacionada con cursos
+        // (incluyendo módulos, lecciones, materiales, estudiantes dentro de cursos)
+        if (href === '/admin/courses') {
+            return pathname?.startsWith('/admin/courses');
+        }
+
         // Para otras rutas, verificar si la ruta actual comienza con el href
         return pathname?.startsWith(href);
     };

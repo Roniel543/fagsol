@@ -100,7 +100,7 @@ function UsersAdminPageContent() {
                         <h1 className="text-3xl font-bold text-gray-900">
                             Gestión de Usuarios
                         </h1>
-                        <p className="text-gray-600 mt-1">Administra los usuarios de la plataforma</p>
+                        <p className="text-gray-700 font-medium mt-1">Administra los usuarios de la plataforma</p>
                     </div>
                     <Link href="/admin/users/new">
                         <Button variant="primary" size="sm">
@@ -111,10 +111,10 @@ function UsersAdminPageContent() {
             </div>
 
             {/* Filtros */}
-            <Card className="p-4 mb-6">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
                             Buscar
                         </label>
                         <input
@@ -122,17 +122,17 @@ function UsersAdminPageContent() {
                             placeholder="Nombre, email..."
                             value={filters.search || ''}
                             onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-primary-orange focus:border-primary-orange"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
                             Rol
                         </label>
                         <select
                             value={filters.role || ''}
                             onChange={(e) => setFilters({ ...filters, role: e.target.value || undefined })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-primary-orange focus:border-primary-orange"
                         >
                             <option value="">Todos</option>
                             <option value="admin">Administrador</option>
@@ -141,13 +141,13 @@ function UsersAdminPageContent() {
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-semibold text-gray-900 mb-2">
                             Estado
                         </label>
                         <select
                             value={filters.is_active || ''}
                             onChange={(e) => setFilters({ ...filters, is_active: e.target.value || undefined })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-primary-orange focus:border-primary-orange"
                         >
                             <option value="">Todos</option>
                             <option value="true">Activo</option>
@@ -155,7 +155,7 @@ function UsersAdminPageContent() {
                         </select>
                     </div>
                 </div>
-            </Card>
+            </div>
 
             {/* Error Message */}
             {error && (
@@ -168,7 +168,7 @@ function UsersAdminPageContent() {
             {isLoading && (
                 <div className="text-center py-12">
                     <LoadingSpinner size="lg" />
-                    <p className="mt-4 text-gray-600">Cargando usuarios...</p>
+                    <p className="mt-4 text-gray-700 font-medium">Cargando usuarios...</p>
                 </div>
             )}
 
@@ -176,22 +176,22 @@ function UsersAdminPageContent() {
             {!isLoading && (
                 <>
                     {users.length === 0 ? (
-                        <Card className="p-8 text-center">
-                            <p className="text-gray-600 mb-4">No hay usuarios registrados aún.</p>
+                        <div className="bg-white border border-gray-200 rounded-lg p-8 text-center shadow-sm">
+                            <p className="text-gray-700 font-medium mb-4">No hay usuarios registrados aún.</p>
                             <Link href="/admin/users/new">
                                 <Button variant="primary">Crear Primer Usuario</Button>
                             </Link>
-                        </Card>
+                        </div>
                     ) : (
-                        <div className="bg-white shadow overflow-hidden sm:rounded-md">
+                        <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
                             <ul className="divide-y divide-gray-200">
                                 {users
                                     .filter((user) => {
                                         if (filters.search) {
                                             const search = filters.search.toLowerCase();
                                             const matchesSearch = 
-                                                user.first_name.toLowerCase().includes(search) ||
-                                                user.last_name.toLowerCase().includes(search) ||
+                                                (user.first_name?.toLowerCase().includes(search) || '') ||
+                                                (user.last_name?.toLowerCase().includes(search) || '') ||
                                                 user.email.toLowerCase().includes(search);
                                             if (!matchesSearch) return false;
                                         }
@@ -204,7 +204,7 @@ function UsersAdminPageContent() {
                                     })
                                     .map((user) => (
                                         <li key={user.id}>
-                                            <div className="px-4 py-4 sm:px-6 hover:bg-gray-50 transition-colors">
+                                            <div className="px-6 py-5 hover:bg-gray-50 transition-colors">
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center space-x-4 flex-1">
                                                         {/* Avatar */}
@@ -213,22 +213,22 @@ function UsersAdminPageContent() {
                                                             {user.last_name?.[0]?.toUpperCase() || 'S'}
                                                         </div>
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center space-x-2">
-                                                                <h3 className="text-lg font-medium text-gray-900">
-                                                                    {user.first_name} {user.last_name}
+                                                            <div className="flex items-center space-x-2 flex-wrap">
+                                                                <h3 className="text-lg font-semibold text-gray-900">
+                                                                    {user.first_name || ''} {user.last_name || ''}
                                                                 </h3>
                                                                 {getRoleBadge(user.role)}
                                                                 {getStatusBadge(user.is_active)}
                                                             </div>
-                                                            <p className="text-sm text-gray-500 mt-1">
+                                                            <p className="text-sm text-gray-700 font-medium mt-1">
                                                                 {user.email}
                                                             </p>
-                                                            <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
-                                                                <span>ID: {user.id}</span>
+                                                            <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
+                                                                <span className="font-medium">ID: {user.id}</span>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center space-x-2 ml-4">
+                                                    <div className="flex items-center space-x-2 ml-4 flex-wrap gap-2">
                                                         <Link href={`/admin/users/${user.id}`}>
                                                             <Button variant="secondary" size="sm">
                                                                 Ver

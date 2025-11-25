@@ -8,7 +8,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from apps.courses.models import Course, Module, Lesson
+from apps.courses.models import Course, Module, Lesson, Material
 from apps.users.models import Enrollment
 from apps.users.permissions import (
     can_view_course, can_access_course_content, IsAdminOrInstructor, IsAdmin, is_admin
@@ -438,6 +438,28 @@ def get_course_content(request, course_id):
                 'order': module.order
             })
         
+        # Obtener materiales del curso (solo activos)
+        materials = []
+        for material in course.materials.filter(is_active=True).order_by('order'):
+            material_data = {
+                'id': material.id,
+                'title': material.title,
+                'description': material.description,
+                'material_type': material.material_type,
+                'url': material.url,
+                'order': material.order,
+            }
+            
+            # Incluir información de asociación si existe
+            if material.module:
+                material_data['module_id'] = material.module.id
+                material_data['module_title'] = material.module.title
+            if material.lesson:
+                material_data['lesson_id'] = material.lesson.id
+                material_data['lesson_title'] = material.lesson.title
+            
+            materials.append(material_data)
+        
         # Preparar datos de respuesta
         response_data = {
             'course': {
@@ -446,7 +468,8 @@ def get_course_content(request, course_id):
                 'description': course.description,
                 'slug': course.slug,
             },
-            'modules': modules
+            'modules': modules,
+            'materials': materials  # ✅ Agregar materiales a la respuesta
         }
         
         # Incluir enrollment solo si existe

@@ -94,15 +94,15 @@ export function Input({
     variant = 'dark', // Por defecto dark para mantener compatibilidad
 }: InputProps) {
     const isLight = variant === 'light';
-    const labelClasses = isLight 
+    const labelClasses = isLight
         ? 'block text-sm font-medium text-gray-900 mb-1'
         : 'block text-sm font-medium text-primary-white mb-1';
     const inputClasses = isLight
         ? `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'
-            } placeholder-gray-400 text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`
+        } placeholder-gray-400 text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`
         : `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-            } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`;
-    
+        } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`;
+
     return (
         <div className={className}>
             {label && (
@@ -138,6 +138,7 @@ interface PasswordInputProps {
     error?: string;
     className?: string;
     showToggle?: boolean; // Si mostrar el botón de mostrar/ocultar
+    variant?: 'dark' | 'light'; // Nueva prop para variante
 }
 
 export function PasswordInput({
@@ -150,15 +151,27 @@ export function PasswordInput({
     error,
     className = '',
     showToggle = true,
+    variant = 'dark', // Por defecto dark para mantener compatibilidad
 }: PasswordInputProps) {
     const [showPassword, setShowPassword] = useState(false);
+    const isLight = variant === 'light';
+
+    const labelClasses = isLight
+        ? 'block text-sm font-medium text-gray-900 mb-1'
+        : 'block text-sm font-medium text-primary-white mb-1';
+
+    const inputClasses = isLight
+        ? `appearance-none relative block w-full px-4 py-3 pr-12 border ${error ? 'border-red-300' : 'border-gray-300'
+        } placeholder-gray-400 text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`
+        : `appearance-none relative block w-full px-4 py-3 pr-12 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
+        } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`;
 
     return (
         <div className={className}>
             {label && (
-                <label htmlFor={name} className="block text-sm font-medium text-primary-white mb-1">
+                <label htmlFor={name} className={labelClasses}>
                     {label}
-                    {required && <span className="text-status-error ml-1">*</span>}
+                    {required && <span className={isLight ? 'text-red-500 ml-1' : 'text-status-error ml-1'}>*</span>}
                 </label>
             )}
             <div className="relative">
@@ -170,14 +183,16 @@ export function PasswordInput({
                     onChange={onChange}
                     placeholder={placeholder}
                     required={required}
-                    className={`appearance-none relative block w-full px-4 py-3 pr-12 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-                        } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`}
+                    className={inputClasses}
                 />
                 {showToggle && (
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-secondary-light-gray hover:text-primary-white transition-colors focus:outline-none"
+                        className={`absolute right-3 top-1/2 -translate-y-1/2 transition-colors focus:outline-none ${isLight
+                            ? 'text-gray-500 hover:text-gray-700'
+                            : 'text-secondary-light-gray hover:text-primary-white'
+                            }`}
                         aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     >
                         {showPassword ? (
@@ -189,7 +204,7 @@ export function PasswordInput({
                 )}
             </div>
             {error && (
-                <p className="mt-1 text-sm text-status-error">{error}</p>
+                <p className={`mt-1 text-sm ${isLight ? 'text-red-600' : 'text-status-error'}`}>{error}</p>
             )}
         </div>
     );
@@ -221,15 +236,15 @@ export function Select({
     variant = 'dark', // Por defecto dark para mantener compatibilidad
 }: SelectProps) {
     const isLight = variant === 'light';
-    const labelClasses = isLight 
+    const labelClasses = isLight
         ? 'block text-sm font-medium text-gray-900 mb-1'
         : 'block text-sm font-medium text-primary-white mb-1';
     const selectClasses = isLight
         ? `block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'
-            } text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
+        } text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
         : `block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-            } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
-    
+        } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+
     return (
         <div className={className}>
             {label && (

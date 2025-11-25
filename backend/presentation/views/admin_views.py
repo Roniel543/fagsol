@@ -1351,15 +1351,16 @@ def list_users(request):
     GET /api/v1/admin/users/?role=student&is_active=true&search=juan
     """
     try:
-        from infrastructure.database.models import User
+        from django.contrib.auth.models import User
+        from apps.users.permissions import get_user_role
         
         # Filtros
-        queryset = User.objects.all()
+        queryset = User.objects.select_related('profile').all()
         
-        # Filtro por rol
+        # Filtro por rol (desde UserProfile)
         role = request.query_params.get('role', None)
         if role:
-            queryset = queryset.filter(role=role)
+            queryset = queryset.filter(profile__role=role)
         
         # Filtro por estado activo
         is_active = request.query_params.get('is_active', None)
@@ -1377,20 +1378,31 @@ def list_users(request):
             )
         
         # Ordenar por fecha de creación (más recientes primero)
-        queryset = queryset.order_by('-created_at')
+        queryset = queryset.order_by('-date_joined')
         
         # Serializar usuarios
         users_data = []
         for user in queryset:
+            # Obtener rol desde el perfil
+            user_role = get_user_role(user)
+            
+            # Obtener is_email_verified desde el perfil si existe
+            is_email_verified = False
+            try:
+                if user.profile:
+                    is_email_verified = getattr(user.profile, 'is_email_verified', False)
+            except:
+                pass
+            
             users_data.append({
                 'id': user.id,
                 'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'role': user.role,
+                'first_name': user.first_name or '',
+                'last_name': user.last_name or '',
+                'role': user_role,
                 'is_active': user.is_active,
-                'is_email_verified': user.is_email_verified,
-                'created_at': user.created_at.isoformat() if user.created_at else None,
+                'is_email_verified': is_email_verified,
+                'created_at': user.date_joined.isoformat() if user.date_joined else None,
                 'last_login': user.last_login.isoformat() if user.last_login else None,
             })
         
@@ -1401,10 +1413,10 @@ def list_users(request):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f'Error listing users: {str(e)}')
+        logger.error(f'Error listing users: {str(e)}', exc_info=True)
         return Response({
             'success': False,
-            'message': 'Error al listar usuarios'
+            'message': f'Error al listar usuarios: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1428,27 +1440,40 @@ def get_user_detail(request, user_id):
     GET /api/v1/admin/users/{user_id}/
     """
     try:
-        from infrastructure.database.models import User
+        from django.contrib.auth.models import User
+        from apps.users.permissions import get_user_role
         
         try:
-            user = User.objects.get(id=user_id)
+            user = User.objects.select_related('profile').get(id=user_id)
         except User.DoesNotExist:
             return Response({
                 'success': False,
                 'message': 'Usuario no encontrado'
             }, status=status.HTTP_404_NOT_FOUND)
         
+        # Obtener rol desde el perfil
+        user_role = get_user_role(user)
+        
+        # Obtener datos del perfil si existe
+        phone = None
+        is_email_verified = False
+        try:
+            if user.profile:
+                phone = getattr(user.profile, 'phone', None)
+                is_email_verified = getattr(user.profile, 'is_email_verified', False)
+        except:
+            pass
+        
         user_data = {
             'id': user.id,
             'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'role': user.role,
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+            'role': user_role,
             'is_active': user.is_active,
-            'is_email_verified': user.is_email_verified,
-            'phone': user.phone,
-            'created_at': user.created_at.isoformat() if user.created_at else None,
-            'updated_at': user.updated_at.isoformat() if user.updated_at else None,
+            'is_email_verified': is_email_verified,
+            'phone': phone or '',
+            'created_at': user.date_joined.isoformat() if user.date_joined else None,
             'last_login': user.last_login.isoformat() if user.last_login else None,
         }
         
@@ -1458,10 +1483,10 @@ def get_user_detail(request, user_id):
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
-        logger.error(f'Error getting user detail {user_id}: {str(e)}')
+        logger.error(f'Error getting user detail {user_id}: {str(e)}', exc_info=True)
         return Response({
             'success': False,
-            'message': 'Error al obtener usuario'
+            'message': f'Error al obtener usuario: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -1498,8 +1523,9 @@ def create_user(request):
     POST /api/v1/admin/users/
     """
     try:
-        from infrastructure.database.models import User
-        from django.contrib.auth.hashers import make_password
+        from django.contrib.auth.models import User
+        from apps.core.models import UserProfile
+        from apps.users.permissions import assign_user_to_group, get_user_role
         
         email = request.data.get('email', '').lower().strip()
         password = request.data.get('password', '')
@@ -1537,19 +1563,28 @@ def create_user(request):
             password=password,
             first_name=first_name,
             last_name=last_name,
-            role=role,
-            phone=phone,
             is_active=is_active
         )
+        
+        # Crear perfil de usuario
+        profile = UserProfile.objects.create(
+            user=user,
+            role=role,
+            phone=phone
+        )
+        
+        # Asignar al grupo correspondiente
+        assign_user_to_group(user, role)
         
         user_data = {
             'id': user.id,
             'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'role': user.role,
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+            'role': get_user_role(user),
             'is_active': user.is_active,
-            'created_at': user.created_at.isoformat() if user.created_at else None,
+            'phone': profile.phone or '',
+            'created_at': user.date_joined.isoformat() if user.date_joined else None,
         }
         
         return Response({
@@ -1596,14 +1631,15 @@ def create_user(request):
 def update_user(request, user_id):
     """
     Actualiza un usuario existente.
-    PUT /api/v1/admin/users/{user_id}/
+    PUT /api/v1/admin/users/{user_id}/update/
     """
     try:
-        from infrastructure.database.models import User
-        from django.contrib.auth.hashers import make_password
+        from django.contrib.auth.models import User
+        from apps.core.models import UserProfile
+        from apps.users.permissions import assign_user_to_group
         
         try:
-            user = User.objects.get(id=user_id)
+            user = User.objects.select_related('profile').get(id=user_id)
         except User.DoesNotExist:
             return Response({
                 'success': False,
@@ -1629,18 +1665,6 @@ def update_user(request, user_id):
         if 'last_name' in request.data:
             user.last_name = request.data.get('last_name', '').strip()
         
-        if 'role' in request.data:
-            role = request.data.get('role', '')
-            if role not in ['student', 'teacher', 'admin']:
-                return Response({
-                    'success': False,
-                    'message': 'Rol inválido. Debe ser: student, teacher o admin'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            user.role = role
-        
-        if 'phone' in request.data:
-            user.phone = request.data.get('phone', '').strip() or None
-        
         if 'is_active' in request.data:
             user.is_active = request.data.get('is_active', True)
         
@@ -1650,15 +1674,40 @@ def update_user(request, user_id):
         
         user.save()
         
+        # Actualizar o crear UserProfile
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        
+        # Actualizar rol en el perfil
+        if 'role' in request.data:
+            role = request.data.get('role', '')
+            if role not in ['student', 'teacher', 'admin']:
+                return Response({
+                    'success': False,
+                    'message': 'Rol inválido. Debe ser: student, teacher o admin'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            profile.role = role
+            # Asignar al grupo correspondiente
+            assign_user_to_group(user, role)
+        
+        # Actualizar teléfono en el perfil
+        if 'phone' in request.data:
+            phone = request.data.get('phone', '').strip() or None
+            profile.phone = phone
+        
+        profile.save()
+        
+        # Obtener datos actualizados del perfil
+        profile.refresh_from_db()
+        from apps.users.permissions import get_user_role
+        
         user_data = {
             'id': user.id,
             'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'role': user.role,
+            'first_name': user.first_name or '',
+            'last_name': user.last_name or '',
+            'role': get_user_role(user),
             'is_active': user.is_active,
-            'phone': user.phone,
-            'updated_at': user.updated_at.isoformat() if user.updated_at else None,
+            'phone': profile.phone or '',
         }
         
         return Response({
@@ -1695,7 +1744,7 @@ def delete_user(request, user_id):
     DELETE /api/v1/admin/users/{user_id}/
     """
     try:
-        from infrastructure.database.models import User
+        from django.contrib.auth.models import User
         
         try:
             user = User.objects.get(id=user_id)
@@ -1742,7 +1791,7 @@ def activate_user(request, user_id):
     POST /api/v1/admin/users/{user_id}/activate/
     """
     try:
-        from infrastructure.database.models import User
+        from django.contrib.auth.models import User
         
         try:
             user = User.objects.get(id=user_id)
@@ -1792,7 +1841,7 @@ def deactivate_user(request, user_id):
     POST /api/v1/admin/users/{user_id}/deactivate/
     """
     try:
-        from infrastructure.database.models import User
+        from django.contrib.auth.models import User
         
         try:
             user = User.objects.get(id=user_id)

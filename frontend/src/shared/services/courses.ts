@@ -463,6 +463,22 @@ export interface CourseEnrollment {
 }
 
 /**
+ * Material complementario del curso
+ */
+export interface CourseMaterial {
+    id: string;
+    title: string;
+    description?: string;
+    material_type: 'video' | 'link';
+    url: string;
+    order: number;
+    module_id?: string;
+    module_title?: string;
+    lesson_id?: string;
+    lesson_title?: string;
+}
+
+/**
  * Respuesta del contenido completo del curso
  */
 export interface CourseContentResponse {
@@ -477,6 +493,7 @@ export interface CourseContentResponse {
         enrollment?: CourseEnrollment;
         access_type?: 'admin_or_instructor';
         modules: ModuleWithContent[];
+        materials: CourseMaterial[]; // ✅ Agregar materiales
     };
 }
 

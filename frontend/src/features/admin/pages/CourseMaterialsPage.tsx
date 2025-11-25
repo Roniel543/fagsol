@@ -145,7 +145,7 @@ function CourseMaterialsPageContent() {
                             <Video className="w-16 h-16 mx-auto text-gray-500 mb-4" />
                             <p className="text-gray-900 mb-4 font-medium">Este curso no tiene materiales aún.</p>
                             <Link href={`/admin/courses/${courseId}/materials/new`}>
-                                <Button variant="primary">
+                                <Button variant="primary" className="flex mx-auto">
                                     <Plus className="w-4 h-4 mr-2" />
                                     Agregar Primer Material
                                 </Button>

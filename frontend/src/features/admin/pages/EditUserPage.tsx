@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card } from '@/shared/components';
+import { Button } from '@/shared/components';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { UserForm } from '../components/UserForm';
@@ -17,14 +17,14 @@ function EditUserPageContent() {
     if (!userId || isNaN(userId)) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
-                <Card className="p-8 text-center">
-                    <p className="text-red-600 mb-4">ID de usuario no válido</p>
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center shadow-sm">
+                    <p className="text-red-700 font-semibold mb-4">ID de usuario no válido</p>
                     <Link href="/admin/users">
                         <Button variant="primary">
                             Volver a Usuarios
                         </Button>
                     </Link>
-                </Card>
+                </div>
             </div>
         );
     }
@@ -38,7 +38,7 @@ function EditUserPageContent() {
                         <h1 className="text-3xl font-bold text-gray-900">
                             Editar Usuario
                         </h1>
-                        <p className="text-gray-600 mt-1">Modifica la información del usuario</p>
+                        <p className="text-gray-700 font-medium mt-1">Modifica la información del usuario</p>
                     </div>
                     <Link href="/admin/users">
                         <Button variant="secondary" size="sm">
@@ -49,9 +49,9 @@ function EditUserPageContent() {
             </div>
 
             {/* Main Content */}
-            <Card className="p-8">
+            <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
                 <UserForm userId={userId} onSuccess={handleSuccess} />
-            </Card>
+            </div>
         </div>
     );
 }

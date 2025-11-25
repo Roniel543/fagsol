@@ -320,7 +320,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                         error={errors.url}
                         variant="light"
                     />
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-gray-700 mt-1 font-medium">
                         {formData.material_type === 'video'
                             ? 'Ingresa la URL completa del video de Vimeo'
                             : 'Ingresa la URL del enlace externo'}
@@ -368,7 +368,7 @@ export function MaterialForm({ courseId, materialId, onSuccess, onCancel }: Mate
                 )}
             </div>
 
-            <div className="flex justify-end space-x-4 pt-4 border-t">
+            <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
                 {onCancel && (
                     <Button type="button" variant="secondary" onClick={onCancel}>
                         Cancelar

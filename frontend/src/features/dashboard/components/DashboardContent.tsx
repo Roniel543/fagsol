@@ -44,9 +44,9 @@ function DashboardContentInner() {
         );
     }
 
-    // Para otros roles, usar el layout tradicional
+    // Para otros roles, usar el layout tradicional con fondo oscuro
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gradient-to-br from-primary-black via-secondary-dark-gray to-primary-black">
             <DashboardHeader onLogout={logout} />
 
             {/* Main Content */}
