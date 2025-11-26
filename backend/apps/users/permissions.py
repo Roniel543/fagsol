@@ -575,7 +575,8 @@ def assign_user_to_group(user, role):
     
     group_name = role_to_group.get(role)
     if group_name:
-        group = Group.objects.get(name=group_name)
+        # Usar get_or_create para mayor robustez (evita DoesNotExist)
+        group, created = Group.objects.get_or_create(name=group_name)
         user.groups.add(group)
 
 

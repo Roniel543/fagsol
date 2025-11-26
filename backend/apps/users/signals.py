@@ -5,6 +5,7 @@ Este módulo maneja la asignación automática de usuarios a grupos de Django
 cuando se crea o actualiza un UserProfile.
 """
 
+import logging
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.contrib.auth.models import User, Group
@@ -13,6 +14,8 @@ from apps.users.permissions import (
     GROUP_ADMIN, GROUP_INSTRUCTOR, GROUP_STUDENT, GROUP_GUEST,
     ROLE_ADMIN, ROLE_INSTRUCTOR, ROLE_STUDENT, ROLE_GUEST
 )
+
+logger = logging.getLogger('apps')
 
 
 @receiver(post_save, sender=UserProfile)
@@ -45,13 +48,20 @@ def assign_user_to_group_on_profile_save(sender, instance, created, **kwargs):
     
     group_name = role_to_group.get(role)
     if group_name:
-        try:
-            group = Group.objects.get(name=group_name)
-            user.groups.add(group)
-        except Group.DoesNotExist:
-            # Si el grupo no existe, crearlo
-            group = Group.objects.create(name=group_name)
-            user.groups.add(group)
+        # Usar get_or_create para mayor robustez (evita DoesNotExist)
+        group, created = Group.objects.get_or_create(name=group_name)
+        user.groups.add(group)
+        
+        # Logging para debugging
+        if created:
+            logger.warning(
+                f'Grupo {group_name} no existía, creado automáticamente. '
+                f'Usuario {user.id} ({user.email}) asignado al grupo.'
+            )
+        else:
+            logger.info(
+                f'Usuario {user.id} ({user.email}) asignado al grupo {group_name} (rol: {role})'
+            )
 
 
 def ensure_groups_exist():

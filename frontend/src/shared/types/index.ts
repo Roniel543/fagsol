@@ -68,4 +68,24 @@ export interface Course {
     thumbnailUrl: string;
     provider: string;
     instructor: Instructor;
+    // Campos adicionales para detalle de curso
+    is_creator?: boolean; // Indica si el usuario actual es el creador del curso
+    is_enrolled?: boolean; // Indica si el usuario actual está inscrito
+    modules?: Array<{
+        id: string;
+        title: string;
+        description?: string;
+        price?: number;
+        is_purchasable: boolean;
+        lessons: Array<{
+            id: string;
+            title: string;
+            lesson_type: string;
+            duration_minutes: number;
+            order: number;
+        }>;
+        order: number;
+    }>;
+    status?: string; // Estado del curso (published, draft, etc.)
+    enrollments?: number; // Número de inscripciones
 }
