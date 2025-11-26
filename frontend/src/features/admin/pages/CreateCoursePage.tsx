@@ -1,17 +1,18 @@
 'use client';
 
+import { Button, ProtectedRoute } from '@/shared/components';
+import { useAuth } from '@/shared/hooks/useAuth';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CourseForm } from '../components/CourseForm';
-import { Button, Card, ProtectedRoute } from '@/shared/components';
-import Link from 'next/link';
 
 function CreateCoursePageContent() {
     const router = useRouter();
+    const { user } = useAuth();
 
     const handleSuccess = () => {
         // Redirigir según el rol del usuario
-        const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
-        if (userRole === 'instructor') {
+        if (user?.role === 'instructor') {
             router.push('/instructor/courses');
         } else {
             router.push('/admin/courses');
@@ -30,17 +31,11 @@ function CreateCoursePageContent() {
                             </h1>
                             <p className="text-gray-600">Completa el formulario para crear un nuevo curso</p>
                         </div>
-                        {(() => {
-                            const userRole = typeof window !== 'undefined' ? localStorage.getItem('userRole') : null;
-                            const backUrl = userRole === 'instructor' ? '/instructor/courses' : '/admin/courses';
-                            return (
-                                <Link href={backUrl}>
-                                    <Button variant="secondary" size="sm">
-                                        Volver a Cursos
-                                    </Button>
-                                </Link>
-                            );
-                        })()}
+                        <Link href={user?.role === 'instructor' ? '/instructor/courses' : '/admin/courses'}>
+                            <Button variant="secondary" size="sm">
+                                Volver a Cursos
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             </header>

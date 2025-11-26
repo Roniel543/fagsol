@@ -43,6 +43,7 @@ export interface BackendCourseDetail extends BackendCourse {
         order: number;
     }>;
     is_enrolled?: boolean;
+    is_creator?: boolean;  // Indica si el usuario actual es el creador del curso
 }
 
 /**
@@ -168,6 +169,9 @@ export function adaptBackendCourseToFrontend(backendCourse: BackendCourse): Cour
 export function adaptBackendCourseDetailToFrontend(backendDetail: BackendCourseDetail): Course & {
     modules?: BackendCourseDetail['modules'];
     is_enrolled?: boolean;
+    status?: string;
+    enrollments?: number;
+    is_creator?: boolean;
 } {
     const baseCourse = adaptBackendCourseToFrontend(backendDetail);
 
@@ -175,6 +179,9 @@ export function adaptBackendCourseDetailToFrontend(backendDetail: BackendCourseD
         ...baseCourse,
         modules: backendDetail.modules,
         is_enrolled: backendDetail.is_enrolled,
+        status: (backendDetail as any).status,
+        enrollments: (backendDetail as any).enrollments,
+        is_creator: backendDetail.is_creator || false,
     };
 }
 
@@ -503,5 +510,44 @@ export interface CourseContentResponse {
 export async function getCourseContent(courseId: string): Promise<CourseContentResponse> {
     const response = await apiRequest<CourseContentResponse>(`/courses/${courseId}/content/`);
     return response as unknown as CourseContentResponse;
+}
+
+/**
+ * Parámetros para listar cursos del instructor
+ */
+export interface ListInstructorCoursesParams {
+    status?: 'all' | 'published' | 'draft' | 'pending_review' | 'needs_revision' | 'archived';
+    search?: string;
+}
+
+/**
+ * Respuesta de lista de cursos del instructor
+ */
+export interface ListInstructorCoursesResponse {
+    success: boolean;
+    data: BackendCourseDetail[];
+    count: number;
+}
+
+/**
+ * Lista los cursos del instructor autenticado
+ * Requiere autenticación y rol instructor
+ */
+export async function listInstructorCourses(params?: ListInstructorCoursesParams): Promise<ListInstructorCoursesResponse> {
+    const queryParams = new URLSearchParams();
+
+    if (params?.status && params.status !== 'all') {
+        queryParams.append('status', params.status);
+    }
+
+    if (params?.search) {
+        queryParams.append('search', params.search);
+    }
+
+    const queryString = queryParams.toString();
+    const endpoint = `/instructor/courses/${queryString ? `?${queryString}` : ''}`;
+
+    const response = await apiRequest<ListInstructorCoursesResponse>(endpoint);
+    return response as unknown as ListInstructorCoursesResponse;
 }
 

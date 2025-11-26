@@ -274,7 +274,8 @@ def can_access_course_content(user, course):
     Policy: Verifica si el usuario puede acceder al contenido completo de un curso.
     
     Reglas:
-    - Admin e instructores pueden acceder a todo
+    - Admin puede acceder a todo
+    - Instructores solo pueden acceder a sus propios cursos (donde son creadores)
     - Estudiantes solo si están inscritos y el enrollment está activo
     
     Args:
@@ -289,9 +290,22 @@ def can_access_course_content(user, course):
     
     user_role = get_user_role(user)
     
-    # Admin e instructores pueden acceder a todo
-    if user_role in [ROLE_ADMIN, ROLE_INSTRUCTOR]:
+    # Admin puede acceder a todo
+    if user_role == ROLE_ADMIN:
         return True
+    
+    # Instructores solo pueden acceder a sus propios cursos
+    if user_role == ROLE_INSTRUCTOR:
+        # Verificar que el curso fue creado por este instructor
+        if course.created_by and course.created_by.id == user.id:
+            return True
+        # Si el curso tiene un campo instructor/owner, verificar
+        if hasattr(course, 'instructor') and course.instructor and course.instructor.id == user.id:
+            return True
+        if hasattr(course, 'owner') and course.owner and course.owner.id == user.id:
+            return True
+        # Si no es el creador, no puede acceder (debe pagar como cualquier estudiante)
+        return False
     
     # Estudiantes solo si están inscritos
     if user_role == ROLE_STUDENT:

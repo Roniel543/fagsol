@@ -11,7 +11,8 @@ from presentation.views.course_views import (
     create_course,
     update_course,
     delete_course,
-    request_course_review
+    request_course_review,
+    list_instructor_courses
 )
 
 urlpatterns = [

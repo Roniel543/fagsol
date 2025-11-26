@@ -49,6 +49,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
     const loadCourse = useCallback(async () => {
         try {
             setLoadingCourse(true);
+            setError(null);
             const response = await getCourseById(courseId!);
             if (response.success && response.data) {
                 const course = response.data;
@@ -74,13 +75,19 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                     provider: (course as any).provider || 'fagsol',
                 });
                 setCurrentStatus(courseStatus);
+            } else {
+                const errorMessage = (response as any).message || 'Error al cargar el curso';
+                setError(errorMessage);
+                showToast(`❌ ${errorMessage}`, 'error');
             }
         } catch (err: any) {
-            setError(err.message || 'Error al cargar el curso');
+            const errorMessage = err.message || 'Error al cargar el curso';
+            setError(errorMessage);
+            showToast(`❌ ${errorMessage}`, 'error');
         } finally {
             setLoadingCourse(false);
         }
-    }, [courseId]);
+    }, [courseId, showToast]);
 
     // Cargar curso si es edición
     useEffect(() => {
@@ -216,6 +223,14 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
             if (courseId) {
                 // Actualizar curso
                 const updateData: UpdateCourseRequest = { ...formData };
+
+                // Si el usuario es instructor y el curso ya está publicado,
+                // no enviar el campo status para evitar errores
+                if (user?.role === 'instructor' && currentStatus === 'published' && updateData.status === 'published') {
+                    // No enviar status si ya está publicado (mantener el estado actual)
+                    delete updateData.status;
+                }
+
                 response = await updateCourse(courseId, updateData);
             } else {
                 // Crear curso
@@ -223,17 +238,45 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
             }
 
             if (response.success) {
-                if (onSuccess) {
-                    onSuccess();
+                // Mostrar toast de éxito
+                if (courseId) {
+                    // Curso actualizado
+                    if (user?.role === 'instructor') {
+                        showToast('✅ Curso actualizado exitosamente. Los cambios se han guardado.', 'success');
+                    } else {
+                        showToast('✅ Curso actualizado exitosamente', 'success');
+                    }
                 } else {
-                    // Redirigir a la lista de cursos
-                    window.location.href = '/admin/courses';
+                    // Curso creado
+                    if (user?.role === 'instructor') {
+                        showToast('✅ Curso creado exitosamente. Está en estado "Borrador". Puedes solicitar revisión cuando esté listo.', 'success');
+                    } else {
+                        showToast('✅ Curso creado exitosamente', 'success');
+                    }
                 }
+
+                // Pequeño delay para que el usuario vea el toast antes de redirigir
+                setTimeout(() => {
+                    if (onSuccess) {
+                        onSuccess();
+                    } else {
+                        // Redirigir a la lista de cursos según el rol
+                        if (user?.role === 'instructor') {
+                            window.location.href = '/instructor/courses';
+                        } else {
+                            window.location.href = '/admin/courses';
+                        }
+                    }
+                }, 1000);
             } else {
-                setError((response as any).message || 'Error al guardar el curso');
+                const errorMessage = (response as any).message || 'Error al guardar el curso';
+                setError(errorMessage);
+                showToast(`❌ ${errorMessage}`, 'error');
             }
         } catch (err: any) {
-            setError(err.message || 'Error de conexión con el servidor');
+            const errorMessage = err.message || 'Error de conexión con el servidor';
+            setError(errorMessage);
+            showToast(`❌ ${errorMessage}`, 'error');
         } finally {
             setLoading(false);
         }
@@ -253,6 +296,15 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
             {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
                     {error}
+                </div>
+            )}
+
+            {/* Mensaje informativo para instructores con cursos publicados */}
+            {courseId && user?.role === 'instructor' && currentStatus === 'published' && (
+                <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg">
+                    <p className="text-sm font-medium">
+                        ℹ️ Este curso ya está publicado. Puedes actualizar su contenido, pero no puedes cambiar su estado. Si necesitas hacer cambios significativos, contacta a un administrador.
+                    </p>
                 </div>
             )}
 
@@ -495,7 +547,6 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         </span>
                     </div>
                 )}
-
                 <div className="flex space-x-4">
                     {onCancel && (
                         <Button

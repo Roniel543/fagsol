@@ -5,6 +5,7 @@ import { useCart } from '@/shared/contexts/CartContext';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useCourseBySlug, useCourses } from '@/shared/hooks/useCourses';
 import { useEnrollments } from '@/shared/hooks/useEnrollments';
+import { Edit } from 'lucide-react';
 import { notFound, useParams, useRouter } from 'next/navigation';
 import { useMemo } from 'react';
 import { AcademyHeader } from '../components/AcademyHeader';
@@ -39,10 +40,18 @@ export default function CourseDetailPage() {
         );
     }, [detail, enrollments, isAuthenticated]);
 
-    // Verificar si es admin o instructor
-    const isAdminOrInstructor = useMemo(() => {
-        return user?.role === 'admin' || user?.role === 'instructor';
+    // Verificar si es admin
+    const isAdmin = useMemo(() => {
+        return user?.role === 'admin';
     }, [user]);
+
+    // Verificar si el instructor es el creador del curso
+    const isCourseCreator = useMemo(() => {
+        if (!detail || !user) return false;
+        // Verificar si el backend indica que es el creador
+        const backendIsCreator = (detail as any).is_creator === true;
+        return backendIsCreator;
+    }, [detail, user]);
 
     // Loading state
     if (isLoading) {
@@ -64,6 +73,33 @@ export default function CourseDetailPage() {
 
     // Error state o curso no encontrado
     if (isError || !detail) {
+        // Si es instructor o admin, mostrar mensaje más útil en lugar de 404
+        if (isAdmin || user?.role === 'instructor') {
+            return (
+                <>
+                    <AcademyHeader />
+                    <main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
+                        <div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
+                            <div className="rounded-xl border border-status-error/50 bg-status-error/10 p-6 text-center">
+                                <h2 className="text-xl font-semibold text-status-error mb-2">
+                                    Curso no encontrado
+                                </h2>
+                                <p className="text-gray-400 mb-4">
+                                    El curso con slug "{slug}" no existe o no está disponible.
+                                </p>
+                                <button
+                                    onClick={() => router.push('/instructor/courses')}
+                                    className="px-4 py-2 bg-primary-orange text-primary-black rounded-lg hover:opacity-90"
+                                >
+                                    Volver a Mis Cursos
+                                </button>
+                            </div>
+                        </div>
+                    </main>
+                    <Footer />
+                </>
+            );
+        }
         return notFound();
     }
 
@@ -92,8 +128,32 @@ export default function CourseDetailPage() {
                 )}
             </div>
 
-            {/* Botón "Acceder al Curso" si está inscrito o es admin/instructor */}
-            {(isEnrolled || isAdminOrInstructor) ? (
+            {/* Botones según el tipo de usuario */}
+            {isCourseCreator ? (
+                // Si es el creador del curso (instructor o admin que lo creó)
+                <div className="mt-4 space-y-2">
+                    <button
+                        onClick={handleAccessCourse}
+                        className="w-full rounded-lg font-semibold py-3 bg-primary-orange text-primary-black hover:opacity-90 hover:scale-105 transition-all"
+                    >
+                        Ver Contenido del Curso
+                    </button>
+                    <button
+                        onClick={() => {
+                            if (user?.role === 'instructor') {
+                                router.push(`/instructor/courses/${detail.id}/edit`);
+                            } else {
+                                router.push(`/admin/courses/${detail.id}/edit`);
+                            }
+                        }}
+                        className="w-full rounded-lg font-semibold py-2 bg-zinc-700 text-white hover:bg-zinc-600 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Edit className="w-4 h-4" />
+                        Editar Curso
+                    </button>
+                </div>
+            ) : (isEnrolled || isAdmin) ? (
+                // Si está inscrito o es admin (admin puede acceder a cualquier curso)
                 <button
                     onClick={handleAccessCourse}
                     className="mt-4 w-full rounded-lg font-semibold py-3 bg-primary-orange text-primary-black hover:opacity-90 hover:scale-105 transition-all"

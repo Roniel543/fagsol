@@ -13,6 +13,7 @@ import {
     getCourseStatusCounts,
     getPendingCourses,
     listCourses,
+    listInstructorCourses,
     rejectCourse,
     requestCourseReview,
     type ApproveCourseRequest,
@@ -20,6 +21,7 @@ import {
     type CourseStatusCountsResponse,
     type CoursesWithReviewResponse,
     type ListCoursesParams,
+    type ListInstructorCoursesParams,
     type RejectCourseRequest
 } from '@/shared/services/courses';
 import React from 'react';
@@ -314,6 +316,38 @@ export function useCourseContent(courseId: string | null) {
 
     return {
         content: data || null,
+        isLoading,
+        isError: !!error,
+        error,
+        mutate,
+    };
+}
+
+/**
+ * Hook para listar cursos del instructor autenticado
+ * Requiere autenticación y rol instructor
+ */
+export function useInstructorCourses(params?: ListInstructorCoursesParams) {
+    const { data, error, isLoading, mutate } = useSWR(
+        ['instructor-courses', params],
+        async () => {
+            const response = await listInstructorCourses(params);
+            // Adaptar cada curso del backend al formato del frontend
+            return {
+                courses: response.data.map(adaptBackendCourseDetailToFrontend),
+                count: response.count,
+            };
+        },
+        {
+            revalidateOnFocus: true,
+            revalidateOnReconnect: true,
+            dedupingInterval: 5000,
+        }
+    );
+
+    return {
+        courses: data?.courses || [],
+        count: data?.count || 0,
         isLoading,
         isError: !!error,
         error,

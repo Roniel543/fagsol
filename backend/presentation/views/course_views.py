@@ -166,8 +166,20 @@ def get_course_by_slug(request, slug):
     GET /api/v1/courses/slug/{slug}/
     """
     try:
-        # Obtener curso por slug
-        course = get_object_or_404(Course, slug=slug, is_active=True)
+        # Obtener curso por slug (permitir cursos inactivos si el usuario es admin o instructor)
+        from apps.users.permissions import is_admin, is_instructor
+        if request.user.is_authenticated and (is_admin(request.user) or is_instructor(request.user)):
+            # Admin e instructores pueden ver cursos inactivos
+            try:
+                course = Course.objects.get(slug=slug)
+            except Course.DoesNotExist:
+                return Response({
+                    'success': False,
+                    'message': 'Curso no encontrado'
+                }, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Usuarios normales solo pueden ver cursos activos
+            course = get_object_or_404(Course, slug=slug, is_active=True)
         
         # Verificar permisos
         if not can_view_course(request.user, course):
@@ -208,6 +220,11 @@ def get_course_by_slug(request, slug):
                 status='active'
             ).exists()
         
+        # Verificar si el usuario actual es el creador del curso
+        is_creator = False
+        if request.user.is_authenticated and course.created_by:
+            is_creator = course.created_by.id == request.user.id
+        
         return Response({
             'success': True,
             'data': {
@@ -232,6 +249,7 @@ def get_course_by_slug(request, slug):
                 'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
                 'modules': modules,
                 'is_enrolled': is_enrolled,
+                'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
                 'created_at': course.created_at.isoformat(),
             }
         }, status=status.HTTP_200_OK)
@@ -319,6 +337,11 @@ def get_course(request, course_id):
                 status='active'
             ).exists()
         
+        # Verificar si el usuario actual es el creador del curso
+        is_creator = False
+        if request.user.is_authenticated and course.created_by:
+            is_creator = course.created_by.id == request.user.id
+        
         return Response({
             'success': True,
             'data': {
@@ -343,6 +366,7 @@ def get_course(request, course_id):
                 'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
                 'modules': modules,
                 'is_enrolled': is_enrolled,
+                'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
                 'created_at': course.created_at.isoformat(),
             }
         }, status=status.HTTP_200_OK)
@@ -396,9 +420,18 @@ def get_course_content(request, course_id):
         
         # Verificar permisos usando policy
         if not can_access_course_content(request.user, course):
+            # Mensaje de error más específico según el caso
+            from apps.users.permissions import get_user_role, ROLE_INSTRUCTOR
+            user_role = get_user_role(request.user)
+            
+            if user_role == ROLE_INSTRUCTOR:
+                message = 'No tienes acceso a este curso. Solo puedes acceder a los cursos que has creado. Para acceder a cursos de otros instructores, debes inscribirte.'
+            else:
+                message = 'No tienes acceso a este curso. Debes estar inscrito para acceder al contenido.'
+            
             return Response({
                 'success': False,
-                'message': 'No tienes acceso a este curso. Debes estar inscrito.'
+                'message': message
             }, status=status.HTTP_403_FORBIDDEN)
         
         # Obtener enrollment (si existe)
@@ -497,6 +530,146 @@ def get_course_content(request, course_id):
         }, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
         logger.error(f"Error en get_course_content: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista los cursos del instructor autenticado. Requiere rol instructor',
+    manual_parameters=[
+        openapi.Parameter(
+            'status',
+            openapi.IN_QUERY,
+            description='Filtro por estado (all, published, draft, pending_review, needs_revision, archived)',
+            type=openapi.TYPE_STRING,
+            enum=['all', 'published', 'draft', 'pending_review', 'needs_revision', 'archived'],
+            required=False
+        ),
+        openapi.Parameter(
+            'search',
+            openapi.IN_QUERY,
+            description='Búsqueda por título',
+            type=openapi.TYPE_STRING,
+            required=False
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            description='Lista de cursos del instructor',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': [
+                        {
+                            'id': 'c-001',
+                            'title': 'Mi Curso',
+                            'slug': 'mi-curso',
+                            'status': 'draft',
+                            'enrollments': 0,
+                            'rating': 0.0
+                        }
+                    ],
+                    'count': 1
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo instructores'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Cursos']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_instructor_courses(request):
+    """
+    Lista los cursos del instructor autenticado
+    GET /api/v1/instructor/courses/
+    
+    Query params:
+    - status: filtro por estado (all, published, draft, pending_review, needs_revision, archived)
+    - search: búsqueda por título
+    
+    Requiere autenticación y rol instructor
+    """
+    try:
+        from apps.users.permissions import is_instructor
+        from apps.users.models import Enrollment
+        
+        # Validar que el usuario es instructor
+        if not is_instructor(request.user):
+            return Response({
+                'success': False,
+                'message': 'Solo los instructores pueden ver sus cursos'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Obtener filtros
+        status_filter = request.query_params.get('status', 'all')
+        search = request.query_params.get('search', '').strip()
+        
+        # Query base: cursos creados por el instructor
+        queryset = Course.objects.filter(
+            created_by=request.user,
+            is_active=True
+        )
+        
+        # Filtrar por estado
+        if status_filter and status_filter != 'all':
+            queryset = queryset.filter(status=status_filter)
+        
+        # Búsqueda por título
+        if search:
+            queryset = queryset.filter(title__icontains=search)
+        
+        # Ordenar por fecha de creación (más recientes primero)
+        queryset = queryset.order_by('-created_at')
+        
+        # Serializar cursos con información adicional
+        courses = []
+        for course in queryset:
+            # Contar inscripciones
+            enrollments_count = Enrollment.objects.filter(
+                course=course,
+                status__in=['active', 'completed']
+            ).count()
+            
+            courses.append({
+                'id': course.id,
+                'title': course.title,
+                'slug': course.slug,
+                'description': course.description,
+                'short_description': course.short_description or (course.description[:200] + '...' if len(course.description) > 200 else course.description),
+                'price': float(course.price),
+                'discount_price': float(course.discount_price) if course.discount_price else None,
+                'currency': course.currency,
+                'thumbnail_url': course.thumbnail_url,
+                'banner_url': course.banner_url,
+                'status': course.status,
+                'category': course.category,
+                'level': course.level,
+                'provider': course.provider,
+                'tags': course.tags or [],
+                'hours': course.hours,
+                'rating': float(course.rating),
+                'ratings_count': course.ratings_count,
+                'enrollments': enrollments_count,
+                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+                'created_at': course.created_at.isoformat(),
+                'updated_at': course.updated_at.isoformat(),
+            })
+        
+        return Response({
+            'success': True,
+            'data': courses,
+            'count': len(courses)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en list_instructor_courses: {str(e)}", exc_info=True)
         return Response({
             'success': False,
             'message': 'Error interno del servidor'

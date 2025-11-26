@@ -74,6 +74,7 @@ urlpatterns = [
     path('api/v1/dashboard/', include('presentation.api.v1.dashboard.urls')),
     path('api/v1/payments/', include('presentation.api.v1.payments.urls')),
     path('api/v1/courses/', include('presentation.api.v1.courses.urls')),
+    path('api/v1/instructor/', include('presentation.api.v1.instructor.urls')),
     path('api/v1/enrollments/', include('presentation.api.v1.enrollments.urls')),
     path('api/v1/certificates/', include('presentation.api.v1.certificates.urls')),
     path('api/v1/progress/', include('presentation.api.v1.progress.urls')),

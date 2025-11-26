@@ -224,15 +224,22 @@ class CourseService:
                 valid_statuses = ['draft', 'pending_review', 'needs_revision', 'published', 'archived']
                 if status not in valid_statuses:
                     return False, None, "Estado inválido"
-                # Instructores no pueden cambiar a published directamente
-                if status == 'published' and not is_admin(user):
+                
+                # Si el instructor intenta cambiar a published, pero el curso ya está published,
+                # permitir mantener el estado (no es un cambio real)
+                if status == 'published' and course.status == 'published' and not is_admin(user):
+                    # El curso ya está publicado, no es un cambio, permitir continuar
+                    pass
+                # Instructores no pueden cambiar a published directamente (solo si es un cambio real)
+                elif status == 'published' and course.status != 'published' and not is_admin(user):
                     return False, None, "Los instructores no pueden publicar cursos directamente. Deben solicitar revisión."
-                
-                # Si el curso estaba archivado y se cambia a otro estado, reactivarlo automáticamente
-                if course.status == 'archived' and status != 'archived':
-                    course.is_active = True
-                
-                course.status = status
+                else:
+                    # Permitir el cambio de estado
+                    # Si el curso estaba archivado y se cambia a otro estado, reactivarlo automáticamente
+                    if course.status == 'archived' and status != 'archived':
+                        course.is_active = True
+                    
+                    course.status = status
             
             if 'thumbnail_url' in kwargs:
                 thumbnail_url = kwargs['thumbnail_url']

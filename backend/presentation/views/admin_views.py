@@ -1677,6 +1677,9 @@ def update_user(request, user_id):
         # Actualizar o crear UserProfile
         profile, created = UserProfile.objects.get_or_create(user=user)
         
+        # Obtener el rol anterior para detectar cambios
+        previous_role = profile.role
+        
         # Actualizar rol en el perfil
         if 'role' in request.data:
             role = request.data.get('role', '')
@@ -1685,7 +1688,27 @@ def update_user(request, user_id):
                     'success': False,
                     'message': 'Rol inválido. Debe ser: student, teacher o admin'
                 }, status=status.HTTP_400_BAD_REQUEST)
+            
             profile.role = role
+            
+            # Si un admin está cambiando el rol a instructor, aprobar automáticamente
+            if role == 'teacher' and previous_role != 'teacher':
+                # Verificar que el que hace el cambio es admin
+                from apps.users.permissions import is_admin
+                if is_admin(request.user):
+                    profile.instructor_status = 'approved'
+                    profile.instructor_approved_by = request.user
+                    from django.utils import timezone
+                    profile.instructor_approved_at = timezone.now()
+                    logger.info(f'Admin {request.user.email} cambió rol a instructor y aprobó automáticamente a {user.email}')
+            
+            # Si se cambia de instructor a otro rol, limpiar estado de instructor
+            if previous_role == 'teacher' and role != 'teacher':
+                profile.instructor_status = None
+                profile.instructor_approved_by = None
+                profile.instructor_approved_at = None
+                profile.instructor_rejection_reason = None
+            
             # Asignar al grupo correspondiente
             assign_user_to_group(user, role)
         

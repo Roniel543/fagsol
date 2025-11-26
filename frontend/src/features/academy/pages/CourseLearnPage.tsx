@@ -46,10 +46,17 @@ export default function CourseLearnPage() {
     // Obtener progreso del curso
     const { progress: courseProgress, mutate: mutateCourseProgress } = useCourseProgress(enrollmentId);
 
-    // Verificar si es admin o instructor
-    const isAdminOrInstructor = useMemo(() => {
-        return user?.role === 'admin' || user?.role === 'instructor';
+    // Verificar si es admin
+    const isAdmin = useMemo(() => {
+        return user?.role === 'admin';
     }, [user]);
+
+    // Verificar si el instructor es el creador del curso
+    const isCourseCreator = useMemo(() => {
+        if (!courseDetail || !user) return false;
+        // Verificar si el backend indica que es el creador
+        return (courseDetail as any).is_creator === true;
+    }, [courseDetail, user]);
 
     // Lección seleccionada
     const selectedLesson = useMemo(() => {
@@ -118,8 +125,9 @@ export default function CourseLearnPage() {
         );
     }
 
-    // Verificar acceso (debe estar inscrito o ser admin/instructor)
-    if (!isEnrolled && !isAdminOrInstructor) {
+    // Verificar acceso (debe estar inscrito, ser admin, o ser instructor creador del curso)
+    // Nota: El backend es la autoridad final, esta validación es solo para UX
+    if (!isEnrolled && !isAdmin && !isCourseCreator) {
         return (
             <>
                 <AcademyHeader />

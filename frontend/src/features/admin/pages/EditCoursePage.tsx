@@ -1,17 +1,24 @@
 'use client';
 
-import { useRouter, useParams } from 'next/navigation';
-import { CourseForm } from '../components/CourseForm';
 import { Button, Card, ProtectedRoute } from '@/shared/components';
+import { useAuth } from '@/shared/hooks/useAuth';
 import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { CourseForm } from '../components/CourseForm';
 
 function EditCoursePageContent() {
     const router = useRouter();
     const params = useParams();
+    const { user } = useAuth();
     const courseId = params?.id as string;
 
     const handleSuccess = () => {
-        router.push('/admin/courses');
+        // Redirigir según el rol del usuario
+        if (user?.role === 'instructor') {
+            router.push('/instructor/courses');
+        } else {
+            router.push('/admin/courses');
+        }
     };
 
     if (!courseId) {
@@ -41,7 +48,7 @@ function EditCoursePageContent() {
                             </h1>
                             <p className="text-gray-600">Modifica la información del curso</p>
                         </div>
-                        <Link href="/admin/courses">
+                        <Link href={user?.role === 'instructor' ? '/instructor/courses' : '/admin/courses'}>
                             <Button variant="secondary" size="sm">
                                 Volver a Cursos
                             </Button>

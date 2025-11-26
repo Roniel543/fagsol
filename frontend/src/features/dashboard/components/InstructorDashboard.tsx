@@ -1,8 +1,9 @@
 'use client';
 
 import { Button, LoadingSpinner } from '@/shared/components';
-import { useDashboard } from '@/shared/hooks/useDashboard';
 import { useAuth } from '@/shared/hooks/useAuth';
+import { useDashboard } from '@/shared/hooks/useDashboard';
+import { ArrowRight, BookOpen, CheckCircle2, FileText, Plus, Search, Star, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -16,33 +17,33 @@ export function InstructorDashboard() {
         return (
             <div className="flex items-center justify-center py-12">
                 <LoadingSpinner size="lg" />
-                <p className="ml-4 text-gray-600">Cargando estadísticas...</p>
+                <p className="ml-4 text-secondary-light-gray font-medium">Cargando estadísticas...</p>
             </div>
         );
     }
 
     if (isError || !instructorStats) {
         return (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+            <div className="bg-red-900/30 border border-red-500/30 rounded-lg p-6 backdrop-blur-sm">
                 <div className="flex items-start">
-                    <svg className="w-6 h-6 text-red-600 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-6 h-6 text-red-400 mr-3 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-red-800 mb-2">Error al cargar las estadísticas</h3>
-                        <p className="text-red-700 mb-4">
+                        <h3 className="text-lg font-semibold text-red-300 mb-2">Error al cargar las estadísticas</h3>
+                        <p className="text-red-200 mb-4">
                             No se pudieron cargar las estadísticas del dashboard. Por favor, intenta recargar la página.
                         </p>
                         <div className="flex gap-3">
-                            <Button 
-                                variant="primary" 
+                            <Button
+                                variant="primary"
                                 size="sm"
                                 onClick={() => window.location.reload()}
                             >
                                 Recargar Página
                             </Button>
-                            <Button 
-                                variant="secondary" 
+                            <Button
+                                variant="secondary"
                                 size="sm"
                                 onClick={() => router.push('/instructor/courses')}
                             >
@@ -56,139 +57,250 @@ export function InstructorDashboard() {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header con bienvenida */}
-            <div className="bg-gradient-to-r from-primary-orange/10 to-amber-500/10 rounded-xl p-6 border border-primary-orange/20">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">¡Bienvenido, Instructor!</h1>
-                <p className="text-gray-600">Gestiona tus cursos, estudiantes y contenido educativo desde aquí.</p>
+        <div className="space-y-6 relative">
+            {/* Elementos decorativos de fondo */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-20 right-10 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl"></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-purple-500/5 via-transparent to-primary-orange/5 rounded-full blur-3xl"></div>
             </div>
 
-            {/* Estadísticas principales */}
+            {/* Header con bienvenida mejorado */}
+            <div className="relative bg-gradient-to-r from-purple-900/30 via-primary-orange/20 to-amber-500/20 rounded-xl p-6 border border-primary-orange/20 backdrop-blur-sm shadow-lg overflow-hidden">
+                {/* Patrón decorativo */}
+                <div className="absolute inset-0 opacity-10">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary-orange/30 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/30 rounded-full blur-3xl"></div>
+                </div>
+                <div className="relative z-10">
+                    <h1 className="text-3xl font-bold text-primary-white mb-2 bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
+                        ¡Bienvenido, Instructor!
+                    </h1>
+                    <p className="text-secondary-light-gray font-medium text-lg">Gestiona tus cursos, estudiantes y contenido educativo desde aquí.</p>
+                </div>
+            </div>
+
+            {/* Estadísticas principales mejoradas */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <div className="bg-gradient-to-br from-white to-blue-50 shadow-lg rounded-xl p-6 border border-blue-100 hover:shadow-xl transition-shadow">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-600">Mis Cursos</h3>
-                        <svg className="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                    </div>
-                    <p className="text-4xl font-bold text-gray-900 mb-1">{instructorStats.courses.total}</p>
-                    <div className="mt-2 text-sm text-gray-600">
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 mr-2">
-                            {instructorStats.courses.published} publicados
-                        </span>
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            {instructorStats.courses.draft} borradores
-                        </span>
-                    </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white to-purple-50 shadow-lg rounded-xl p-6 border border-purple-100 hover:shadow-xl transition-shadow">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-600">Estudiantes</h3>
-                        <svg className="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                    </div>
-                    <p className="text-4xl font-bold text-gray-900 mb-1">{instructorStats.students.unique}</p>
-                    <div className="mt-2 text-sm text-gray-600">
-                        Estudiantes únicos en mis cursos
-                    </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white to-green-50 shadow-lg rounded-xl p-6 border border-green-100 hover:shadow-xl transition-shadow">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-600">Inscripciones</h3>
-                        <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <p className="text-4xl font-bold text-gray-900 mb-1">{instructorStats.enrollments.total}</p>
-                    <div className="mt-2 text-sm text-gray-600">
-                        <span className="text-green-600 font-medium">{instructorStats.enrollments.active} activas</span>
-                        {' • '}
-                        <span className="text-gray-500">{instructorStats.enrollments.completed} completadas</span>
-                    </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-white to-amber-50 shadow-lg rounded-xl p-6 border border-amber-100 hover:shadow-xl transition-shadow">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-600">Calificación</h3>
-                        <svg className="w-6 h-6 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                    </div>
-                    <p className="text-4xl font-bold text-gray-900 mb-1">{instructorStats.rating.average.toFixed(1)}</p>
-                    <div className="mt-2 text-sm text-gray-600">
-                        De {instructorStats.courses.total} cursos
-                    </div>
-                </div>
-            </div>
-
-            {/* Acciones rápidas */}
-            <div className="bg-gradient-to-br from-white to-gray-50 shadow-lg rounded-xl p-6 border border-gray-200">
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Acciones Rápidas</h2>
-                <p className="text-gray-600 mb-6">Gestiona tus cursos y contenido educativo</p>
-                <div className="flex flex-wrap gap-4">
-                    <Link href="/instructor/courses/new">
-                        <Button variant="primary" size="lg" className="shadow-md hover:shadow-lg transition-shadow">
-                            <span className="flex items-center gap-2">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
-                                Crear Nuevo Curso
-                            </span>
-                        </Button>
-                    </Link>
-                    <Link href="/instructor/courses">
-                        <Button variant="secondary" size="lg" className="shadow-md hover:shadow-lg transition-shadow">
-                            <span className="flex items-center gap-2">
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Ver Mis Cursos
-                            </span>
-                        </Button>
-                    </Link>
-                    <Button 
-                        variant="secondary" 
-                        size="lg" 
-                        onClick={() => router.push('/academy/catalog')}
-                        className="shadow-md hover:shadow-lg transition-shadow"
-                    >
-                        <span className="flex items-center gap-2">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            Ver Catálogo
-                        </span>
-                    </Button>
-                </div>
-            </div>
-
-            {/* Cursos más populares */}
-            {instructorStats.popular_courses.length > 0 && (
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">Mis Cursos Más Populares</h2>
-                    <div className="space-y-3">
-                        {instructorStats.popular_courses.map((course) => (
-                            <div key={course.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                                <div>
-                                    <p className="font-medium text-gray-900">{course.title}</p>
-                                    <p className="text-sm text-gray-600">{course.enrollments} inscripciones</p>
-                                </div>
-                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.status === 'published'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                    {course.status === 'published' ? 'Publicado' : 'Borrador'}
-                                </span>
+                {/* Mis Cursos */}
+                <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-lg p-6 shadow-lg hover:shadow-primary-orange/30 hover:border-primary-orange/50 hover:scale-105 transition-all duration-300 overflow-hidden group">
+                    {/* Efecto de brillo decorativo */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all duration-300"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                                <BookOpen className="w-6 h-6 text-white" />
                             </div>
-                        ))}
+                        </div>
+                        <h3 className="text-sm font-semibold text-secondary-light-gray mb-2">Mis Cursos</h3>
+                        <p className="text-3xl font-bold text-primary-white mb-2 group-hover:text-blue-400 transition-colors duration-300">{instructorStats.courses.total}</p>
+                        <div className="flex items-center space-x-2 text-sm">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-400 border border-green-500/30">
+                                {instructorStats.courses.published} publicados
+                            </span>
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                                {instructorStats.courses.draft} borradores
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Estudiantes */}
+                <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-lg p-6 shadow-lg hover:shadow-primary-orange/30 hover:border-primary-orange/50 hover:scale-105 transition-all duration-300 overflow-hidden group">
+                    {/* Efecto de brillo decorativo */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-full blur-2xl group-hover:bg-purple-500/20 transition-all duration-300"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                                <Users className="w-6 h-6 text-white" />
+                            </div>
+                        </div>
+                        <h3 className="text-sm font-semibold text-secondary-light-gray mb-2">Estudiantes</h3>
+                        <p className="text-3xl font-bold text-primary-white mb-2 group-hover:text-purple-400 transition-colors duration-300">{instructorStats.students.unique}</p>
+                        <div className="text-sm text-secondary-light-gray font-medium">
+                            Estudiantes únicos en mis cursos
+                        </div>
+                    </div>
+                </div>
+
+                {/* Inscripciones */}
+                <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-lg p-6 shadow-lg hover:shadow-primary-orange/30 hover:border-primary-orange/50 hover:scale-105 transition-all duration-300 overflow-hidden group">
+                    {/* Efecto de brillo decorativo */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full blur-2xl group-hover:bg-green-500/20 transition-all duration-300"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                                <CheckCircle2 className="w-6 h-6 text-white" />
+                            </div>
+                        </div>
+                        <h3 className="text-sm font-semibold text-secondary-light-gray mb-2">Inscripciones</h3>
+                        <p className="text-3xl font-bold text-primary-white mb-2 group-hover:text-green-400 transition-colors duration-300">{instructorStats.enrollments.total}</p>
+                        <div className="flex items-center space-x-2 text-sm text-secondary-light-gray">
+                            <span className="font-medium text-green-400">{instructorStats.enrollments.active} activas</span>
+                            <span>•</span>
+                            <span className="font-medium">{instructorStats.enrollments.completed} completadas</span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Calificación */}
+                <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-lg p-6 shadow-lg hover:shadow-primary-orange/30 hover:border-primary-orange/50 hover:scale-105 transition-all duration-300 overflow-hidden group">
+                    {/* Efecto de brillo decorativo */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all duration-300"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-lg flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                                <Star className="w-6 h-6 text-white" />
+                            </div>
+                        </div>
+                        <h3 className="text-sm font-semibold text-secondary-light-gray mb-2">Calificación</h3>
+                        <p className="text-3xl font-bold text-primary-white mb-2 group-hover:text-amber-400 transition-colors duration-300">{instructorStats.rating.average.toFixed(1)}</p>
+                        <div className="text-sm text-secondary-light-gray font-medium">
+                            De {instructorStats.courses.total} cursos
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Acciones rápidas mejoradas */}
+            <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-lg p-6 shadow-lg overflow-hidden">
+                {/* Patrón decorativo de fondo */}
+                <div className="absolute inset-0 opacity-5">
+                    <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-primary-orange/20 via-transparent to-purple-500/20"></div>
+                </div>
+                <div className="relative z-10">
+                    <div className="flex items-center space-x-3 mb-4">
+                        <div className="w-1 h-8 bg-gradient-to-b from-primary-orange to-amber-500 rounded-full"></div>
+                        <div>
+                            <h2 className="text-xl font-bold text-primary-white">Acciones Rápidas</h2>
+                            <p className="text-secondary-light-gray font-medium text-sm mt-1">Gestiona tus cursos y contenido educativo</p>
+                        </div>
+                    </div>
+                    <div className="flex flex-wrap gap-4">
+                        <Link href="/instructor/courses/new">
+                            <Button variant="primary" size="lg" className="flex items-center space-x-2 group shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
+                                <Plus className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                                <span>Crear Nuevo Curso</span>
+                            </Button>
+                        </Link>
+                        <Link href="/instructor/courses">
+                            <Button variant="secondary" size="lg" className="flex items-center space-x-2 group shadow-lg hover:shadow-lg transition-all duration-300">
+                                <FileText className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                                <span>Ver Mis Cursos</span>
+                            </Button>
+                        </Link>
+                        <Button
+                            variant="secondary"
+                            size="lg"
+                            onClick={() => router.push('/academy/catalog')}
+                            className="flex items-center space-x-2 group shadow-lg hover:shadow-lg transition-all duration-300"
+                        >
+                            <Search className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                            <span>Ver Catálogo</span>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Cursos más populares mejorados */}
+            {instructorStats.popular_courses.length > 0 && (
+                <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-lg p-6 shadow-lg overflow-hidden">
+                    {/* Patrón decorativo */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-primary-orange/5 rounded-full blur-3xl"></div>
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-1 h-8 bg-gradient-to-b from-primary-orange to-amber-500 rounded-full"></div>
+                                <h2 className="text-xl font-bold text-primary-white">Mis Cursos Más Populares</h2>
+                            </div>
+                            <Link
+                                href="/instructor/courses"
+                                className="text-sm font-medium text-primary-orange hover:text-amber-400 transition-colors flex items-center space-x-1 group"
+                            >
+                                <span>Ver todos</span>
+                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                            </Link>
+                        </div>
+                        <div className="space-y-4">
+                            {instructorStats.popular_courses.map((course) => (
+                                <div
+                                    key={course.id}
+                                    className="flex items-center justify-between p-4 bg-primary-black/40 hover:bg-primary-black/60 rounded-lg border border-primary-orange/20 hover:border-primary-orange/40 hover:shadow-lg hover:shadow-primary-orange/20 transition-all duration-300 group"
+                                >
+                                    <div className="flex items-center space-x-4 flex-1">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-primary-orange to-amber-500 rounded-lg flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                            <BookOpen className="w-6 h-6 text-white" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-semibold text-primary-white text-lg mb-1 group-hover:text-primary-orange transition-colors duration-300">{course.title}</p>
+                                            <div className="flex items-center space-x-4 text-sm">
+                                                <div className="flex items-center space-x-2 text-secondary-light-gray">
+                                                    <Users className="w-4 h-4" />
+                                                    <span className="font-medium">{course.enrollments} inscripciones</span>
+                                                </div>
+                                                <span className="text-secondary-light-gray">•</span>
+                                                <span className={`font-medium flex items-center space-x-1 ${course.status === 'published'
+                                                        ? 'text-green-400'
+                                                        : 'text-amber-400'
+                                                    }`}>
+                                                    {course.status === 'published' ? (
+                                                        <>
+                                                            <CheckCircle2 className="w-3 h-3" />
+                                                            <span>Publicado</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <FileText className="w-3 h-3" />
+                                                            <span>Borrador</span>
+                                                        </>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Link href={`/instructor/courses/${course.id}`}>
+                                        <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
+                                            <span>Ver</span>
+                                            <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                                        </Button>
+                                    </Link>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Estado vacío si no hay cursos */}
+            {instructorStats.courses.total === 0 && (
+                <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-lg p-12 text-center shadow-lg overflow-hidden">
+                    {/* Elementos decorativos */}
+                    <div className="absolute inset-0 opacity-10">
+                        <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary-orange/30 rounded-full blur-3xl"></div>
+                        <div className="absolute bottom-1/4 right-1/4 w-64 h-64 bg-purple-500/30 rounded-full blur-3xl"></div>
+                    </div>
+                    <div className="relative z-10">
+                        <div className="w-24 h-24 bg-gradient-to-br from-primary-orange to-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
+                            <BookOpen className="w-12 h-12 text-white" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-primary-white mb-3 bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
+                            ¡Comienza a crear contenido!
+                        </h3>
+                        <p className="text-secondary-light-gray mb-8 max-w-md mx-auto font-medium text-lg">
+                            Aún no has creado ningún curso. Crea tu primer curso y comparte tu conocimiento con la comunidad.
+                        </p>
+                        <Link href="/instructor/courses/new">
+                            <Button
+                                variant="primary"
+                                className="flex items-center space-x-2 mx-auto group shadow-lg hover:shadow-primary-orange/50 transition-all duration-300"
+                            >
+                                <Plus className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
+                                <span>Crear Mi Primer Curso</span>
+                            </Button>
+                        </Link>
                     </div>
                 </div>
             )}
         </div>
     );
 }
-
