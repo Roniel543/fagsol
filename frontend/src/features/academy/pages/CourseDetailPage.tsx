@@ -49,8 +49,7 @@ export default function CourseDetailPage() {
     const isCourseCreator = useMemo(() => {
         if (!detail || !user) return false;
         // Verificar si el backend indica que es el creador
-        const backendIsCreator = (detail as any).is_creator === true;
-        return backendIsCreator;
+        return detail.is_creator === true;
     }, [detail, user]);
 
     // Loading state

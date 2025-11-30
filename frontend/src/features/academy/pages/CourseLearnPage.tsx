@@ -55,7 +55,7 @@ export default function CourseLearnPage() {
     const isCourseCreator = useMemo(() => {
         if (!courseDetail || !user) return false;
         // Verificar si el backend indica que es el creador
-        return (courseDetail as any).is_creator === true;
+        return courseDetail.is_creator === true;
     }, [courseDetail, user]);
 
     // Lección seleccionada
