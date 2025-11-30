@@ -1,10 +1,10 @@
 'use client';
 
-import { Button, Card, LoadingSpinner } from '@/shared/components';
-import { useAdminUsers, useDeleteUser, useActivateUser, useDeactivateUser } from '@/shared/hooks/useAdminUsers';
+import { Button, LoadingSpinner } from '@/shared/components';
+import { useToast } from '@/shared/components/Toast';
+import { useActivateUser, useAdminUsers, useDeactivateUser, useDeleteUser } from '@/shared/hooks/useAdminUsers';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useToast } from '@/shared/components/Toast';
 
 function UsersAdminPageContent() {
     const { users, isLoading, mutate } = useAdminUsers();
