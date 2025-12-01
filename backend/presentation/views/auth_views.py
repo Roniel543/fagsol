@@ -459,3 +459,108 @@ def apply_to_be_instructor(request):
             'message': 'Error interno del servidor',
             'error': str(e)
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene la solicitud de instructor del usuario autenticado. Permite ver el estado de la solicitud (pending, approved, rejected) y el motivo de rechazo si aplica.',
+    responses={
+        200: openapi.Response(
+            description='Solicitud encontrada',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': {
+                        'id': 1,
+                        'status': 'pending',
+                        'status_display': 'Pendiente',
+                        'professional_title': 'Ingeniero',
+                        'specialization': 'Metalurgia',
+                        'reviewed_by': None,
+                        'reviewed_at': None,
+                        'rejection_reason': None,
+                        'created_at': '2025-01-12T10:00:00Z',
+                        'updated_at': '2025-01-12T10:00:00Z'
+                    }
+                }
+            }
+        ),
+        404: openapi.Response(description='No tienes una solicitud de instructor'),
+        401: openapi.Response(description='No autenticado'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Autenticación']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_instructor_application(request):
+    """
+    Obtiene la solicitud de instructor del usuario autenticado
+    GET /api/v1/auth/my-instructor-application/
+    
+    Permite al usuario ver:
+    - Estado de su solicitud (pending, approved, rejected)
+    - Motivo de rechazo (si fue rechazada)
+    - Fecha de revisión
+    - Quién la revisó
+    
+    Requiere autenticación
+    """
+    try:
+        from infrastructure.services.instructor_application_service import InstructorApplicationService
+        
+        # Obtener la solicitud del usuario
+        service = InstructorApplicationService()
+        application = service.get_user_application(request.user)
+        
+        if not application:
+            return Response({
+                'success': False,
+                'message': 'No tienes una solicitud de instructor'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verificar si puede volver a aplicar (si fue rechazada)
+        can_reapply = None
+        days_remaining = None
+        if application.status == 'rejected':
+            can_reapply, days_remaining = service.can_reapply(request.user)
+        
+        # Serializar datos
+        data = {
+            'id': application.id,
+            'professional_title': application.professional_title,
+            'experience_years': application.experience_years,
+            'specialization': application.specialization,
+            'bio': application.bio,
+            'portfolio_url': application.portfolio_url,
+            'motivation': application.motivation,
+            'cv_file_url': request.build_absolute_uri(application.cv_file.url) if application.cv_file else None,
+            'status': application.status,
+            'status_display': application.get_status_display(),
+            'reviewed_by': {
+                'id': application.reviewed_by.id,
+                'email': application.reviewed_by.email,
+            } if application.reviewed_by else None,
+            'reviewed_at': application.reviewed_at.isoformat() if application.reviewed_at else None,
+            'rejection_reason': application.rejection_reason,
+            'created_at': application.created_at.isoformat(),
+            'updated_at': application.updated_at.isoformat(),
+            # Información sobre volver a aplicar
+            'can_reapply': can_reapply if application.status == 'rejected' else None,
+            'days_remaining': days_remaining if application.status == 'rejected' else None,
+        }
+        
+        return Response({
+            'success': True,
+            'data': data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger('apps')
+        logger.error(f'Error en get_my_instructor_application: {str(e)}', exc_info=True)
+        return Response({
+            'success': False,
+            'message': 'Error al obtener la solicitud',
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

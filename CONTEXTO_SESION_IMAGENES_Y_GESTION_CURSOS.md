@@ -16,6 +16,9 @@ Esta sesión implementó un sistema completo de gestión de cursos para instruct
 4. ✅ **Mejoras de UI/UX** con tema oscuro consistente
 5. ✅ **Modales interactivos** para feedback y próximos pasos
 6. ✅ **Content Security Policy (CSP)** configurado para imágenes
+7. ✅ **Sistema de solicitud de instructor mejorado** con validación de tiempo y re-aplicación
+8. ✅ **Formulario de solicitud rediseñado** con layout de 3 columnas y contenido motivacional
+9. ✅ **Banner de invitación** en dashboard de estudiantes para fomentar solicitudes
 
 ---
 
@@ -456,6 +459,9 @@ Content Security Policy: The page's settings blocked the loading of a resource a
 | Modales interactivos | ✅ | Éxito y solicitar revisión |
 | CSP configurado | ✅ | Imágenes cargando correctamente |
 | Permisos validados | ✅ | Instructores solo editan sus cursos |
+| Validación de re-aplicación | ✅ | 30 días de espera después de rechazo |
+| Banner de invitación | ✅ | Dashboard de estudiantes |
+| Formulario rediseñado | ✅ | Layout 3 columnas, sidebar motivacional |
 
 ### **7.2 Flujo Completo Verificado**
 
@@ -558,6 +564,226 @@ Se ha implementado un sistema completo de gestión de cursos para instructores, 
 
 ---
 
+## 🎓 **9. SISTEMA DE SOLICITUD DE INSTRUCTOR MEJORADO**
+
+### **9.1 Mejoras Implementadas (2025-01-27)**
+
+#### **Backend - Validación de Tiempo para Re-aplicar**
+
+**Archivo:** `backend/infrastructure/services/instructor_application_service.py`
+
+**Funcionalidades agregadas:**
+- ✅ Validación de tiempo de espera (30 días) después de rechazo
+- ✅ Método `can_reapply()` que verifica si puede volver a aplicar
+- ✅ Retorna días restantes si aún no puede aplicar
+
+**Constante:**
+```python
+REAPPLY_COOLDOWN_DAYS = 30  # Días de espera antes de re-aplicar
+```
+
+**Lógica de validación:**
+```python
+# Verifica si hay un rechazo reciente
+last_rejected = InstructorApplication.objects.filter(
+    user=user,
+    status='rejected'
+).order_by('-reviewed_at').first()
+
+if last_rejected and last_rejected.reviewed_at:
+    days_since_rejection = (timezone.now() - last_rejected.reviewed_at).days
+    if days_since_rejection < REAPPLY_COOLDOWN_DAYS:
+        days_remaining = REAPPLY_COOLDOWN_DAYS - days_since_rejection
+        return False, None, f"Debes esperar {days_remaining} día(s) más..."
+```
+
+#### **Endpoint Actualizado**
+
+**Archivo:** `backend/presentation/views/auth_views.py`
+
+**Endpoint:** `GET /api/v1/auth/my-instructor-application/`
+
+**Response mejorado:**
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "status": "rejected",
+    "can_reapply": false,
+    "days_remaining": 15,
+    "reviewed_by": { "id": 1, "email": "admin@example.com" },
+    "reviewed_at": "2025-01-12T10:00:00Z",
+    "rejection_reason": "..."
+  }
+}
+```
+
+**Campos nuevos:**
+- `can_reapply`: `boolean | null` - Si puede volver a aplicar
+- `days_remaining`: `number | null` - Días que faltan para poder aplicar
+
+### **9.2 Frontend - Dashboard de Estudiantes**
+
+#### **Banner de Invitación a Ser Instructor**
+
+**Archivo:** `frontend/src/features/dashboard/components/StudentDashboard.tsx`
+
+**Características:**
+- ✅ Banner atractivo con gradientes y efectos visuales
+- ✅ Muestra beneficios: llegar a más estudiantes, generar ingresos, construir marca
+- ✅ Call-to-action directo: "Solicitar Ser Instructor"
+- ✅ Lógica inteligente de visualización:
+  - Se muestra si no tiene solicitud
+  - Se muestra si tiene solicitud rechazada y puede volver a aplicar
+  - No se muestra si tiene solicitud pendiente o aprobada
+  - No se muestra si tiene solicitud rechazada y aún no puede volver a aplicar
+
+**Diseño:**
+- Gradiente naranja/ámbar
+- Iconos contextuales (Users, DollarSign, Award, Zap)
+- Efectos hover y animaciones sutiles
+- Responsive: se adapta a móvil y desktop
+
+#### **Banner de Estado de Solicitud Mejorado**
+
+**Mejoras:**
+- ✅ Información de revisión (fecha, revisor)
+- ✅ Botón "Volver a Aplicar" cuando `can_reapply === true`
+- ✅ Mensaje con días restantes cuando `can_reapply === false`
+- ✅ Diseño diferenciado por estado (pending, approved, rejected)
+
+### **9.3 Formulario de Solicitud Rediseñado**
+
+#### **Layout de 3 Columnas**
+
+**Archivo:** `frontend/src/features/auth/components/BecomeInstructorForm.tsx`
+
+**Estructura:**
+```
+┌─────────────────────────────────────────────────────────┐
+│  Sidebar Izquierdo (1/3)  │  Formulario Central (2/3)  │
+│  - Beneficios             │  - Campos del formulario   │
+│  - Proceso                │  - Validaciones            │
+│  - Tips                   │  - Botones de acción       │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Sidebar Izquierdo (Solo Desktop):**
+- ✅ **Card de Beneficios:** ¿Por qué ser instructor?
+  - Llega a más estudiantes
+  - Genera ingresos
+  - Construye tu marca
+  - Flexibilidad total
+- ✅ **Card de Proceso:** Pasos de revisión (1, 2, 3)
+- ✅ **Card de Tips:** Consejos para mejorar la solicitud
+- ✅ Sticky positioning: se mantiene visible al hacer scroll
+
+**Formulario Central:**
+- ✅ Layout más amplio: `max-w-7xl` (antes `max-w-3xl`)
+- ✅ Grid de 2 columnas para campos básicos
+- ✅ Campo de motivación destacado con borde dinámico
+- ✅ Validación en tiempo real mejorada
+
+#### **Mejoras de Validación**
+
+**Bug corregido:**
+- ✅ Error de validación se limpia automáticamente al alcanzar 50 caracteres
+- ✅ `useEffect` que monitorea cambios en el campo de motivación
+- ✅ Feedback visual inmediato
+
+**Estados visuales del campo de motivación:**
+- 🔴 **Rojo:** Error o faltan caracteres
+- 🟢 **Verde:** Completado correctamente (≥50 caracteres)
+- ⚪ **Gris:** Estado inicial
+
+**Contador de caracteres:**
+- Cambia de color según progreso:
+  - Gris: < 40 caracteres
+  - Amarillo: 40-49 caracteres
+  - Verde: ≥ 50 caracteres
+
+#### **Optimizaciones de UX**
+
+**Reducción de scroll:**
+- ✅ Header más compacto (logo 60px)
+- ✅ Espaciado reducido (`p-4 sm:p-6` en lugar de `p-8 sm:p-10`)
+- ✅ Campos más compactos (`py-2.5` en lugar de `py-3`)
+- ✅ Textareas más pequeñas (3-4 filas)
+- ✅ Eliminadas secciones grandes innecesarias
+
+**Mejoras de accesibilidad:**
+- ✅ Labels asociados correctamente
+- ✅ Aria-labels donde corresponde
+- ✅ Navegación por teclado mejorada
+- ✅ Contraste de colores adecuado
+
+**Feedback mejorado:**
+- ✅ Validación en tiempo real
+- ✅ Mensajes de error contextuales
+- ✅ Indicadores visuales de progreso
+- ✅ Estados de éxito claros
+
+### **9.4 Interfaz TypeScript Actualizada**
+
+**Archivo:** `frontend/src/shared/services/instructorApplications.ts`
+
+**Interfaz `InstructorApplication` actualizada:**
+```typescript
+export interface InstructorApplication {
+  // ... campos existentes ...
+  
+  // Nuevos campos para re-aplicar
+  can_reapply?: boolean | null;
+  days_remaining?: number | null;
+}
+```
+
+### **9.5 Flujo Completo de Re-aplicación**
+
+```
+1. Usuario tiene solicitud rechazada
+   ↓
+2. Dashboard muestra banner con información de rechazo
+   ↓
+3. Si pasaron 30 días:
+   - Muestra botón "Volver a Aplicar"
+   - Usuario puede hacer clic y llenar formulario nuevamente
+   ↓
+4. Si NO pasaron 30 días:
+   - Muestra mensaje: "Debes esperar X días más"
+   - Botón deshabilitado o no visible
+   ↓
+5. Al intentar aplicar antes de tiempo:
+   - Backend rechaza con mensaje claro
+   - Frontend muestra error con días restantes
+```
+
+### **9.6 Archivos Modificados**
+
+#### **Backend:**
+- `backend/infrastructure/services/instructor_application_service.py`
+  - Agregado `REAPPLY_COOLDOWN_DAYS = 30`
+  - Agregado método `can_reapply(user)`
+  - Validación de tiempo en `create_application()`
+- `backend/presentation/views/auth_views.py`
+  - Endpoint `get_my_instructor_application` actualizado
+  - Retorna `can_reapply` y `days_remaining`
+
+#### **Frontend:**
+- `frontend/src/shared/services/instructorApplications.ts`
+  - Interfaz `InstructorApplication` actualizada
+- `frontend/src/features/dashboard/components/StudentDashboard.tsx`
+  - Banner de invitación agregado
+  - Banner de estado mejorado con botón de re-aplicar
+- `frontend/src/features/auth/components/BecomeInstructorForm.tsx`
+  - Rediseño completo con layout de 3 columnas
+  - Sidebar con contenido motivacional
+  - Validación mejorada con bug corregido
+  - Optimizaciones de scroll y UX
+
+---
+
 **Última actualización:** 2025-01-27  
-**Estado:** ✅ Sistema Completo Implementado
+**Estado:** ✅ Sistema Completo Implementado + Mejoras de UX
 

@@ -3,7 +3,8 @@
 import { Button, LoadingSpinner } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useDashboard } from '@/shared/hooks/useDashboard';
-import { ArrowRight, Award, BookOpen, CheckCircle2, GraduationCap, PlayCircle, TrendingUp } from 'lucide-react';
+import { useMyInstructorApplication } from '@/shared/hooks/useInstructorApplications';
+import { ArrowRight, Award, BookOpen, CheckCircle2, Clock, GraduationCap, PlayCircle, TrendingUp, XCircle, AlertCircle, Users, DollarSign, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -13,6 +14,7 @@ export function StudentDashboard() {
     const router = useRouter();
     const { studentStats, isLoading, isError } = useDashboard();
     const { loading: authLoading } = useAuth();
+    const { application, hasApplication, isLoading: loadingApplication } = useMyInstructorApplication();
     const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
 
     // Mostrar loading mientras se verifica la autenticación o se cargan las estadísticas
@@ -103,6 +105,173 @@ export function StudentDashboard() {
                 <PaymentsDashboard />
             ) : (
                 <div className="relative space-y-6">
+                    {/* Banner de Invitación a Ser Instructor - Solo si no tiene solicitud o puede volver a aplicar */}
+                    {(!hasApplication || (application?.status === 'rejected' && application?.can_reapply)) && (
+                        <div className="relative rounded-lg p-6 border-2 border-primary-orange/50 shadow-lg backdrop-blur-sm bg-gradient-to-r from-primary-orange/20 via-amber-500/20 to-primary-orange/20 overflow-hidden group hover:border-primary-orange/70 transition-all duration-300">
+                            {/* Elementos decorativos de fondo */}
+                            <div className="absolute inset-0 opacity-10">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-primary-orange rounded-full blur-3xl"></div>
+                                <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500 rounded-full blur-3xl"></div>
+                            </div>
+                            
+                            <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                                <div className="flex items-start space-x-4 flex-1">
+                                    <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-primary-orange to-amber-500 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                        <GraduationCap className="w-8 h-8 text-white" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-2">
+                                            <h3 className="text-xl font-bold text-primary-white">
+                                                ¿Quieres ser Instructor?
+                                            </h3>
+                                            <Sparkles className="w-5 h-5 text-amber-400 animate-pulse" />
+                                        </div>
+                                        <p className="text-primary-white/90 text-sm mb-3">
+                                            Comparte tu conocimiento y ayuda a otros a aprender. Crea cursos, gana ingresos y construye tu reputación como experto.
+                                        </p>
+                                        <div className="flex flex-wrap gap-4 text-xs text-primary-white/80">
+                                            <div className="flex items-center space-x-1">
+                                                <Users className="w-4 h-4 text-primary-orange" />
+                                                <span>Llega a más estudiantes</span>
+                                            </div>
+                                            <div className="flex items-center space-x-1">
+                                                <DollarSign className="w-4 h-4 text-primary-orange" />
+                                                <span>Genera ingresos</span>
+                                            </div>
+                                            <div className="flex items-center space-x-1">
+                                                <Award className="w-4 h-4 text-primary-orange" />
+                                                <span>Construye tu marca</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Link href="/auth/become-instructor">
+                                    <Button 
+                                        variant="primary" 
+                                        size="md" 
+                                        className="flex items-center space-x-2 group/btn shadow-lg hover:shadow-primary-orange/50 transition-all duration-300 whitespace-nowrap"
+                                    >
+                                        <span>Solicitar Ser Instructor</span>
+                                        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                                    </Button>
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Banner de Estado de Solicitud de Instructor */}
+                    {hasApplication && application && (application.status !== 'rejected' || (application.status === 'rejected' && !application.can_reapply)) && (
+                        <div className={`relative rounded-lg p-6 border-2 shadow-lg backdrop-blur-sm ${
+                            application.status === 'approved'
+                                ? 'bg-gradient-to-r from-green-900/40 to-emerald-900/40 border-green-500/50'
+                                : application.status === 'rejected'
+                                ? 'bg-gradient-to-r from-red-900/40 to-rose-900/40 border-red-500/50'
+                                : 'bg-gradient-to-r from-blue-900/40 to-cyan-900/40 border-blue-500/50'
+                        }`}>
+                            <div className="flex items-start space-x-4">
+                                <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+                                    application.status === 'approved'
+                                        ? 'bg-green-500/20'
+                                        : application.status === 'rejected'
+                                        ? 'bg-red-500/20'
+                                        : 'bg-blue-500/20'
+                                }`}>
+                                    {application.status === 'approved' ? (
+                                        <CheckCircle2 className="w-6 h-6 text-green-400" />
+                                    ) : application.status === 'rejected' ? (
+                                        <XCircle className="w-6 h-6 text-red-400" />
+                                    ) : (
+                                        <Clock className="w-6 h-6 text-blue-400" />
+                                    )}
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className={`text-lg font-bold mb-2 ${
+                                        application.status === 'approved'
+                                            ? 'text-green-300'
+                                            : application.status === 'rejected'
+                                            ? 'text-red-300'
+                                            : 'text-blue-300'
+                                    }`}>
+                                        {application.status === 'approved'
+                                            ? '¡Felicidades! Tu solicitud fue aprobada'
+                                            : application.status === 'rejected'
+                                            ? 'Tu solicitud fue rechazada'
+                                            : 'Solicitud de Instructor en Revisión'}
+                                    </h3>
+                                    <p className="text-primary-white text-sm mb-3">
+                                        {application.status === 'approved'
+                                            ? 'Ya eres instructor. Ahora puedes crear y gestionar tus propios cursos.'
+                                            : application.status === 'rejected'
+                                            ? application.rejection_reason
+                                                ? `Motivo: ${application.rejection_reason}`
+                                                : 'Tu solicitud no fue aprobada. Puedes volver a solicitar después de 30 días.'
+                                            : 'Tu solicitud está siendo revisada por nuestro equipo. Te notificaremos cuando haya un resultado.'}
+                                    </p>
+                                    {application.status === 'approved' && (
+                                        <Link href="/instructor/courses">
+                                            <Button variant="primary" size="sm" className="mt-2">
+                                                <BookOpen className="w-4 h-4 mr-2" />
+                                                Crear Mi Primer Curso
+                                            </Button>
+                                        </Link>
+                                    )}
+                                    {application.status === 'rejected' && (
+                                        <div className="mt-3 space-y-3">
+                                            <div className="p-3 bg-red-900/20 border border-red-500/30 rounded-lg">
+                                                <p className="text-xs text-red-300 mb-1 font-semibold">Información de Revisión:</p>
+                                                {application.reviewed_at && (
+                                                    <p className="text-xs text-red-200">
+                                                        Revisado el: {new Date(application.reviewed_at).toLocaleDateString('es-ES', {
+                                                            year: 'numeric',
+                                                            month: 'long',
+                                                            day: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </p>
+                                                )}
+                                                {application.reviewed_by && (
+                                                    <p className="text-xs text-red-200">
+                                                        Por: {application.reviewed_by.email}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            
+                                            {/* Botón o mensaje para volver a aplicar */}
+                                            {application.can_reapply ? (
+                                                <Link href="/auth/become-instructor">
+                                                    <Button variant="primary" size="sm" className="w-full sm:w-auto">
+                                                        <BookOpen className="w-4 h-4 mr-2" />
+                                                        Volver a Aplicar
+                                                    </Button>
+                                                </Link>
+                                            ) : application.days_remaining !== null && application.days_remaining !== undefined ? (
+                                                <div className="p-3 bg-yellow-900/20 border border-yellow-500/30 rounded-lg">
+                                                    <p className="text-xs text-yellow-300 font-semibold mb-1">
+                                                        ⏳ Tiempo de espera
+                                                    </p>
+                                                    <p className="text-xs text-yellow-200">
+                                                        Debes esperar {application.days_remaining} día{application.days_remaining !== 1 ? 's' : ''} más antes de poder volver a aplicar.
+                                                    </p>
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                    )}
+                                    {application.status === 'pending' && (
+                                        <div className="mt-3 flex items-center space-x-2 text-xs text-blue-300">
+                                            <AlertCircle className="w-4 h-4" />
+                                            <span>Fecha de solicitud: {new Date(application.created_at).toLocaleDateString('es-ES', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            })}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Estadísticas principales mejoradas */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         {/* Cursos Inscritos */}

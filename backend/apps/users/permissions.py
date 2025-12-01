@@ -236,6 +236,9 @@ def can_edit_course(user, course):
     Reglas:
     - Solo admin e instructores pueden editar cursos
     - Los instructores solo pueden editar sus propios cursos (si tienen campo owner)
+    - Los instructores NO pueden editar cursos en 'pending_review' o 'published'
+      (solo pueden editar cursos en 'draft' o 'needs_revision')
+    - Los admins pueden editar cursos en cualquier estado
     
     Args:
         user: Usuario de Django
@@ -249,22 +252,31 @@ def can_edit_course(user, course):
     
     user_role = get_user_role(user)
     
-    # Admin puede editar todo
+    # Admin puede editar todo (sin restricciones de estado)
     if user_role == ROLE_ADMIN:
         return True
     
     # Instructores pueden editar sus propios cursos
     if user_role == ROLE_INSTRUCTOR:
-        # Verificar que el curso fue creado por este instructor
+        # Verificar ownership primero
+        is_owner = False
         if course.created_by and course.created_by == user:
-            return True
-        # Si el curso tiene un campo instructor/owner, verificar
-        if hasattr(course, 'instructor') and course.instructor == user:
-            return True
-        if hasattr(course, 'owner') and course.owner == user:
-            return True
-        # Si no tiene creador asignado, no permitir edición por instructor
-        return False
+            is_owner = True
+        elif hasattr(course, 'instructor') and course.instructor == user:
+            is_owner = True
+        elif hasattr(course, 'owner') and course.owner == user:
+            is_owner = True
+        
+        if not is_owner:
+            return False
+        
+        # Validar estado: instructores NO pueden editar cursos en pending_review o published
+        # Solo pueden editar cursos en draft o needs_revision
+        if course.status in ['pending_review', 'published']:
+            return False
+        
+        # Puede editar si está en draft o needs_revision
+        return course.status in ['draft', 'needs_revision']
     
     return False
 

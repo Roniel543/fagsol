@@ -1,4 +1,4 @@
-// File: C:\Users\ronie\Documents\fagsol\frontend\src\app\admin\courses\[id]\edit\page.tsx
+// File: C:\Users\deadmau5\Documents\fagsol\frontend\src\app\admin\courses\[id]\edit\page.tsx
 import * as entry from '../../../../../../../src/app/admin/courses/[id]/edit/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

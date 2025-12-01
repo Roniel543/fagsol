@@ -184,8 +184,22 @@ class CourseService:
             if not has_perm(user, 'courses.change_course'):
                 return False, None, "No tienes permiso para editar este curso"
             
+            # Validar estado del curso para instructores
+            # Los instructores NO pueden editar cursos en pending_review o published
+            if not is_admin(user) and course.status in ['pending_review', 'published']:
+                if course.status == 'pending_review':
+                    return False, None, "No puedes editar este curso mientras está en revisión. Espera a que se complete la revisión o se soliciten cambios."
+                elif course.status == 'published':
+                    return False, None, "No puedes editar este curso mientras está publicado. Si necesitas hacer cambios, contacta a un administrador."
+            
             # También verificar ownership (instructores solo pueden editar sus cursos)
             if not can_edit_course(user, course):
+                # can_edit_course ya valida el estado, pero damos un mensaje más genérico aquí
+                if not is_admin(user) and course.status in ['pending_review', 'published']:
+                    if course.status == 'pending_review':
+                        return False, None, "No puedes editar este curso mientras está en revisión. Espera a que se complete la revisión o se soliciten cambios."
+                    elif course.status == 'published':
+                        return False, None, "No puedes editar este curso mientras está publicado. Si necesitas hacer cambios, contacta a un administrador."
                 return False, None, "No tienes permiso para editar este curso"
             
             # 3. Validar y actualizar campos

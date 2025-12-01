@@ -1,0 +1,1 @@
+{"c":["app/layout","app/instructor/courses/new/page","app/instructor/courses/[id]/edit/page","app/admin/courses/[id]/edit/page","webpack"],"r":[],"m":["(app-pages-browser)/./node_modules/lucide-react/dist/esm/icons/shield.js","(app-pages-browser)/./node_modules/lucide-react/dist/esm/icons/tag.js","(app-pages-browser)/./node_modules/lucide-react/dist/esm/icons/triangle-alert.js"]}

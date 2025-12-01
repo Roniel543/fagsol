@@ -1,7 +1,7 @@
 {
+  "/dashboard/page": "app/dashboard/page.js",
+  "/auth/register/page": "app/auth/register/page.js",
   "/academy/course/[slug]/page": "app/academy/course/[slug]/page.js",
-  "/academy/page": "app/academy/page.js",
-  "/admin/courses/[id]/edit/page": "app/admin/courses/[id]/edit/page.js",
-  "/admin/courses/pending/page": "app/admin/courses/pending/page.js",
-  "/admin/courses/page": "app/admin/courses/page.js"
+  "/auth/become-instructor/page": "app/auth/become-instructor/page.js",
+  "/admin/instructor-applications/page": "app/admin/instructor-applications/page.js"
 }

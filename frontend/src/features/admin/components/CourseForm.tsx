@@ -215,6 +215,16 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
         e.preventDefault();
         setError(null);
 
+        // Validar que instructores no puedan editar cursos en pending_review o published
+        if (courseId && user?.role === 'instructor' && (currentStatus === 'pending_review' || currentStatus === 'published')) {
+            if (currentStatus === 'pending_review') {
+                setError('No puedes editar este curso mientras está en revisión. Espera a que se complete la revisión o se soliciten cambios.');
+            } else if (currentStatus === 'published') {
+                setError('No puedes editar este curso mientras está publicado. Si necesitas hacer cambios, contacta a un administrador.');
+            }
+            return;
+        }
+
         if (!validateForm()) {
             setError('Por favor, corrige los errores en el formulario');
             return;
@@ -310,6 +320,9 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
     }
 
     const isInstructor = user?.role === 'instructor';
+    
+    // Determinar si el formulario debe estar deshabilitado para instructores
+    const isFormDisabled: boolean = !!(courseId && isInstructor && (currentStatus === 'pending_review' || currentStatus === 'published'));
 
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -323,13 +336,24 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                 </div>
             )}
 
+            {/* Mensaje informativo para instructores con cursos en revisión */}
+            {courseId && isInstructor && currentStatus === 'pending_review' && (
+                <div className="relative bg-blue-900/30 border border-blue-500/30 text-blue-300 px-4 py-3 rounded-lg backdrop-blur-sm">
+                    <div className="flex items-start space-x-3">
+                        <Info className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm font-medium">
+                            Este curso está en revisión. No puedes editarlo hasta que se complete la revisión o se soliciten cambios. Te notificaremos cuando haya un resultado.
+                        </p>
+                    </div>
+                </div>
+            )}
             {/* Mensaje informativo para instructores con cursos publicados */}
             {courseId && isInstructor && currentStatus === 'published' && (
                 <div className="relative bg-amber-900/30 border border-amber-500/30 text-amber-300 px-4 py-3 rounded-lg backdrop-blur-sm">
                     <div className="flex items-start space-x-3">
                         <Info className="w-5 h-5 text-amber-400 mt-0.5 flex-shrink-0" />
                         <p className="text-sm font-medium">
-                            Este curso ya está publicado. Puedes actualizar su contenido, pero no puedes cambiar su estado. Si necesitas hacer cambios significativos, contacta a un administrador.
+                            Este curso ya está publicado. No puedes editarlo directamente. Si necesitas hacer cambios, contacta a un administrador.
                         </p>
                     </div>
                 </div>
@@ -359,6 +383,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             required
                             error={errors.title}
                             variant="dark"
+                            disabled={isFormDisabled}
                         />
                         {isInstructor && !errors.title && (
                             <p className="mt-1 text-xs text-secondary-light-gray flex items-center space-x-1">
@@ -381,7 +406,8 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             placeholder="Breve descripción que aparecerá en el catálogo (máx. 500 caracteres)"
                             rows={3}
                             maxLength={500}
-                            className="block w-full px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-primary-white placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300"
+                            disabled={isFormDisabled}
+                            className="block w-full px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-primary-white placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         />
                         <div className="mt-2 flex items-center justify-between">
                             <p className="text-xs text-secondary-light-gray">
@@ -409,8 +435,9 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             placeholder="Descripción detallada del curso. Explica qué aprenderán los estudiantes, los objetivos, y el valor que ofrece tu curso..."
                             rows={8}
                             required
+                            disabled={isFormDisabled}
                             className={`block w-full px-4 py-3 bg-primary-black/40 border ${errors.description ? 'border-red-500/50' : 'border-primary-orange/20'
-                                } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-primary-white placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300`}
+                                } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-primary-white placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed`}
                         />
                         {errors.description ? (
                             <p className="mt-2 text-sm text-red-400 flex items-center space-x-1">
@@ -455,6 +482,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             required
                             error={errors.price}
                             variant="dark"
+                            disabled={isFormDisabled}
                         />
                         {isInstructor && !errors.price && (
                             <p className="mt-1 text-xs text-secondary-light-gray">
@@ -474,6 +502,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             placeholder="Opcional"
                             error={errors.discount_price}
                             variant="dark"
+                            disabled={isFormDisabled}
                         />
                         {isInstructor && !errors.discount_price && (
                             <p className="mt-1 text-xs text-secondary-light-gray">
@@ -511,6 +540,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             onChange={handleChange}
                             placeholder="Ej: Programación, Diseño, Marketing..."
                             variant="dark"
+                            disabled={isFormDisabled}
                         />
                     </div>
 
@@ -527,6 +557,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                 { value: 'advanced', label: 'Avanzado' },
                             ]}
                             variant="dark"
+                            disabled={isFormDisabled}
                         />
                     </div>
 
@@ -541,6 +572,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             placeholder="0"
                             error={errors.hours}
                             variant="dark"
+                            disabled={isFormDisabled}
                         />
                         {isInstructor && !errors.hours && (
                             <p className="mt-1 text-xs text-secondary-light-gray">
@@ -583,6 +615,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             imageType="thumbnail"
                             recommendedSize="400x300px"
                             error={errors.thumbnail_url}
+                            disabled={isFormDisabled}
                         />
                     </div>
 
@@ -605,6 +638,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                             imageType="banner"
                             recommendedSize="1920x600px"
                             error={errors.banner_url}
+                            disabled={isFormDisabled}
                         />
                     </div>
                 </div>
@@ -632,7 +666,8 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         value={formData.tags?.join(', ') || ''}
                         onChange={handleTagsChange}
                         placeholder="python, programación, web, desarrollo"
-                        className="block w-full px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-primary-white placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300"
+                        disabled={isFormDisabled}
+                        className="block w-full px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-primary-white placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                     />
                     <div className="mt-2 flex items-center justify-between">
                         <p className="text-xs text-secondary-light-gray">
@@ -696,7 +731,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                     <Button
                         type="submit"
                         loading={loading}
-                        disabled={loading || isRequesting}
+                        disabled={loading || isRequesting || isFormDisabled}
                         className="flex items-center space-x-2"
                     >
                         <BookOpen className="w-4 h-4" />
@@ -945,7 +980,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                         <div className="flex-1">
                                             <h5 className="font-semibold text-primary-white mb-1">Resultado de la Revisión</h5>
                                             <p className="text-sm text-secondary-light-gray">
-                                                El administrador puede <span className="font-semibold text-green-300">aprobar y publicar</span> tu curso, o <span className="font-semibold text-orange-300">solicitar cambios</span> si es necesario.
+                                                El administrador puede <span className="font-semibold text-green-300">aprobar y publicar</span> tu curso, o <span className="font-semibold text-orange-300">solicitar cambios</span> si es necesario. Si se solicitan cambios, podrás editarlo nuevamente y volver a solicitar revisión.
                                             </p>
                                         </div>
                                     </div>
@@ -1021,14 +1056,14 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                             const result = await requestReview(courseId!);
                                             if (result.success) {
                                                 setShowReviewModal(false);
-                                                showToast('✅ Revisión solicitada exitosamente. El administrador revisará tu curso.', 'success');
+                                                showToast('Revisión solicitada exitosamente. El administrador revisará tu curso.', 'success');
                                                 // Recargar el curso para actualizar el estado
                                                 loadCourse();
                                             } else {
-                                                showToast(`❌ ${result.message || 'Error al solicitar revisión'}`, 'error');
+                                                showToast(`${result.message || 'Error al solicitar revisión'}`, 'error');
                                             }
                                         } catch (err: any) {
-                                            showToast(`❌ ${err.message || 'Error al solicitar revisión'}`, 'error');
+                                            showToast(`${err.message || 'Error al solicitar revisión'}`, 'error');
                                         }
                                     }}
                                     disabled={isRequesting || loading}

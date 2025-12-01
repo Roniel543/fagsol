@@ -2,9 +2,11 @@
 
 import { Button, ProtectedRoute } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
-import { ArrowLeft, BookOpen, Layers } from 'lucide-react';
+import { getCourseById } from '@/shared/services/courses';
+import { ArrowLeft, BookOpen, Layers, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { CourseForm } from '../components/CourseForm';
 
 function EditCoursePageContent() {
@@ -12,6 +14,8 @@ function EditCoursePageContent() {
     const params = useParams();
     const { user } = useAuth();
     const courseId = params?.id as string;
+    const [courseStatus, setCourseStatus] = useState<string | null>(null);
+    const [loadingCourse, setLoadingCourse] = useState(true);
 
     const handleSuccess = () => {
         // Redirigir según el rol del usuario
@@ -21,6 +25,35 @@ function EditCoursePageContent() {
             router.push('/admin/courses');
         }
     };
+
+    // Cargar estado del curso para validar permisos
+    useEffect(() => {
+        const loadCourseStatus = async () => {
+            if (!courseId) {
+                setLoadingCourse(false);
+                return;
+            }
+
+            try {
+                const response = await getCourseById(courseId);
+                if (response.success && response.data) {
+                    setCourseStatus((response.data as any).status || 'draft');
+                }
+            } catch (error) {
+                console.error('Error loading course status:', error);
+            } finally {
+                setLoadingCourse(false);
+            }
+        };
+
+        loadCourseStatus();
+    }, [courseId]);
+
+    const isInstructor = user?.role === 'instructor';
+    
+    // Determinar si el instructor puede gestionar módulos y lecciones
+    // Solo puede hacerlo si el curso está en 'draft' o 'needs_revision'
+    const canManageContent = !isInstructor || !courseStatus || courseStatus === 'draft' || courseStatus === 'needs_revision';
 
     if (!courseId) {
         return (
@@ -41,8 +74,6 @@ function EditCoursePageContent() {
             </div>
         );
     }
-
-    const isInstructor = user?.role === 'instructor';
 
     return (
         <div className="min-h-screen bg-primary-black text-primary-white relative overflow-hidden">
@@ -107,30 +138,52 @@ function EditCoursePageContent() {
                                     <div className="p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg">
                                         <p className="text-secondary-light-gray mb-2">Estado Actual</p>
                                         <p className="text-primary-white font-semibold">
-                                            El curso se guardará con su estado actual. Puedes solicitar revisión cuando esté listo.
+                                            {courseStatus === 'pending_review' 
+                                                ? 'El curso está en revisión. No puedes editarlo hasta que se complete la revisión o se soliciten cambios.'
+                                                : courseStatus === 'published'
+                                                ? 'El curso está publicado. No puedes editarlo directamente.'
+                                                : 'El curso se guardará con su estado actual. Puedes solicitar revisión cuando esté listo.'}
                                         </p>
                                     </div>
 
-                                    <div className="p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg">
-                                        <p className="text-secondary-light-gray mb-2">Después de Editar</p>
-                                        <p className="text-primary-white font-semibold">
-                                            Una vez guardes los cambios, podrás agregar módulos y lecciones desde aquí.
-                                        </p>
-                                    </div>
+                                    {canManageContent && (
+                                        <div className="p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg">
+                                            <p className="text-secondary-light-gray mb-2">Después de Editar</p>
+                                            <p className="text-primary-white font-semibold">
+                                                Una vez guardes los cambios, podrás agregar módulos y lecciones desde aquí.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Botón para gestionar módulos */}
-                                <div className="pt-4 border-t border-primary-orange/20">
-                                    <Link href={`/instructor/courses/${courseId}/modules`}>
-                                        <Button variant="primary" size="lg" className="w-full flex items-center justify-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
-                                            <Layers className="w-5 h-5" />
-                                            <span>Gestionar Módulos y Lecciones</span>
-                                        </Button>
-                                    </Link>
-                                    <p className="text-xs text-secondary-light-gray mt-2 text-center">
-                                        Agrega contenido a tu curso antes de solicitar revisión
-                                    </p>
-                                </div>
+                                {canManageContent ? (
+                                    <div className="pt-4 border-t border-primary-orange/20">
+                                        <Link href={`/instructor/courses/${courseId}/modules`}>
+                                            <Button variant="primary" size="lg" className="w-full flex items-center justify-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
+                                                <Layers className="w-5 h-5" />
+                                                <span>Gestionar Módulos y Lecciones</span>
+                                            </Button>
+                                        </Link>
+                                        <p className="text-xs text-secondary-light-gray mt-2 text-center">
+                                            Agrega contenido a tu curso antes de solicitar revisión
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="pt-4 border-t border-primary-orange/20">
+                                        <div className="w-full p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg">
+                                            <div className="flex items-center justify-center space-x-2 text-secondary-light-gray mb-2">
+                                                <Lock className="w-5 h-5" />
+                                                <span className="font-semibold">No disponible</span>
+                                            </div>
+                                            <p className="text-xs text-secondary-light-gray text-center">
+                                                {courseStatus === 'pending_review'
+                                                    ? 'No puedes gestionar contenido mientras el curso está en revisión. Espera a que se complete la revisión o se soliciten cambios.'
+                                                    : 'No puedes gestionar contenido mientras el curso está publicado.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
