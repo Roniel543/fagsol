@@ -1087,3 +1087,111 @@ def request_course_review(request, course_id):
             'message': 'Error interno del servidor'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Sube y optimiza una imagen para un curso (thumbnail o banner). Requiere autenticación y rol admin o instructor',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['file', 'type'],
+        properties={
+            'file': openapi.Schema(
+                type=openapi.TYPE_FILE,
+                description='Archivo de imagen (JPEG, PNG, WebP). Máximo 5MB'
+            ),
+            'type': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                enum=['thumbnail', 'banner'],
+                description='Tipo de imagen: thumbnail (400x300px) o banner (1920x600px)'
+            ),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description='Imagen subida exitosamente',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': {
+                        'url': 'https://...',
+                        'width': 400,
+                        'height': 300,
+                        'size': 125000
+                    }
+                }
+            }
+        ),
+        400: openapi.Response(description='Error de validación'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo admin o instructor'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    security=[{'Bearer': []}],
+    tags=['Cursos']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
+def upload_course_image(request):
+    """
+    Sube y optimiza una imagen para un curso
+    POST /api/v1/courses/upload-image/
+    
+    Requiere autenticación y rol admin o instructor
+    """
+    try:
+        from infrastructure.services.image_upload_service import ImageUploadService
+        
+        # 1. Validar que se haya enviado un archivo
+        if 'file' not in request.FILES:
+            return Response({
+                'success': False,
+                'message': 'No se proporcionó ningún archivo'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        image_file = request.FILES['file']
+        
+        # 2. Validar tipo de imagen
+        image_type = request.data.get('type', '').lower()
+        if image_type not in ['thumbnail', 'banner']:
+            return Response({
+                'success': False,
+                'message': 'Tipo de imagen inválido. Debe ser "thumbnail" o "banner"'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 3. Subir y optimizar imagen
+        upload_service = ImageUploadService()
+        success, result, metadata = upload_service.upload_course_image(image_file, image_type)
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': result  # result contiene el mensaje de error
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 4. Convertir URL relativa a absoluta si es necesario
+        image_url = metadata.get('url', '')
+        if image_url and not image_url.startswith('http'):
+            # Si la URL es relativa, construir URL absoluta apuntando al backend
+            # build_absolute_uri() necesita que la URL no empiece con /
+            if image_url.startswith('/'):
+                # Construir URL absoluta manualmente
+                scheme = request.scheme
+                host = request.get_host()
+                image_url = f"{scheme}://{host}{image_url}"
+            else:
+                image_url = request.build_absolute_uri(image_url)
+            metadata['url'] = image_url
+        
+        # 5. Retornar respuesta exitosa
+        return Response({
+            'success': True,
+            'data': metadata
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en upload_course_image: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor al procesar la imagen'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

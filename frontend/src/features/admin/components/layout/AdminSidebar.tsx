@@ -7,6 +7,7 @@ import {
     LayoutDashboard,
     LogOut,
     Menu,
+    UserCheck,
     Users,
     X
 } from 'lucide-react';
@@ -38,6 +39,11 @@ const sidebarItems: SidebarItem[] = [
         href: '/admin/courses',
         icon: <BookOpen className="w-5 h-5" />,
     },
+    {
+        label: 'Solicitudes de Instructor',
+        href: '/admin/instructor-applications',
+        icon: <UserCheck className="w-5 h-5" />,
+    },
 ];
 
 export function AdminSidebar() {
@@ -56,6 +62,11 @@ export function AdminSidebar() {
         // (incluyendo módulos, lecciones, materiales, estudiantes dentro de cursos)
         if (href === '/admin/courses') {
             return pathname?.startsWith('/admin/courses');
+        }
+
+        // Para /admin/instructor-applications, activo si estás en esa ruta exacta
+        if (href === '/admin/instructor-applications') {
+            return pathname === '/admin/instructor-applications';
         }
 
         // Para otras rutas, verificar si la ruta actual comienza con el href

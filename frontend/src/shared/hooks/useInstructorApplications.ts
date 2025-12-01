@@ -2,16 +2,15 @@
  * Hooks para gestión de solicitudes de instructor
  */
 
-import useSWR from 'swr';
-import { useState } from 'react';
 import {
-    getInstructorApplications,
     approveInstructorApplication,
-    rejectInstructorApplication,
+    getInstructorApplications,
     InstructorApplicationsResponse,
-    ApplicationActionResponse,
     RejectApplicationRequest,
+    rejectInstructorApplication
 } from '@/shared/services/instructorApplications';
+import { useState } from 'react';
+import useSWR from 'swr';
 
 /**
  * Hook para obtener solicitudes de instructor

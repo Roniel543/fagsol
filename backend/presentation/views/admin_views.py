@@ -17,7 +17,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.db import models
 from apps.core.models import UserProfile
-from apps.users.permissions import IsAdmin, has_perm, get_user_role, ROLE_ADMIN
+from apps.users.permissions import IsAdmin, IsAdminOrInstructor, has_perm, get_user_role, ROLE_ADMIN, can_edit_course
 from infrastructure.services.instructor_approval_service import InstructorApprovalService
 from infrastructure.services.course_approval_service import CourseApprovalService
 from infrastructure.services.instructor_application_service import InstructorApplicationService
@@ -1139,6 +1139,7 @@ def list_instructor_applications(request):
                 'specialization': app.specialization,
                 'bio': app.bio,
                 'portfolio_url': app.portfolio_url,
+                'cv_file_url': request.build_absolute_uri(app.cv_file.url) if app.cv_file else None,
                 'motivation': app.motivation,
                 'status': app.status,
                 'status_display': app.get_status_display(),
@@ -1898,7 +1899,7 @@ def deactivate_user(request, user_id):
 
 @swagger_auto_schema(
     method='get',
-    operation_description='Lista todos los módulos de un curso. Solo accesible para administradores.',
+    operation_description='Lista todos los módulos de un curso. Accesible para administradores e instructores (instructores solo de sus propios cursos).',
     responses={
         200: openapi.Response(description='Lista de módulos'),
         404: openapi.Response(description='Curso no encontrado'),
@@ -1909,11 +1910,12 @@ def deactivate_user(request, user_id):
     tags=['Admin - Módulos']
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def list_course_modules(request, course_id):
     """
     Lista todos los módulos de un curso.
     GET /api/v1/admin/courses/{course_id}/modules/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Course, Module
@@ -1925,6 +1927,13 @@ def list_course_modules(request, course_id):
                 'success': False,
                 'message': 'Curso no encontrado'
             }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validar que el instructor solo pueda ver módulos de sus propios cursos
+        if not can_edit_course(request.user, course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para ver los módulos de este curso'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         modules = Module.objects.filter(course=course).order_by('order')
         
@@ -1959,7 +1968,7 @@ def list_course_modules(request, course_id):
 
 @swagger_auto_schema(
     method='post',
-    operation_description='Crea un nuevo módulo para un curso. Solo accesible para administradores.',
+    operation_description='Crea un nuevo módulo para un curso. Accesible para administradores e instructores (instructores solo de sus propios cursos).',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         required=['title', 'order'],
@@ -1983,11 +1992,12 @@ def list_course_modules(request, course_id):
     tags=['Admin - Módulos']
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def create_module(request, course_id):
     """
     Crea un nuevo módulo para un curso.
     POST /api/v1/admin/courses/{course_id}/modules/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Course, Module
@@ -2000,6 +2010,13 @@ def create_module(request, course_id):
                 'success': False,
                 'message': 'Curso no encontrado'
             }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validar que el instructor solo pueda crear módulos en sus propios cursos
+        if not can_edit_course(request.user, course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para crear módulos en este curso'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         title = request.data.get('title', '').strip()
         description = request.data.get('description', '').strip()
@@ -2052,7 +2069,7 @@ def create_module(request, course_id):
 
 @swagger_auto_schema(
     method='put',
-    operation_description='Actualiza un módulo existente. Solo accesible para administradores.',
+    operation_description='Actualiza un módulo existente. Accesible para administradores e instructores (instructores solo de sus propios cursos).',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -2074,11 +2091,12 @@ def create_module(request, course_id):
     tags=['Admin - Módulos']
 )
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def update_module(request, module_id):
     """
     Actualiza un módulo existente.
     PUT /api/v1/admin/modules/{module_id}/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Module
@@ -2091,6 +2109,13 @@ def update_module(request, module_id):
                 'success': False,
                 'message': 'Módulo no encontrado'
             }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validar que el instructor solo pueda editar módulos de sus propios cursos
+        if not can_edit_course(request.user, module.course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para editar este módulo'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         if 'title' in request.data:
             module.title = request.data.get('title', '').strip()
@@ -2151,11 +2176,12 @@ def update_module(request, module_id):
     tags=['Admin - Módulos']
 )
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def delete_module(request, module_id):
     """
     Elimina un módulo.
     DELETE /api/v1/admin/modules/{module_id}/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Module
@@ -2187,7 +2213,7 @@ def delete_module(request, module_id):
 
 @swagger_auto_schema(
     method='get',
-    operation_description='Lista todas las lecciones de un módulo. Solo accesible para administradores.',
+    operation_description='Lista todas las lecciones de un módulo. Accesible para administradores e instructores (instructores solo de sus propios cursos).',
     responses={
         200: openapi.Response(description='Lista de lecciones'),
         404: openapi.Response(description='Módulo no encontrado'),
@@ -2198,11 +2224,12 @@ def delete_module(request, module_id):
     tags=['Admin - Lecciones']
 )
 @api_view(['GET'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def list_module_lessons(request, module_id):
     """
     Lista todas las lecciones de un módulo.
     GET /api/v1/admin/modules/{module_id}/lessons/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Module, Lesson
@@ -2214,6 +2241,13 @@ def list_module_lessons(request, module_id):
                 'success': False,
                 'message': 'Módulo no encontrado'
             }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validar que el instructor solo pueda ver lecciones de sus propios cursos
+        if not can_edit_course(request.user, module.course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para ver las lecciones de este módulo'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         lessons = Lesson.objects.filter(module=module).order_by('order')
         
@@ -2249,7 +2283,7 @@ def list_module_lessons(request, module_id):
 
 @swagger_auto_schema(
     method='post',
-    operation_description='Crea una nueva lección para un módulo. Solo accesible para administradores.',
+    operation_description='Crea una nueva lección para un módulo. Accesible para administradores e instructores (instructores solo de sus propios cursos).',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         required=['title', 'lesson_type', 'order'],
@@ -2275,11 +2309,12 @@ def list_module_lessons(request, module_id):
     tags=['Admin - Lecciones']
 )
 @api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def create_lesson(request, module_id):
     """
     Crea una nueva lección para un módulo.
     POST /api/v1/admin/modules/{module_id}/lessons/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Module, Lesson
@@ -2291,6 +2326,13 @@ def create_lesson(request, module_id):
                 'success': False,
                 'message': 'Módulo no encontrado'
             }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validar que el instructor solo pueda crear lecciones en sus propios cursos
+        if not can_edit_course(request.user, module.course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para crear lecciones en este módulo'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         title = request.data.get('title', '').strip()
         description = request.data.get('description', '').strip()
@@ -2374,7 +2416,7 @@ def create_lesson(request, module_id):
 
 @swagger_auto_schema(
     method='put',
-    operation_description='Actualiza una lección existente. Solo accesible para administradores.',
+    operation_description='Actualiza una lección existente. Accesible para administradores e instructores (instructores solo de sus propios cursos).',
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
@@ -2398,11 +2440,12 @@ def create_lesson(request, module_id):
     tags=['Admin - Lecciones']
 )
 @api_view(['PUT'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def update_lesson(request, lesson_id):
     """
     Actualiza una lección existente.
     PUT /api/v1/admin/lessons/{lesson_id}/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Lesson
@@ -2414,6 +2457,13 @@ def update_lesson(request, lesson_id):
                 'success': False,
                 'message': 'Lección no encontrada'
             }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validar que el instructor solo pueda editar lecciones de sus propios cursos
+        if not can_edit_course(request.user, lesson.module.course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para editar esta lección'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         if 'title' in request.data:
             lesson.title = request.data.get('title', '').strip()
@@ -2496,7 +2546,7 @@ def update_lesson(request, lesson_id):
 
 @swagger_auto_schema(
     method='delete',
-    operation_description='Elimina una lección. Solo accesible para administradores.',
+    operation_description='Elimina una lección. Accesible para administradores e instructores (instructores solo de sus propios cursos).',
     responses={
         200: openapi.Response(description='Lección eliminada exitosamente'),
         404: openapi.Response(description='Lección no encontrada'),
@@ -2507,11 +2557,12 @@ def update_lesson(request, lesson_id):
     tags=['Admin - Lecciones']
 )
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def delete_lesson(request, lesson_id):
     """
     Elimina una lección.
     DELETE /api/v1/admin/lessons/{lesson_id}/
+    Permite acceso a admin e instructores (instructores solo de sus propios cursos)
     """
     try:
         from apps.courses.models import Lesson
@@ -2523,6 +2574,13 @@ def delete_lesson(request, lesson_id):
                 'success': False,
                 'message': 'Lección no encontrada'
             }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Validar que el instructor solo pueda eliminar lecciones de sus propios cursos
+        if not can_edit_course(request.user, lesson.module.course):
+            return Response({
+                'success': False,
+                'message': 'No tienes permiso para eliminar esta lección'
+            }, status=status.HTTP_403_FORBIDDEN)
         
         lesson.delete()
         

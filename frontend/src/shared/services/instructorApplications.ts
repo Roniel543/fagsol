@@ -18,6 +18,7 @@ export interface InstructorApplication {
     specialization?: string;
     bio?: string;
     portfolio_url?: string;
+    cv_file_url?: string | null;
     motivation: string;
     status: 'pending' | 'approved' | 'rejected';
     status_display: string;

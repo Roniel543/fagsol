@@ -240,6 +240,72 @@ export async function updateCourse(courseId: string, data: UpdateCourseRequest):
 }
 
 /**
+ * Interfaz para la respuesta de subida de imagen
+ */
+export interface UploadImageResponse {
+    success: boolean;
+    data?: {
+        url: string;
+        width: number;
+        height: number;
+        original_width: number;
+        original_height: number;
+        size: number;
+        original_size: number;
+        compression_ratio: number;
+        format: string;
+    };
+    message?: string;
+}
+
+/**
+ * Sube y optimiza una imagen para un curso
+ * Requiere autenticación y rol admin o instructor
+ */
+export async function uploadCourseImage(
+    file: File,
+    imageType: 'thumbnail' | 'banner'
+): Promise<UploadImageResponse> {
+    const { getAccessToken } = await import('@/shared/utils/tokenStorage');
+    const { API_CONFIG } = await import('@/shared/services/api');
+
+    const token = getAccessToken();
+    if (!token) {
+        throw new Error('No autenticado');
+    }
+
+    // Crear FormData
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', imageType);
+
+    // Hacer request con FormData (no JSON)
+    const response = await fetch(`${API_CONFIG.BASE_URL}/courses/upload-image/`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            // NO incluir Content-Type, el navegador lo hará automáticamente con el boundary
+        },
+        body: formData,
+    });
+
+    if (!response.ok) {
+        let errorMessage = `HTTP error! status: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.message) {
+                errorMessage = errorData.message;
+            }
+        } catch (e) {
+            // Si no se puede parsear JSON, usar el mensaje por defecto
+        }
+        throw new Error(errorMessage);
+    }
+
+    return await response.json();
+}
+
+/**
  * Elimina (archiva) un curso
  * Solo administradores pueden eliminar cursos
  */

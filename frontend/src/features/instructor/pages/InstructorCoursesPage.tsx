@@ -2,7 +2,7 @@
 
 import { Button, LoadingSpinner, ProtectedRoute } from '@/shared/components';
 import { useInstructorCourses } from '@/shared/hooks/useCourses';
-import { BookOpen, CheckCircle2, Clock, Edit, Eye, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, CheckCircle2, Clock, Edit, Eye, FileText, Plus, Search, Star, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -31,21 +31,27 @@ function InstructorCoursesPageContent() {
     }, [courses, statusFilter]);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-primary-black text-primary-white relative overflow-hidden">
+            {/* Elementos decorativos de fondo */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-20 right-10 w-72 h-72 bg-primary-orange/5 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl"></div>
+            </div>
+
             {/* Header */}
-            <header className="bg-white shadow">
+            <header className="relative bg-secondary-dark-gray/60 backdrop-blur-sm shadow-lg border-b border-primary-orange/20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center py-6">
                         <div>
-                            <h1 className="text-3xl font-bold text-gray-900">
+                            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
                                 Mis Cursos
                             </h1>
-                            <p className="text-gray-600 mt-1">Gestiona todos tus cursos desde aquí</p>
+                            <p className="text-secondary-light-gray font-medium mt-1">Gestiona todos tus cursos desde aquí</p>
                         </div>
                         <Link href="/instructor/courses/new">
-                            <Button variant="primary" size="sm">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Crear Nuevo Curso
+                            <Button variant="primary" size="lg" className="flex items-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
+                                <Plus className="w-5 h-5" />
+                                <span>Crear Nuevo Curso</span>
                             </Button>
                         </Link>
                     </div>
@@ -53,84 +59,86 @@ function InstructorCoursesPageContent() {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Búsqueda y Filtros */}
-                <div className="mb-6 space-y-4">
-                    {/* Barra de búsqueda */}
+                <div className="mb-8 space-y-6">
+                    {/* Barra de búsqueda mejorada */}
                     <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                            <Search className="w-5 h-5 text-secondary-light-gray" />
+                        </div>
                         <input
                             type="text"
                             placeholder="Buscar cursos por título..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-orange focus:border-transparent"
+                            className="w-full px-4 py-3 pl-12 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-primary-white placeholder-secondary-light-gray transition-all duration-300"
                         />
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </div>
                     </div>
 
-                    {/* Filtros por estado */}
-                    <div className="flex gap-2 flex-wrap">
+                    {/* Filtros por estado mejorados */}
+                    <div className="flex gap-3 flex-wrap">
                         <button
                             onClick={() => setStatusFilter('all')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${statusFilter === 'all'
-                                ? 'bg-primary-orange text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${statusFilter === 'all'
+                                ? 'bg-gradient-to-r from-primary-orange to-amber-500 text-white shadow-lg shadow-primary-orange/30'
+                                : 'bg-secondary-dark-gray/60 border border-primary-orange/20 text-secondary-light-gray hover:border-primary-orange/40 hover:bg-secondary-dark-gray/80'
                                 }`}
                         >
-                            Todos
+                            <span>Todos</span>
                         </button>
                         <button
                             onClick={() => setStatusFilter('published')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${statusFilter === 'published'
-                                ? 'bg-green-600 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${statusFilter === 'published'
+                                ? 'bg-green-500/20 border-2 border-green-500 text-green-300 shadow-lg shadow-green-500/20'
+                                : 'bg-secondary-dark-gray/60 border border-primary-orange/20 text-secondary-light-gray hover:border-green-500/40 hover:bg-secondary-dark-gray/80'
                                 }`}
                         >
-                            Publicados
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Publicados</span>
                         </button>
                         <button
                             onClick={() => setStatusFilter('draft')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${statusFilter === 'draft'
-                                ? 'bg-yellow-500 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${statusFilter === 'draft'
+                                ? 'bg-amber-500/20 border-2 border-amber-500 text-amber-300 shadow-lg shadow-amber-500/20'
+                                : 'bg-secondary-dark-gray/60 border border-primary-orange/20 text-secondary-light-gray hover:border-amber-500/40 hover:bg-secondary-dark-gray/80'
                                 }`}
                         >
-                            Borradores
+                            <FileText className="w-4 h-4" />
+                            <span>Borradores</span>
                         </button>
                         <button
                             onClick={() => setStatusFilter('pending_review')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${statusFilter === 'pending_review'
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${statusFilter === 'pending_review'
+                                ? 'bg-blue-500/20 border-2 border-blue-500 text-blue-300 shadow-lg shadow-blue-500/20'
+                                : 'bg-secondary-dark-gray/60 border border-primary-orange/20 text-secondary-light-gray hover:border-blue-500/40 hover:bg-secondary-dark-gray/80'
                                 }`}
                         >
-                            Pendientes
+                            <Clock className="w-4 h-4" />
+                            <span>Pendientes</span>
                         </button>
                         <button
                             onClick={() => setStatusFilter('needs_revision')}
-                            className={`px-4 py-2 rounded-lg font-medium transition-colors ${statusFilter === 'needs_revision'
-                                ? 'bg-orange-500 text-white'
-                                : 'bg-white text-gray-700 hover:bg-gray-100'
+                            className={`px-4 py-2.5 rounded-lg font-medium transition-all duration-300 flex items-center space-x-2 ${statusFilter === 'needs_revision'
+                                ? 'bg-orange-500/20 border-2 border-orange-500 text-orange-300 shadow-lg shadow-orange-500/20'
+                                : 'bg-secondary-dark-gray/60 border border-primary-orange/20 text-secondary-light-gray hover:border-orange-500/40 hover:bg-secondary-dark-gray/80'
                                 }`}
                         >
-                            Requiere Cambios
+                            <FileText className="w-4 h-4" />
+                            <span>Requiere Cambios</span>
                         </button>
                     </div>
                 </div>
 
                 {/* Lista de Cursos */}
                 {isLoading ? (
-                    <div className="bg-white rounded-lg shadow p-12 text-center">
+                    <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-xl shadow-lg p-12 text-center">
                         <LoadingSpinner size="lg" />
-                        <p className="mt-4 text-gray-600">Cargando cursos...</p>
+                        <p className="mt-4 text-secondary-light-gray font-medium">Cargando cursos...</p>
                     </div>
                 ) : isError ? (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-                        <p className="text-red-600 mb-4">
+                    <div className="relative bg-red-900/30 border border-red-500/30 rounded-xl p-6 text-center backdrop-blur-sm">
+                        <p className="text-red-300 mb-4 font-medium">
                             {error?.message || 'Error al cargar los cursos. Por favor, intenta nuevamente.'}
                         </p>
                         <Button variant="primary" onClick={() => mutate()}>
@@ -138,115 +146,154 @@ function InstructorCoursesPageContent() {
                         </Button>
                     </div>
                 ) : filteredCourses.length === 0 ? (
-                    <div className="bg-white rounded-lg shadow p-12 text-center">
-                        <BookOpen className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    <div className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-xl shadow-lg p-12 text-center">
+                        <div className="w-20 h-20 bg-gradient-to-br from-primary-orange/20 to-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <BookOpen className="w-10 h-10 text-primary-orange" />
+                        </div>
+                        <h3 className="text-2xl font-bold text-primary-white mb-2">
                             {searchQuery || statusFilter !== 'all'
                                 ? 'No se encontraron cursos'
                                 : 'No tienes cursos aún'}
                         </h3>
-                        <p className="text-gray-600 mb-6">
+                        <p className="text-secondary-light-gray mb-6 max-w-md mx-auto">
                             {searchQuery || statusFilter !== 'all'
                                 ? 'Intenta con otros filtros o crea un nuevo curso'
-                                : 'Comienza creando tu primer curso'}
+                                : 'Comienza creando tu primer curso y comparte tu conocimiento con el mundo'}
                         </p>
                         <Link href="/instructor/courses/new">
-                            <Button variant="primary">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Crear Mi Primer Curso
+                            <Button variant="primary" size="lg" className="flex items-center space-x-2 mx-auto">
+                                <Plus className="w-5 h-5" />
+                                <span>Crear Mi Primer Curso</span>
                             </Button>
                         </Link>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-6">
-                        {filteredCourses.map((course) => (
-                            <div
-                                key={course.id}
-                                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-6"
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-xl font-semibold text-gray-900">{course.title}</h3>
-                                            {(() => {
-                                                const courseStatus = (course as any).status;
-                                                return (
-                                                    <span
-                                                        className={`px-3 py-1 rounded-full text-xs font-medium ${courseStatus === 'published'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : courseStatus === 'draft'
-                                                                ? 'bg-yellow-100 text-yellow-800'
-                                                                : courseStatus === 'pending_review'
-                                                                    ? 'bg-blue-100 text-blue-800'
-                                                                    : courseStatus === 'needs_revision'
-                                                                        ? 'bg-orange-100 text-orange-800'
-                                                                        : courseStatus === 'archived'
-                                                                            ? 'bg-gray-100 text-gray-800'
-                                                                            : 'bg-gray-100 text-gray-800'
-                                                            }`}
-                                                    >
-                                                        {courseStatus === 'published'
-                                                            ? 'Publicado'
-                                                            : courseStatus === 'draft'
-                                                                ? 'Borrador'
-                                                                : courseStatus === 'pending_review'
-                                                                    ? 'Pendiente'
-                                                                    : courseStatus === 'needs_revision'
-                                                                        ? 'Requiere Cambios'
-                                                                        : courseStatus === 'archived'
-                                                                            ? 'Archivado'
-                                                                            : courseStatus || 'Desconocido'}
+                        {filteredCourses.map((course) => {
+                            const courseStatus = (course as any).status;
+                            const enrollments = (course as any).enrollments || 0;
+                            const rating = course.rating || 0.0;
+
+                            // Colores y estilos según el estado
+                            const statusConfig = {
+                                published: {
+                                    bg: 'bg-green-500/20',
+                                    border: 'border-green-500/40',
+                                    text: 'text-green-300',
+                                    icon: <CheckCircle2 className="w-3 h-3" />,
+                                    label: 'Publicado'
+                                },
+                                draft: {
+                                    bg: 'bg-amber-500/20',
+                                    border: 'border-amber-500/40',
+                                    text: 'text-amber-300',
+                                    icon: <FileText className="w-3 h-3" />,
+                                    label: 'Borrador'
+                                },
+                                pending_review: {
+                                    bg: 'bg-blue-500/20',
+                                    border: 'border-blue-500/40',
+                                    text: 'text-blue-300',
+                                    icon: <Clock className="w-3 h-3" />,
+                                    label: 'Pendiente'
+                                },
+                                needs_revision: {
+                                    bg: 'bg-orange-500/20',
+                                    border: 'border-orange-500/40',
+                                    text: 'text-orange-300',
+                                    icon: <FileText className="w-3 h-3" />,
+                                    label: 'Requiere Cambios'
+                                },
+                                archived: {
+                                    bg: 'bg-gray-500/20',
+                                    border: 'border-gray-500/40',
+                                    text: 'text-gray-300',
+                                    icon: <FileText className="w-3 h-3" />,
+                                    label: 'Archivado'
+                                }
+                            };
+
+                            const status = statusConfig[courseStatus as keyof typeof statusConfig] || statusConfig.draft;
+
+                            return (
+                                <div
+                                    key={course.id}
+                                    className="relative bg-secondary-dark-gray/60 backdrop-blur-sm border border-primary-orange/20 rounded-xl shadow-lg hover:shadow-primary-orange/30 hover:border-primary-orange/50 transition-all duration-300 overflow-hidden group"
+                                >
+                                    {/* Efecto de brillo decorativo */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-primary-orange/5 rounded-full blur-3xl group-hover:bg-primary-orange/10 transition-all duration-300"></div>
+
+                                    <div className="relative p-6">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-3 mb-3 flex-wrap">
+                                                    <h3 className="text-xl font-bold text-primary-white group-hover:text-primary-orange transition-colors duration-300 truncate">
+                                                        {course.title}
+                                                    </h3>
+                                                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border ${status.bg} ${status.border} ${status.text}`}>
+                                                        {status.icon}
+                                                        <span>{status.label}</span>
                                                     </span>
-                                                );
-                                            })()}
+                                                </div>
+                                                <p className="text-secondary-light-gray mb-4 line-clamp-2 text-sm">
+                                                    {course.description || course.subtitle || 'Sin descripción'}
+                                                </p>
+                                                <div className="flex items-center gap-6 text-sm">
+                                                    <span className="flex items-center gap-2 text-secondary-light-gray">
+                                                        <Users className="w-4 h-4 text-primary-orange" />
+                                                        <span className="font-medium">{enrollments} {enrollments === 1 ? 'inscripción' : 'inscripciones'}</span>
+                                                    </span>
+                                                    <span className="flex items-center gap-2 text-secondary-light-gray">
+                                                        <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                                                        <span className="font-medium">{rating.toFixed(1)}</span>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2 flex-shrink-0">
+                                                <Link
+                                                    href={`/academy/course/${course.slug}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    title="Ver curso en la academia"
+                                                >
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        className="hover:bg-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Link
+                                                    href={`/instructor/courses/${course.id}/edit`}
+                                                    title="Editar curso"
+                                                >
+                                                    <Button
+                                                        variant="secondary"
+                                                        size="sm"
+                                                        className="hover:bg-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </Button>
+                                                </Link>
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        if (confirm('¿Estás seguro de que deseas eliminar este curso?')) {
+                                                            // TODO: Implementar eliminación
+                                                        }
+                                                    }}
+                                                    className="hover:scale-110 transition-transform duration-300"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <p className="text-gray-600 mb-4 line-clamp-2">{course.description}</p>
-                                        <div className="flex items-center gap-6 text-sm text-gray-500">
-                                            <span className="flex items-center gap-1">
-                                                <Clock className="w-4 h-4" />
-                                                {(course as any).enrollments || 0} inscripciones
-                                            </span>
-                                            <span className="flex items-center gap-1">
-                                                <CheckCircle2 className="w-4 h-4" />
-                                                {course.rating || 0.0} ⭐
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 ml-4">
-                                        <Link
-                                            href={`/academy/course/${course.slug}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            title="Ver curso en la academia"
-                                        >
-                                            <Button variant="secondary" size="sm">
-                                                <Eye className="w-4 h-4" />
-                                            </Button>
-                                        </Link>
-                                        <Link
-                                            href={`/instructor/courses/${course.id}/edit`}
-                                            title="Editar curso"
-                                        >
-                                            <Button variant="secondary" size="sm">
-                                                <Edit className="w-4 h-4" />
-                                            </Button>
-                                        </Link>
-                                        <Button
-                                            variant="danger"
-                                            size="sm"
-                                            onClick={() => {
-                                                // TODO: Implementar eliminación
-                                                if (confirm('¿Estás seguro de que deseas eliminar este curso?')) {
-                                                    // Llamar a deleteCourse
-                                                }
-                                            }}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
                                     </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 )}
             </main>

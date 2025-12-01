@@ -1,7 +1,8 @@
 'use client';
 
-import { Button, Card, ProtectedRoute } from '@/shared/components';
+import { Button, ProtectedRoute } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
+import { ArrowLeft, BookOpen, Layers } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { CourseForm } from '../components/CourseForm';
@@ -23,34 +24,58 @@ function EditCoursePageContent() {
 
     if (!courseId) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <Card className="p-8 text-center">
-                    <p className="text-red-600">ID de curso no válido</p>
-                    <Link href="/admin/courses">
-                        <Button variant="primary" className="mt-4">
-                            Volver a Cursos
+            <div className="min-h-screen bg-primary-black flex items-center justify-center p-4">
+                <div className="bg-secondary-dark-gray/60 backdrop-blur-sm border border-red-500/30 rounded-xl shadow-lg p-8 text-center max-w-md w-full">
+                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <BookOpen className="w-8 h-8 text-red-400" />
+                    </div>
+                    <h3 className="text-xl font-bold text-primary-white mb-2">ID de curso no válido</h3>
+                    <p className="text-secondary-light-gray mb-6">No se pudo encontrar el curso que intentas editar.</p>
+                    <Link href={user?.role === 'instructor' ? '/instructor/courses' : '/admin/courses'}>
+                        <Button variant="primary" className="flex items-center space-x-2 mx-auto">
+                            <ArrowLeft className="w-4 h-4" />
+                            <span>Volver a Cursos</span>
                         </Button>
                     </Link>
-                </Card>
+                </div>
             </div>
         );
     }
 
+    const isInstructor = user?.role === 'instructor';
+
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-primary-black text-primary-white relative overflow-hidden">
+            {/* Elementos decorativos de fondo */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-20 right-10 w-72 h-72 bg-primary-orange/5 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl"></div>
+            </div>
+
             {/* Header */}
-            <header className="bg-white shadow">
+            <header className="relative bg-secondary-dark-gray/60 backdrop-blur-sm shadow-lg border-b border-primary-orange/20">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center py-6">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">
-                                Editar Curso
-                            </h1>
-                            <p className="text-gray-600">Modifica la información del curso</p>
+                        <div className="flex items-center space-x-4">
+                            <Link
+                                href={isInstructor ? '/instructor/courses' : '/admin/courses'}
+                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary-dark-gray/60 hover:bg-secondary-dark-gray border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 group"
+                            >
+                                <ArrowLeft className="w-5 h-5 text-primary-orange group-hover:text-amber-400" />
+                            </Link>
+                            <div>
+                                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
+                                    Editar Curso
+                                </h1>
+                                <p className="text-secondary-light-gray font-medium mt-1">
+                                    Modifica la información del curso
+                                </p>
+                            </div>
                         </div>
-                        <Link href={user?.role === 'instructor' ? '/instructor/courses' : '/admin/courses'}>
-                            <Button variant="secondary" size="sm">
-                                Volver a Cursos
+                        <Link href={isInstructor ? '/instructor/courses' : '/admin/courses'}>
+                            <Button variant="secondary" size="lg" className="flex items-center space-x-2">
+                                <ArrowLeft className="w-4 h-4" />
+                                <span>Volver a Cursos</span>
                             </Button>
                         </Link>
                     </div>
@@ -58,11 +83,57 @@ function EditCoursePageContent() {
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <div className="bg-white border border-gray-200 rounded-xl shadow-lg p-8">
-                        <CourseForm courseId={courseId} onSuccess={handleSuccess} />
+            <main className="relative max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Columna principal del formulario */}
+                    <div className="lg:col-span-2">
+                        <div className="bg-secondary-dark-gray/60 border border-primary-orange/20 rounded-xl shadow-lg p-8 backdrop-blur-sm">
+                            <CourseForm courseId={courseId} onSuccess={handleSuccess} />
+                        </div>
                     </div>
+
+                    {/* Sidebar de información (solo para instructores) */}
+                    {isInstructor && (
+                        <div className="lg:col-span-1">
+                            <div className="bg-secondary-dark-gray/60 border border-primary-orange/20 rounded-xl shadow-lg p-6 backdrop-blur-sm space-y-6 sticky top-8">
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-primary-orange to-amber-500 rounded-lg flex items-center justify-center shadow-lg">
+                                        <BookOpen className="w-5 h-5 text-white" />
+                                    </div>
+                                    <h2 className="text-xl font-bold text-primary-white">Información del Curso</h2>
+                                </div>
+
+                                <div className="space-y-4 text-sm">
+                                    <div className="p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg">
+                                        <p className="text-secondary-light-gray mb-2">Estado Actual</p>
+                                        <p className="text-primary-white font-semibold">
+                                            El curso se guardará con su estado actual. Puedes solicitar revisión cuando esté listo.
+                                        </p>
+                                    </div>
+
+                                    <div className="p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg">
+                                        <p className="text-secondary-light-gray mb-2">Después de Editar</p>
+                                        <p className="text-primary-white font-semibold">
+                                            Una vez guardes los cambios, podrás agregar módulos y lecciones desde aquí.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Botón para gestionar módulos */}
+                                <div className="pt-4 border-t border-primary-orange/20">
+                                    <Link href={`/instructor/courses/${courseId}/modules`}>
+                                        <Button variant="primary" size="lg" className="w-full flex items-center justify-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
+                                            <Layers className="w-5 h-5" />
+                                            <span>Gestionar Módulos y Lecciones</span>
+                                        </Button>
+                                    </Link>
+                                    <p className="text-xs text-secondary-light-gray mt-2 text-center">
+                                        Agrega contenido a tu curso antes de solicitar revisión
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>

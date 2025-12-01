@@ -6,6 +6,7 @@ export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
 export { CoursePlaceholder } from './CoursePlaceholder';
 export { default as Footer } from './Footer';
 export { default as Header } from './Header';
+export { ImageUploader } from './ImageUploader';
 export { MiniCart } from './MiniCart';
 export { ProtectedRoute } from './ProtectedRoute';
 export { SafeHTML } from './SafeHTML';
@@ -100,8 +101,8 @@ export function Input({
     const inputClasses = isLight
         ? `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'
         } placeholder-gray-400 text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`
-        : `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-        } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`;
+        : `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-red-500/50' : 'border-primary-orange/20'
+        } placeholder-secondary-light-gray text-primary-white bg-primary-black/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm backdrop-blur-sm transition-all duration-300`;
 
     return (
         <div className={className}>
@@ -122,7 +123,7 @@ export function Input({
                 className={inputClasses}
             />
             {error && (
-                <p className="mt-1 text-sm text-red-600">{error}</p>
+                <p className={`mt-1 text-sm ${isLight ? 'text-red-600' : 'text-red-400'}`}>{error}</p>
             )}
         </div>
     );
@@ -242,8 +243,8 @@ export function Select({
     const selectClasses = isLight
         ? `block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'
         } text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
-        : `block w-full px-4 py-3 border ${error ? 'border-status-error' : 'border-secondary-medium-gray'
-        } placeholder-secondary-light-gray text-primary-white bg-secondary-dark-gray rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
+        : `block w-full px-4 py-3 border ${error ? 'border-red-500/50' : 'border-primary-orange/20'
+        } placeholder-secondary-light-gray text-primary-white bg-primary-black/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm backdrop-blur-sm transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
 
     return (
         <div className={className}>
@@ -269,7 +270,7 @@ export function Select({
                 ))}
             </select>
             {error && (
-                <p className="mt-1 text-sm text-red-600">{error}</p>
+                <p className={`mt-1 text-sm ${isLight ? 'text-red-600' : 'text-red-400'}`}>{error}</p>
             )}
         </div>
     );

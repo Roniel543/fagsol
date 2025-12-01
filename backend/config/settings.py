@@ -347,6 +347,15 @@ AWS_S3_VERIFY = True
 AWS_QUERYSTRING_EXPIRE = 3600
 
 # ==================================
+# AZURE BLOB STORAGE CONFIGURATION (Para imágenes de cursos)
+# ==================================
+
+USE_AZURE_STORAGE = config('USE_AZURE_STORAGE', default=False, cast=bool)
+AZURE_STORAGE_ACCOUNT_NAME = config('AZURE_STORAGE_ACCOUNT_NAME', default='')
+AZURE_STORAGE_ACCOUNT_KEY = config('AZURE_STORAGE_ACCOUNT_KEY', default='')
+AZURE_STORAGE_CONTAINER_NAME = config('AZURE_STORAGE_CONTAINER_NAME', default='fagsol-media')
+
+# ==================================
 # OPENAPI/SWAGGER CONFIGURATION
 # ==================================
 

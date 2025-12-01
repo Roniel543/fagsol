@@ -105,26 +105,57 @@ const nextConfig = {
 
   // Headers de seguridad
   async headers() {
+    // Obtener URL del backend desde variables de entorno
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+    const backendBaseUrl = apiUrl.replace('/api/v1', ''); // Extraer base URL sin /api/v1
+
+    // Construir directiva img-src dinámicamente
+    const imgSrcDirectives = [
+      "'self'",
+      "data:",
+      "https:",
+      "blob:",
+      "https://images.unsplash.com",
+      "https://*.unsplash.com",
+      "https://*.blob.core.windows.net", // Azure Blob Storage
+    ];
+
+    // En desarrollo, agregar URLs HTTP del backend local
+    if (process.env.NODE_ENV === 'development' || backendBaseUrl.includes('localhost') || backendBaseUrl.includes('127.0.0.1')) {
+      imgSrcDirectives.push("http://localhost:8000", "http://127.0.0.1:8000");
+    }
+
+    // En producción, agregar la URL del backend si es HTTPS
+    if (process.env.NODE_ENV === 'production' && backendBaseUrl.startsWith('https://')) {
+      imgSrcDirectives.push(backendBaseUrl);
+    }
+
+    const cspDirectives = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://sdk.mercadopago.com https://*.mercadopago.com https://http2.mlstatic.com https://*.mlstatic.com", // 'unsafe-eval' necesario para Next.js en desarrollo, Mercado Pago SDK y Bricks
+      "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' necesario para Tailwind
+      `img-src ${imgSrcDirectives.join(' ')}`, // Permitir imágenes del backend y Azure Blob Storage
+      "font-src 'self' data:",
+      "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://http2.mlstatic.com https://*.mlstatic.com https://api.mercadolibre.com", // Mercado Pago Bricks necesita mlstatic.com para assets
+      "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://player.vimeo.com ",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ];
+
+    // Solo agregar upgrade-insecure-requests en producción (no en desarrollo con localhost)
+    if (process.env.NODE_ENV === 'production') {
+      cspDirectives.push("upgrade-insecure-requests");
+    }
+
     return [
       {
         source: '/:path*',
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://sdk.mercadopago.com https://*.mercadopago.com https://http2.mlstatic.com https://*.mlstatic.com", // 'unsafe-eval' necesario para Next.js en desarrollo, Mercado Pago SDK y Bricks
-              "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' necesario para Tailwind
-              "img-src 'self' data: https: blob: https://images.unsplash.com https://*.unsplash.com",
-              "font-src 'self' data:",
-              "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://http2.mlstatic.com https://*.mlstatic.com https://api.mercadolibre.com", // Mercado Pago Bricks necesita mlstatic.com para assets
-              "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://player.vimeo.com ",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              "upgrade-insecure-requests",
-            ].join('; '),
+            value: cspDirectives.join('; '),
           },
           {
             key: 'X-Content-Type-Options',

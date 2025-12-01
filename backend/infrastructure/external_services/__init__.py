@@ -392,8 +392,14 @@ class LocalFileStorageService(FileStorageService):
             with open(full_path, 'wb') as f:
                 f.write(file_content)
             
-            # Retornar URL
-            return f"{settings.MEDIA_URL}{file_path}"
+            # Retornar URL relativa (se convertirá a absoluta en el endpoint)
+            # Asegurar que MEDIA_URL tenga el / inicial
+            media_url = settings.MEDIA_URL
+            if not media_url.startswith('/'):
+                media_url = '/' + media_url
+            if not media_url.endswith('/'):
+                media_url = media_url + '/'
+            return f"{media_url}{file_path}"
             
         except Exception as e:
             raise Exception(f"Error al subir archivo: {str(e)}")
@@ -427,3 +433,22 @@ class LocalFileStorageService(FileStorageService):
         """
         from django.conf import settings
         return f"{settings.MEDIA_URL}{file_path}"
+
+
+# Importar AzureBlobStorageService si está disponible
+try:
+    from .azure_storage import AzureBlobStorageService
+    __all__ = [
+        'MercadoPagoPaymentGateway',
+        'DjangoEmailService',
+        'DjangoNotificationService',
+        'LocalFileStorageService',
+        'AzureBlobStorageService',
+    ]
+except ImportError:
+    __all__ = [
+        'MercadoPagoPaymentGateway',
+        'DjangoEmailService',
+        'DjangoNotificationService',
+        'LocalFileStorageService',
+    ]

@@ -1,11 +1,11 @@
 'use client';
 
-import { Button, ProtectedRoute, Modal } from '@/shared/components';
+import { Button, Modal, ProtectedRoute } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast';
-import { useInstructorApplications, useApproveInstructorApplication, useRejectInstructorApplication } from '@/shared/hooks/useInstructorApplications';
+import { useApproveInstructorApplication, useInstructorApplications, useRejectInstructorApplication } from '@/shared/hooks/useInstructorApplications';
+import { Award, Briefcase, CheckCircle2, Clock, Download, ExternalLink, FileText, GraduationCap, UserCheck, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
-import { CheckCircle2, XCircle, Clock, ExternalLink, FileText, AlertCircle, UserCheck } from 'lucide-react';
 
 function InstructorApplicationsAdminPageContent() {
     const [statusFilter, setStatusFilter] = useState<'pending' | 'approved' | 'rejected' | undefined>(undefined);
@@ -267,13 +267,35 @@ function InstructorApplicationsAdminPageContent() {
                                                     </span>
                                                 </div>
                                                 <div className="flex-1">
-                                                    <div className="flex items-center space-x-3">
+                                                    <div className="flex items-center space-x-3 flex-wrap">
                                                         <h3 className="text-lg font-semibold text-gray-900">
                                                             {application.user.first_name} {application.user.last_name}
                                                         </h3>
                                                         {getStatusBadge(application.status)}
                                                     </div>
                                                     <p className="text-sm text-gray-500 mt-1">{application.user.email}</p>
+                                                    
+                                                    {/* Información clave siempre visible */}
+                                                    <div className="mt-3 flex flex-wrap gap-4 text-sm">
+                                                        {application.professional_title && (
+                                                            <div className="flex items-center gap-1.5 text-gray-600">
+                                                                <GraduationCap className="w-4 h-4 text-primary-orange" />
+                                                                <span className="font-medium">{application.professional_title}</span>
+                                                            </div>
+                                                        )}
+                                                        {application.experience_years > 0 && (
+                                                            <div className="flex items-center gap-1.5 text-gray-600">
+                                                                <Briefcase className="w-4 h-4 text-primary-orange" />
+                                                                <span>{application.experience_years} {application.experience_years === 1 ? 'año' : 'años'} de experiencia</span>
+                                                            </div>
+                                                        )}
+                                                        {application.specialization && (
+                                                            <div className="flex items-center gap-1.5 text-gray-600">
+                                                                <Award className="w-4 h-4 text-primary-orange" />
+                                                                <span>{application.specialization}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
 
@@ -311,10 +333,25 @@ function InstructorApplicationsAdminPageContent() {
                                                                 href={application.portfolio_url}
                                                                 target="_blank"
                                                                 rel="noopener noreferrer"
-                                                                className="text-primary-orange hover:underline inline-flex items-center gap-1"
+                                                                className="text-primary-orange hover:underline inline-flex items-center gap-1 font-medium"
                                                             >
-                                                                {application.portfolio_url}
+                                                                Ver Portfolio
                                                                 <ExternalLink className="w-3 h-3" />
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                    {application.cv_file_url && (
+                                                        <div>
+                                                            <span className="font-medium text-gray-700">CV:</span>{' '}
+                                                            <a
+                                                                href={application.cv_file_url}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                download
+                                                                className="text-primary-orange hover:underline inline-flex items-center gap-1 font-medium"
+                                                            >
+                                                                <Download className="w-3 h-3" />
+                                                                Descargar CV (PDF)
                                                             </a>
                                                         </div>
                                                     )}
@@ -339,8 +376,27 @@ function InstructorApplicationsAdminPageContent() {
                                                             <p className="mt-1 text-red-600">{application.rejection_reason}</p>
                                                         </div>
                                                     )}
-                                                    <div className="text-xs text-gray-500">
-                                                        Solicitud creada: {new Date(application.created_at).toLocaleString('es-ES')}
+                                                    <div className="text-xs text-gray-500 space-y-1">
+                                                        <div>
+                                                            <span className="font-medium">Creada:</span> {new Date(application.created_at).toLocaleString('es-ES', {
+                                                                year: 'numeric',
+                                                                month: 'long',
+                                                                day: 'numeric',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </div>
+                                                        {application.reviewed_at && (
+                                                            <div>
+                                                                <span className="font-medium">Revisada:</span> {new Date(application.reviewed_at).toLocaleString('es-ES', {
+                                                                    year: 'numeric',
+                                                                    month: 'long',
+                                                                    day: 'numeric',
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit'
+                                                                })}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}

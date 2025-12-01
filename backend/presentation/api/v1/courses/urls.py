@@ -12,7 +12,8 @@ from presentation.views.course_views import (
     update_course,
     delete_course,
     request_course_review,
-    list_instructor_courses
+    list_instructor_courses,
+    upload_course_image
 )
 
 urlpatterns = [
@@ -23,6 +24,9 @@ urlpatterns = [
     
     # Rutas con slug
     path('slug/<str:slug>/', get_course_by_slug, name='get_course_by_slug'),
+    
+    # Subida de imágenes (debe ir antes de rutas con parámetros)
+    path('upload-image/', upload_course_image, name='upload_course_image'),  # POST /api/v1/courses/upload-image/
     
     # Rutas con course_id (deben ir al final para evitar conflictos)
     path('<str:course_id>/', get_course, name='get_course'),  # GET /api/v1/courses/{id}/
