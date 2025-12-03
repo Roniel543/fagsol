@@ -50,10 +50,8 @@ function DashboardContentInner() {
             <DashboardHeader onLogout={logout} />
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    {renderDashboard()}
-                </div>
+            <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6">
+                {renderDashboard()}
             </main>
         </div>
     );

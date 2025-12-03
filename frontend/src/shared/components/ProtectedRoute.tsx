@@ -38,12 +38,12 @@ export function ProtectedRoute({
     redirectTo = '/auth/login',
     fallbackRoute = '/dashboard',
 }: ProtectedRouteProps) {
-    const { user, isAuthenticated, loading } = useAuth();
+    const { user, isAuthenticated, loadingUser } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
         // Esperar a que termine de cargar la autenticación
-        if (loading) {
+        if (loadingUser) {
             return;
         }
 
@@ -60,10 +60,10 @@ export function ProtectedRoute({
                 return;
             }
         }
-    }, [isAuthenticated, user, loading, allowedRoles, redirectTo, fallbackRoute, router]);
+    }, [isAuthenticated, user, loadingUser, allowedRoles, redirectTo, fallbackRoute, router]);
 
     // Mostrar loading mientras se verifica la autenticación
-    if (loading) {
+    if (loadingUser) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50">
                 <div className="text-center">

@@ -5,7 +5,7 @@ Maneja la lógica de negocio para estadísticas del dashboard según rol
 
 import logging
 from typing import Dict, Optional, Tuple
-from django.db.models import Count, Sum, Avg, Q, DecimalField
+from django.db.models import Count, Sum, Avg, Q, DecimalField, Min
 from django.db.models.functions import TruncMonth, TruncDay
 from django.utils import timezone
 from datetime import timedelta
@@ -334,6 +334,73 @@ class DashboardService:
             
         except Exception as e:
             logger.error(f"Error al obtener estadísticas de estudiante para usuario {user.id}: {str(e)}", exc_info=True)
+            return False, None, f"Error al obtener estadísticas: {str(e)}"
+    
+    def get_public_stats(self) -> Tuple[bool, Optional[Dict], str]:
+        """
+        Obtiene estadísticas públicas para mostrar en la página de inicio
+        No requiere autenticación - solo datos básicos y seguros
+        
+        Returns:
+            Tuple[success, stats_dict, error_message]
+        """
+        try:
+            # Estadísticas de estudiantes (usuarios activos con rol student)
+            total_students = UserProfile.objects.filter(role='student', user__is_active=True).count()
+            
+            # Cursos publicados
+            published_courses = Course.objects.filter(status='published', is_active=True).count()
+            
+            # Estadísticas de instructores (para TeacherSection)
+            # Instructores activos (con user activo)
+            active_instructors = UserProfile.objects.filter(role='instructor', user__is_active=True).count()
+            
+            # Cursos creados por instructores (solo publicados y activos)
+            # Incluir cursos donde created_by es un instructor O provider es 'fagsol'
+            instructor_courses_queryset = Course.objects.filter(
+                status='published',
+                is_active=True
+            ).filter(
+                Q(created_by__profile__role='instructor') | Q(provider='fagsol')
+            )
+            
+            instructor_courses_count = instructor_courses_queryset.count()
+            
+            # Calificación promedio de cursos de instructores (solo publicados)
+            avg_rating = instructor_courses_queryset.aggregate(
+                avg=Avg('rating')
+            )['avg'] or 0.00
+            
+            # Años de experiencia (calculado desde la fecha de creación del primer curso o usuario)
+            # Usar la fecha más antigua entre cursos o usuarios como referencia
+            first_course_date = Course.objects.aggregate(Min('created_at'))['created_at__min']
+            first_user_date = User.objects.filter(is_active=True).aggregate(Min('date_joined'))['date_joined__min']
+            
+            # Calcular años de experiencia desde la fecha más antigua
+            years_experience = 10  # Valor por defecto
+            if first_course_date or first_user_date:
+                from datetime import datetime
+                reference_date = first_course_date if first_course_date else first_user_date
+                if reference_date:
+                    years_experience = max(10, (timezone.now() - reference_date).days // 365)
+            
+            stats = {
+                'students': total_students,
+                'courses': published_courses,
+                'years_experience': years_experience,
+                # Estadísticas de instructores
+                'instructors': {
+                    'active': active_instructors,
+                    'courses_created': instructor_courses_count,
+                    'average_rating': float(avg_rating),
+                },
+            }
+            
+            logger.info(f"Estadísticas públicas obtenidas: {stats}")
+            return True, stats, ""
+            
+        except Exception as e:
+            logger.error(f"Error al obtener estadísticas públicas: {str(e)}")
             return False, None, f"Error al obtener estadísticas: {str(e)}"
     
     def get_dashboard_stats(self, user) -> Tuple[bool, Optional[Dict], str]:

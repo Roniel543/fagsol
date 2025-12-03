@@ -1,9 +1,13 @@
 'use client';
 
-import { DollarSign, FileText, Users, Headphones } from 'lucide-react';
+import { DollarSign, FileText, Users, Headphones, Star } from 'lucide-react';
 import Link from 'next/link';
+import { usePublicStats } from '@/shared/hooks/usePublicStats';
+import { AnimatedCounter } from '@/shared/components';
 
 export function TeacherSection() {
+    // Obtener estadísticas reales del backend
+    const { stats, isLoading } = usePublicStats();
     const benefits = [
         {
             icon: <DollarSign className="w-6 h-6" />,
@@ -77,31 +81,68 @@ export function TeacherSection() {
                         </Link>
                     </div>
 
-                    {/* Right Content - Stats */}
+                    {/* Right Content - Stats con datos reales */}
                     <div className="relative">
                         <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 border border-zinc-800 rounded-2xl p-8">
-                            <div className="space-y-8">
-                                <div className="text-center">
-                                    <div className="text-5xl font-bold text-primary-orange mb-2">
-                                        +500
+                            {isLoading ? (
+                                <div className="space-y-8 animate-pulse">
+                                    <div className="text-center">
+                                        <div className="h-16 bg-zinc-800 rounded mb-2"></div>
+                                        <div className="h-4 bg-zinc-800 rounded w-32 mx-auto"></div>
                                     </div>
-                                    <p className="text-gray-400">Estudiantes Activos</p>
-                                </div>
-                                <div className="border-t border-zinc-800"></div>
-                                <div className="text-center">
-                                    <div className="text-5xl font-bold text-primary-orange mb-2">
-                                        50+
+                                    <div className="border-t border-zinc-800"></div>
+                                    <div className="text-center">
+                                        <div className="h-16 bg-zinc-800 rounded mb-2"></div>
+                                        <div className="h-4 bg-zinc-800 rounded w-32 mx-auto"></div>
                                     </div>
-                                    <p className="text-gray-400">Cursos Disponibles</p>
-                                </div>
-                                <div className="border-t border-zinc-800"></div>
-                                <div className="text-center">
-                                    <div className="text-5xl font-bold text-primary-orange mb-2">
-                                        4.8★
+                                    <div className="border-t border-zinc-800"></div>
+                                    <div className="text-center">
+                                        <div className="h-16 bg-zinc-800 rounded mb-2"></div>
+                                        <div className="h-4 bg-zinc-800 rounded w-32 mx-auto"></div>
                                     </div>
-                                    <p className="text-gray-400">Calificación Promedio</p>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="space-y-8">
+                                    {/* Instructores Activos */}
+                                    <div className="text-center">
+                                        <div className="text-5xl font-bold text-primary-orange mb-2">
+                                            {stats.instructors.active > 0 ? (
+                                                <span>+<AnimatedCounter end={stats.instructors.active} duration={2000} /></span>
+                                            ) : (
+                                                <span className="animate-pulse">---</span>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-400">Instructores Activos</p>
+                                    </div>
+                                    <div className="border-t border-zinc-800"></div>
+                                    {/* Cursos Creados por Instructores */}
+                                    <div className="text-center">
+                                        <div className="text-5xl font-bold text-primary-orange mb-2">
+                                            {stats.instructors.courses_created > 0 ? (
+                                                <span><AnimatedCounter end={stats.instructors.courses_created} duration={2000} />+</span>
+                                            ) : (
+                                                <span className="animate-pulse">---</span>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-400">Cursos Creados</p>
+                                    </div>
+                                    <div className="border-t border-zinc-800"></div>
+                                    {/* Calificación Promedio */}
+                                    <div className="text-center">
+                                        <div className="flex items-center justify-center gap-2 text-5xl font-bold text-primary-orange mb-2">
+                                            {stats.instructors.average_rating > 0 ? (
+                                                <>
+                                                    <Star className="w-8 h-8 fill-primary-orange text-primary-orange" />
+                                                    <span>{stats.instructors.average_rating.toFixed(1)}</span>
+                                                </>
+                                            ) : (
+                                                <span className="animate-pulse">---</span>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-400">Calificación Promedio</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         {/* Decorative element */}
                         <div className="absolute -z-10 top-4 right-4 w-full h-full bg-primary-orange/5 rounded-2xl"></div>

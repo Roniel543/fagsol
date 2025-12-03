@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 export function InstructorDashboard() {
     const router = useRouter();
     const { instructorStats, isLoading, isError } = useDashboard();
-    const { loading: authLoading } = useAuth();
+    const { loadingUser: authLoading } = useAuth();
 
     // Mostrar loading mientras se verifica la autenticación o se cargan las estadísticas
     if (authLoading || isLoading) {

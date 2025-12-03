@@ -4,6 +4,7 @@ import { authAPI } from '@/shared/services/api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '@/shared/types';
 import {
     clearTokens,
+    getUserData,
     migrateTokensFromLocalStorage,
     setTokens,
     setUserData
@@ -13,7 +14,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 interface AuthContextType {
     user: User | null;
-    loading: boolean;
+    loadingUser: boolean;
     login: (credentials: LoginRequest) => Promise<AuthResponse>;
     register: (userData: RegisterRequest) => Promise<AuthResponse>;
     logout: () => Promise<void>;
@@ -22,24 +23,67 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+
+function loadInitialUserSnapshot(): User | null {
+    if (typeof window === 'undefined') return null;
+    
+    try {
+        // Migrar tokens de localStorage a sessionStorage (compatibilidad)
+        migrateTokensFromLocalStorage();
+        
+        // Cargar snapshot del usuario desde sessionStorage
+        const userSnapshot = getUserData();
+        const accessToken = sessionStorage.getItem('access_token');
+        
+        // Solo retornar snapshot si hay token y datos de usuario
+        if (accessToken && userSnapshot) {
+            return userSnapshot as User;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error loading initial user snapshot:', error);
+        return null;
+    }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+    // IMPORTANTE: Siempre empezar con null y loadingUser = true para SSR
+    // Esto asegura que servidor y cliente rendericen lo mismo inicialmente
     const [user, setUser] = useState<User | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [loadingUser, setLoadingUser] = useState(true);
     const router = useRouter();
 
     useEffect(() => {
-        // Función para verificar y restaurar sesión
-        const verifyAndRestoreSession = async () => {
-            // Migrar tokens de localStorage a sessionStorage (compatibilidad)
-            migrateTokensFromLocalStorage();
+        /**
+         * Cargar snapshot inicial solo en el cliente (después de hidratación)
+         * Esto evita errores de hidratación mientras mantiene FOUC bajo
+         */
+        const loadSnapshot = () => {
+            const initialUser = loadInitialUserSnapshot();
+            if (initialUser) {
+                // Si hay snapshot, usarlo inmediatamente y marcar como no-loading
+                // Esto permite mostrar el contenido correcto rápidamente
+                setUser(initialUser);
+                setLoadingUser(false);
+            }
+        };
 
-            // Verificar si hay tokens en sessionStorage
+        loadSnapshot();
+
+        /**
+         * Valida el usuario en background con la API
+         * Esto actualiza el estado con datos frescos del servidor
+         */
+        const validateUserInBackground = async () => {
             const accessToken = typeof window !== 'undefined'
                 ? sessionStorage.getItem('access_token')
                 : null;
 
             if (!accessToken) {
-                setLoading(false);
+                // No hay token, limpiar usuario si existe snapshot obsoleto
+                setUser(null);
+                setLoadingUser(false);
                 return;
             }
 
@@ -48,8 +92,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const response = await authAPI.getCurrentUser();
 
                 if (response.success && response.user) {
-                    // Token válido, restaurar usuario
-                    setUserData(response.user); // Actualizar datos del usuario
+                    // Token válido, actualizar usuario con datos frescos
+                    setUserData(response.user);
                     setUser(response.user);
                 } else {
                     // Token inválido, intentar refrescar antes de limpiar
@@ -109,11 +153,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUser(null);
                 }
             } finally {
-                setLoading(false);
+                setLoadingUser(false);
             }
         };
 
-        verifyAndRestoreSession();
+        validateUserInBackground();
     }, []);
 
     const login = async (credentials: LoginRequest): Promise<AuthResponse> => {
@@ -183,7 +227,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const value: AuthContextType = {
         user,
-        loading,
+        loadingUser,
         login,
         register,
         logout,

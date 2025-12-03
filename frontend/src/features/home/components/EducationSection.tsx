@@ -1,32 +1,45 @@
 'use client';
 
-import { GraduationCap, BookOpen, Users, TrendingUp } from 'lucide-react';
+import { useMemo } from 'react';
+import Link from 'next/link';
+import { GraduationCap, BookOpen, Users, TrendingUp, Clock } from 'lucide-react';
 import { Badge } from '@/shared/components';
+import { useCourses } from '@/shared/hooks/useCourses';
+import { Course } from '@/shared/types';
+import Image from 'next/image';
+import { CoursePlaceholder } from '@/shared/components';
 
 export function EducationSection() {
-    const courses = [
-        {
-            category: "Metalurgia",
-            title: "Procesos Metalúrgicos del Oro y Plata",
-            description: "Aprende técnicas profesionales de extracción y procesamiento de metales preciosos.",
-            duration: "8 semanas",
-            level: "Intermedio"
-        },
-        {
-            category: "Agroindustria",
-            title: "Procesos Agroindustriales Sostenibles",
-            description: "Domina los procesos agroindustriales con enfoque en sostenibilidad y eficiencia.",
-            duration: "6 semanas",
-            level: "Básico"
-        },
-        {
-            category: "Energías Renovables",
-            title: "Sistemas de Energía Solar Aplicada",
-            description: "Diseña e implementa sistemas de energía solar para aplicaciones industriales.",
-            duration: "10 semanas",
-            level: "Avanzado"
-        }
-    ];
+    // Obtener cursos publicados del backend
+    const { courses, isLoading, isError } = useCourses({ 
+        status: 'published' 
+    });
+
+    // Seleccionar top 3 cursos por rating y enrollments
+    const topCourses = useMemo(() => {
+        if (!courses || courses.length === 0) return [];
+        
+        // Ordenar por score combinado (rating * 10 + enrollments)
+        const sorted = [...courses]
+            .sort((a, b) => {
+                const aScore = (a.rating || 0) * 10 + (a.enrollments || 0);
+                const bScore = (b.rating || 0) * 10 + (b.enrollments || 0);
+                return bScore - aScore;
+            })
+            .slice(0, 3); // Top 3
+        
+        return sorted;
+    }, [courses]);
+
+    // Formatear nivel para mostrar
+    const formatLevel = (level: string) => {
+        const levelMap: Record<string, string> = {
+            'beginner': 'Básico',
+            'intermediate': 'Intermedio',
+            'advanced': 'Avanzado'
+        };
+        return levelMap[level] || level;
+    };
 
     const features = [
         {
@@ -92,48 +105,125 @@ export function EducationSection() {
                     ))}
                 </div>
 
-                {/* Courses Preview */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-                    {courses.map((course, index) => (
-                        <div
-                            key={index}
-                            className="group bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden hover:border-primary-orange/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary-orange/10"
-                        >
-                            {/* Image Placeholder */}
-                            <div className="h-48 bg-gradient-to-br from-zinc-900 to-zinc-800 flex items-center justify-center">
-                                <BookOpen className="w-16 h-16 text-zinc-700" />
+                {/* Courses Preview - Con datos reales */}
+                {isLoading && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                        {[1, 2, 3].map((i) => (
+                            <div
+                                key={i}
+                                className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden animate-pulse"
+                            >
+                                <div className="h-48 bg-zinc-900"></div>
+                                <div className="p-6">
+                                    <div className="h-4 bg-zinc-800 rounded w-20 mb-3"></div>
+                                    <div className="h-6 bg-zinc-800 rounded w-full mb-2"></div>
+                                    <div className="h-4 bg-zinc-800 rounded w-3/4 mb-4"></div>
+                                    <div className="flex gap-4">
+                                        <div className="h-3 bg-zinc-800 rounded w-20"></div>
+                                        <div className="h-3 bg-zinc-800 rounded w-20"></div>
+                                    </div>
+                                </div>
                             </div>
+                        ))}
+                    </div>
+                )}
 
-                            {/* Content */}
-                            <div className="p-6">
-                                <div className="mb-3">
-                                    <Badge variant="secondary" size="sm">
-                                        {course.category}
-                                    </Badge>
+                {isError && (
+                    <div className="text-center py-12 mb-12">
+                        <p className="text-gray-400 mb-4">No se pudieron cargar los cursos</p>
+                        <Link
+                            href="/academy"
+                            className="inline-block px-6 py-3 bg-primary-orange text-white rounded-lg hover:opacity-90 transition-opacity"
+                        >
+                            Ver Catálogo Completo
+                        </Link>
+                    </div>
+                )}
+
+                {!isLoading && !isError && topCourses.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                        {topCourses.map((course: Course) => (
+                            <Link
+                                key={course.id}
+                                href={`/academy/course/${course.slug}`}
+                                className="group bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden hover:border-primary-orange/50 transition-all duration-300 hover:shadow-xl hover:shadow-primary-orange/10 block"
+                            >
+                                {/* Thumbnail */}
+                                <div className="relative h-48 bg-gradient-to-br from-zinc-900 to-zinc-800 overflow-hidden">
+                                    {course.thumbnailUrl ? (
+                                        <Image
+                                            src={course.thumbnailUrl}
+                                            alt={course.title}
+                                            fill
+                                            className="object-cover group-hover:scale-110 transition-transform duration-500"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <CoursePlaceholder size="default" />
+                                        </div>
+                                    )}
+                                    {/* Overlay gradient */}
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                                 </div>
-                                <h3 className="text-lg font-bold text-primary-white mb-2 group-hover:text-primary-orange transition-colors">
-                                    {course.title}
-                                </h3>
-                                <p className="text-sm text-gray-400 mb-4 leading-relaxed">
-                                    {course.description}
-                                </p>
-                                <div className="flex items-center justify-between text-xs text-gray-500">
-                                    <span>⏱️ {course.duration}</span>
-                                    <span>📊 {course.level}</span>
+
+                                {/* Content */}
+                                <div className="p-6">
+                                    <div className="mb-3 flex items-center justify-between">
+                                        <Badge variant="secondary" size="sm">
+                                            {course.category || 'General'}
+                                        </Badge>
+                                        {course.rating > 0 && (
+                                            <div className="flex items-center gap-1 text-xs text-yellow-500">
+                                                <span>⭐</span>
+                                                <span className="text-gray-300">{course.rating.toFixed(1)}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <h3 className="text-lg font-bold text-primary-white mb-2 group-hover:text-primary-orange transition-colors line-clamp-2">
+                                        {course.title}
+                                    </h3>
+                                    <p className="text-sm text-gray-400 mb-4 leading-relaxed line-clamp-2">
+                                        {course.subtitle || course.description || 'Curso especializado con contenido de alta calidad.'}
+                                    </p>
+                                    <div className="flex items-center justify-between text-xs text-gray-500">
+                                        <div className="flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            <span>{course.hours > 0 ? `${course.hours} h` : 'Flexible'}</span>
+                                        </div>
+                                        <span>📊 {formatLevel(course.level)}</span>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    ))}
-                </div>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+
+                {!isLoading && !isError && topCourses.length === 0 && (
+                    <div className="text-center py-12 mb-12">
+                        <p className="text-gray-400 mb-4">No hay cursos disponibles en este momento</p>
+                        <Link
+                            href="/academy"
+                            className="inline-block px-6 py-3 bg-primary-orange text-white rounded-lg hover:opacity-90 transition-opacity"
+                        >
+                            Ver Catálogo Completo
+                        </Link>
+                    </div>
+                )}
 
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                    <button className="px-8 py-4 bg-primary-orange hover:bg-primary-orange/90 text-primary-black font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/30">
+                    <Link
+                        href="/academy"
+                        className="px-8 py-4 bg-primary-orange hover:bg-primary-orange/90 text-primary-black font-semibold rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/30"
+                    >
                         Ver Todos los Cursos
-                    </button>
-                    <button className="px-8 py-4 border-2 border-primary-orange text-primary-orange hover:bg-primary-orange hover:text-primary-black font-semibold rounded-lg transition-all duration-300">
+                    </Link>
+                    <Link
+                        href="/auth/become-instructor"
+                        className="px-8 py-4 border-2 border-primary-orange text-primary-orange hover:bg-primary-orange hover:text-primary-black font-semibold rounded-lg transition-all duration-300"
+                    >
                         Enseña en Fagsol
-                    </button>
+                    </Link>
                 </div>
             </div>
         </section>

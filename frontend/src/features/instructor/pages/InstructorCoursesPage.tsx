@@ -1,6 +1,7 @@
 'use client';
 
 import { Button, LoadingSpinner, ProtectedRoute } from '@/shared/components';
+import { InstructorHeader } from '@/features/instructor/components/InstructorHeader';
 import { useInstructorCourses } from '@/shared/hooks/useCourses';
 import { BookOpen, CheckCircle2, Clock, Edit, Eye, FileText, Plus, Search, Star, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
@@ -39,24 +40,18 @@ function InstructorCoursesPageContent() {
             </div>
 
             {/* Header */}
-            <header className="relative bg-secondary-dark-gray/60 backdrop-blur-sm shadow-lg border-b border-primary-orange/20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <div>
-                            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
-                                Mis Cursos
-                            </h1>
-                            <p className="text-secondary-light-gray font-medium mt-1">Gestiona todos tus cursos desde aquí</p>
-                        </div>
-                        <Link href="/instructor/courses/new">
-                            <Button variant="primary" size="lg" className="flex items-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
-                                <Plus className="w-5 h-5" />
-                                <span>Crear Nuevo Curso</span>
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
-            </header>
+            <InstructorHeader
+                title="Mis Cursos"
+                subtitle="Gestiona todos tus cursos desde aquí"
+                rightAction={
+                    <Link href="/instructor/courses/new">
+                        <Button variant="primary" size="lg" className="flex items-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
+                            <Plus className="w-5 h-5" />
+                            <span>Crear Nuevo Curso</span>
+                        </Button>
+                    </Link>
+                }
+            />
 
             {/* Main Content */}
             <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

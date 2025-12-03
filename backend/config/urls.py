@@ -13,6 +13,7 @@ from rest_framework_simplejwt.views import (
 )
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from presentation.views.dashboard_views import get_public_stats
 
 # Schema view para Swagger (configurado aquí para evitar importaciones circulares)
 from rest_framework import permissions
@@ -28,7 +29,7 @@ schema_view = get_schema_view(
         Esta API usa JWT (JSON Web Tokens) para autenticación. Para usar los endpoints protegidos:
         1. Obtén un token usando `/api/v1/login/`
         2. Haz clic en "Authorize" (🔓) arriba a la derecha
-        3. Pega el token CON "Bearer " al inicio: `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+        3. Pega el token CON "Bearer " al inicio: ` e...`
         4. Haz clic en "Authorize" y cierra
         
         ## Seguridad
@@ -78,6 +79,10 @@ urlpatterns = [
     path('api/v1/enrollments/', include('presentation.api.v1.enrollments.urls')),
     path('api/v1/certificates/', include('presentation.api.v1.certificates.urls')),
     path('api/v1/progress/', include('presentation.api.v1.progress.urls')),
+    path('api/v1/contact/', include('presentation.api.v1.contact.urls')),
+    
+    # Public Stats (endpoint público sin autenticación)
+    path('api/v1/stats/public/', get_public_stats, name='public_stats'),
     
     # OpenAPI/Swagger Documentation
     path('swagger<format>/', schema_view.without_ui(cache_timeout=0), name='schema-json'),

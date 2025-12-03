@@ -1,6 +1,7 @@
 'use client';
 
 import { ProtectedRoute } from '@/shared/components';
+import { InstructorHeader } from '@/features/instructor/components/InstructorHeader';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { ArrowLeft, BookOpen, Lightbulb, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -30,42 +31,49 @@ function CreateCoursePageContent() {
             </div>
 
             {/* Header */}
-            <header className="relative bg-gradient-to-r from-primary-black via-secondary-dark-gray/90 to-primary-black backdrop-blur-sm shadow-lg border-b border-primary-orange/20 overflow-hidden">
-                {/* Elementos decorativos de fondo */}
-                <div className="absolute inset-0 opacity-10">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-primary-orange/20 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-orange/10 rounded-full blur-3xl"></div>
-                </div>
+            {isInstructor ? (
+                <InstructorHeader
+                    title="Crear Nuevo Curso"
+                    subtitle="Completa el formulario para crear tu curso. Podrás agregar módulos y lecciones después."
+                    showBackButton={true}
+                    backHref="/instructor/courses"
+                    backLabel="Volver a Mis Cursos"
+                />
+            ) : (
+                <header className="relative bg-gradient-to-r from-primary-black via-secondary-dark-gray/90 to-primary-black backdrop-blur-sm shadow-lg border-b border-primary-orange/20 overflow-hidden">
+                    {/* Elementos decorativos de fondo */}
+                    <div className="absolute inset-0 opacity-10">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-primary-orange/20 rounded-full blur-3xl"></div>
+                        <div className="absolute bottom-0 left-0 w-96 h-96 bg-primary-orange/10 rounded-full blur-3xl"></div>
+                    </div>
 
-                <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                href={isInstructor ? '/instructor/courses' : '/admin/courses'}
-                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary-dark-gray/60 hover:bg-secondary-dark-gray border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 group"
-                            >
-                                <ArrowLeft className="w-5 h-5 text-secondary-light-gray group-hover:text-primary-orange transition-colors" />
-                            </Link>
-                        <div>
-                                <div className="flex items-center space-x-3 mb-2">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-primary-orange to-amber-500 rounded-lg flex items-center justify-center shadow-lg">
-                                        <BookOpen className="w-6 h-6 text-white" />
+                    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between items-center py-6">
+                            <div className="flex items-center space-x-4">
+                                <Link
+                                    href="/admin/courses"
+                                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary-dark-gray/60 hover:bg-secondary-dark-gray border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 group"
+                                >
+                                    <ArrowLeft className="w-5 h-5 text-secondary-light-gray group-hover:text-primary-orange transition-colors" />
+                                </Link>
+                                <div>
+                                    <div className="flex items-center space-x-3 mb-2">
+                                        <div className="w-12 h-12 bg-gradient-to-br from-primary-orange to-amber-500 rounded-lg flex items-center justify-center shadow-lg">
+                                            <BookOpen className="w-6 h-6 text-white" />
+                                        </div>
+                                        <h1 className="text-3xl font-bold text-primary-white bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
+                                            Crear Nuevo Curso
+                                        </h1>
                                     </div>
-                                    <h1 className="text-3xl font-bold text-primary-white bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
-                                Crear Nuevo Curso
-                            </h1>
+                                    <p className="text-secondary-light-gray font-medium">
+                                        Completa el formulario para crear un nuevo curso
+                                    </p>
                                 </div>
-                                <p className="text-secondary-light-gray font-medium">
-                                    {isInstructor
-                                        ? 'Completa el formulario para crear tu curso. Podrás agregar módulos y lecciones después.'
-                                        : 'Completa el formulario para crear un nuevo curso'
-                                    }
-                                </p>
                             </div>
                         </div>
                     </div>
-                </div>
-            </header>
+                </header>
+            )}
 
             {/* Main Content */}
             <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

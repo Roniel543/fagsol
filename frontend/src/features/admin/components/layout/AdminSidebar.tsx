@@ -9,7 +9,8 @@ import {
     Menu,
     UserCheck,
     Users,
-    X
+    X,
+    Mail
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -44,6 +45,11 @@ const sidebarItems: SidebarItem[] = [
         href: '/admin/instructor-applications',
         icon: <UserCheck className="w-5 h-5" />,
     },
+    {
+        label: 'Mensajes de Contacto',
+        href: '/admin/contact-messages',
+        icon: <Mail className="w-5 h-5" />,
+    },
 ];
 
 export function AdminSidebar() {
@@ -67,6 +73,11 @@ export function AdminSidebar() {
         // Para /admin/instructor-applications, activo si estás en esa ruta exacta
         if (href === '/admin/instructor-applications') {
             return pathname === '/admin/instructor-applications';
+        }
+
+        // Para /admin/contact-messages, activo si estás en esa ruta exacta
+        if (href === '/admin/contact-messages') {
+            return pathname === '/admin/contact-messages';
         }
 
         // Para otras rutas, verificar si la ruta actual comienza con el href

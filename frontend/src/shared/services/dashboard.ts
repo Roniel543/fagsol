@@ -152,3 +152,34 @@ export async function getStudentStats(): Promise<DashboardStatsResponse> {
     return response as unknown as DashboardStatsResponse;
 }
 
+/**
+ * Estadísticas públicas (sin autenticación)
+ */
+export interface PublicStats {
+    students: number;
+    courses: number;
+    years_experience: number;
+    instructors: {
+        active: number;
+        courses_created: number;
+        average_rating: number;
+    };
+}
+
+/**
+ * Respuesta de estadísticas públicas
+ */
+export interface PublicStatsResponse {
+    success: boolean;
+    data: PublicStats;
+}
+
+/**
+ * Obtiene estadísticas públicas para la página de inicio
+ * No requiere autenticación
+ */
+export async function getPublicStats(): Promise<PublicStatsResponse> {
+    const response = await apiRequest<PublicStatsResponse>('/stats/public/');
+    return response as unknown as PublicStatsResponse;
+}
+

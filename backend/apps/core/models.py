@@ -233,3 +233,72 @@ class InstructorApplication(models.Model):
     def is_rejected(self):
         """Verifica si la solicitud fue rechazada"""
         return self.status == 'rejected'
+
+
+class ContactMessage(models.Model):
+    """
+    Modelo para almacenar mensajes de contacto del formulario público
+    """
+    STATUS_CHOICES = [
+        ('new', 'Nuevo'),
+        ('read', 'Leído'),
+        ('replied', 'Respondido'),
+        ('archived', 'Archivado'),
+    ]
+    
+    # Información del contacto
+    name = models.CharField(max_length=100, verbose_name="Nombre")
+    email = models.EmailField(verbose_name="Email")
+    phone = models.CharField(max_length=20, verbose_name="Teléfono")
+    message = models.TextField(max_length=2000, verbose_name="Mensaje")
+    
+    # Estado y seguimiento
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='new',
+        verbose_name="Estado",
+        help_text="Estado del mensaje"
+    )
+    
+    # Notas internas (para el admin)
+    admin_notes = models.TextField(
+        blank=True,
+        null=True,
+        max_length=1000,
+        verbose_name="Notas del Administrador",
+        help_text="Notas internas sobre este mensaje"
+    )
+    
+    # Fechas
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Fecha de Actualización")
+    read_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Fecha de Lectura",
+        help_text="Fecha en que el mensaje fue leído por primera vez"
+    )
+    
+    class Meta:
+        db_table = 'contact_messages'
+        verbose_name = 'Mensaje de Contacto'
+        verbose_name_plural = 'Mensajes de Contacto'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['status', '-created_at']),
+            models.Index(fields=['email', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Mensaje de {self.name} ({self.email}) - {self.get_status_display()}"
+    
+    @property
+    def is_new(self):
+        """Verifica si el mensaje es nuevo"""
+        return self.status == 'new'
+    
+    @property
+    def is_read(self):
+        """Verifica si el mensaje ha sido leído"""
+        return self.status in ['read', 'replied']

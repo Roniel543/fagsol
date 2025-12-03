@@ -5,7 +5,7 @@ Configuración del Admin de Django - FagSol Escuela Virtual
 from django.contrib import admin
 from django.contrib.auth.models import User
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import UserProfile, InstructorApplication
+from .models import UserProfile, InstructorApplication, ContactMessage
 
 
 # Extender el admin de User para incluir el perfil
@@ -88,3 +88,64 @@ class InstructorApplicationAdmin(admin.ModelAdmin):
             readonly.extend(['user', 'professional_title', 'experience_years', 
                            'specialization', 'bio', 'portfolio_url', 'cv_file', 'motivation'])
         return readonly
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    """
+    Admin para gestionar mensajes de contacto
+    """
+    list_display = [
+        'name',
+        'email',
+        'phone',
+        'status',
+        'created_at',
+        'read_at',
+        'message_preview'
+    ]
+    list_filter = ['status', 'created_at', 'read_at']
+    search_fields = [
+        'name',
+        'email',
+        'phone',
+        'message'
+    ]
+    readonly_fields = ['created_at', 'updated_at', 'read_at']
+    fieldsets = (
+        ('Información del Contacto', {
+            'fields': ('name', 'email', 'phone')
+        }),
+        ('Mensaje', {
+            'fields': ('message',)
+        }),
+        ('Estado y Seguimiento', {
+            'fields': (
+                'status',
+                'read_at',
+                'admin_notes'
+            )
+        }),
+        ('Fechas', {
+            'fields': ('created_at', 'updated_at')
+        }),
+    )
+    
+    def message_preview(self, obj):
+        """Muestra una vista previa del mensaje"""
+        if obj.message:
+            return obj.message[:100] + '...' if len(obj.message) > 100 else obj.message
+        return '-'
+    message_preview.short_description = 'Vista Previa del Mensaje'
+    
+    def save_model(self, request, obj, form, change):
+        """Marca como leído cuando el admin lo abre por primera vez"""
+        if change and obj.status == 'new' and not obj.read_at:
+            from django.utils import timezone
+            obj.read_at = timezone.now()
+            obj.status = 'read'
+        super().save_model(request, obj, form, change)
+    
+    def get_queryset(self, request):
+        """Optimizar queries"""
+        return super().get_queryset(request).select_related()

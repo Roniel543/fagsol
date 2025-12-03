@@ -16,7 +16,7 @@ from django.contrib.auth.models import User, Group, Permission
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.db import models
-from apps.core.models import UserProfile
+from apps.core.models import UserProfile, ContactMessage
 from apps.users.permissions import IsAdmin, IsAdminOrInstructor, has_perm, get_user_role, ROLE_ADMIN, can_edit_course
 from infrastructure.services.instructor_approval_service import InstructorApprovalService
 from infrastructure.services.course_approval_service import CourseApprovalService
@@ -3210,5 +3210,197 @@ def get_student_progress(request, course_id, enrollment_id):
         return Response({
             'success': False,
             'message': 'Error al obtener progreso del alumno'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ========== GESTIÓN DE MENSAJES DE CONTACTO ==========
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Lista todos los mensajes de contacto con filtros opcionales. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter(
+            'status',
+            openapi.IN_QUERY,
+            description='Filtro por estado (new, read, replied, archived)',
+            type=openapi.TYPE_STRING,
+            enum=['new', 'read', 'replied', 'archived'],
+            required=False
+        ),
+        openapi.Parameter(
+            'search',
+            openapi.IN_QUERY,
+            description='Búsqueda por nombre, email, teléfono o mensaje',
+            type=openapi.TYPE_STRING,
+            required=False
+        ),
+    ],
+    responses={
+        200: openapi.Response(
+            description='Lista de mensajes de contacto',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': [
+                        {
+                            'id': 1,
+                            'name': 'Juan Pérez',
+                            'email': 'juan@example.com',
+                            'phone': '+51 999 999 999',
+                            'message': 'Mensaje de ejemplo...',
+                            'status': 'new',
+                            'admin_notes': None,
+                            'created_at': '2025-12-03T10:00:00Z',
+                            'updated_at': '2025-12-03T10:00:00Z',
+                            'read_at': None
+                        }
+                    ],
+                    'count': 1
+                }
+            }
+        ),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='No autorizado - Solo administradores'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Mensajes de Contacto']
+)
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def list_contact_messages(request):
+    """
+    Lista todos los mensajes de contacto con filtros opcionales.
+    GET /api/v1/admin/contact-messages/?status=new&search=juan
+    """
+    try:
+        # Filtros
+        queryset = ContactMessage.objects.all()
+        
+        # Filtro por estado
+        status_filter = request.query_params.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        
+        # Búsqueda por nombre, email, teléfono o mensaje
+        search = request.query_params.get('search', None)
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search) |
+                Q(email__icontains=search) |
+                Q(phone__icontains=search) |
+                Q(message__icontains=search)
+            )
+        
+        # Ordenar por fecha de creación (más recientes primero)
+        queryset = queryset.order_by('-created_at')
+        
+        # Serializar mensajes
+        messages_data = []
+        for message in queryset:
+            messages_data.append({
+                'id': message.id,
+                'name': message.name,
+                'email': message.email,
+                'phone': message.phone,
+                'message': message.message,
+                'status': message.status,
+                'status_display': message.get_status_display(),
+                'admin_notes': message.admin_notes,
+                'created_at': message.created_at.isoformat(),
+                'updated_at': message.updated_at.isoformat(),
+                'read_at': message.read_at.isoformat() if message.read_at else None,
+            })
+        
+        return Response({
+            'success': True,
+            'data': messages_data,
+            'count': len(messages_data)
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en list_contact_messages: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'message': 'Error al obtener mensajes de contacto'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='patch',
+    operation_description='Actualiza el estado o notas de un mensaje de contacto. Solo accesible para administradores.',
+    manual_parameters=[
+        openapi.Parameter('id', openapi.IN_PATH, description='ID del mensaje', type=openapi.TYPE_INTEGER),
+    ],
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'status': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                enum=['new', 'read', 'replied', 'archived'],
+                description='Nuevo estado del mensaje'
+            ),
+            'admin_notes': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Notas del administrador'
+            ),
+        }
+    ),
+    responses={
+        200: openapi.Response(description='Mensaje actualizado exitosamente'),
+        404: openapi.Response(description='Mensaje no encontrado'),
+        403: openapi.Response(description='No autorizado'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Admin - Mensajes de Contacto']
+)
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def update_contact_message(request, id):
+    """
+    Actualiza el estado o notas de un mensaje de contacto
+    PATCH /api/v1/admin/contact-messages/{id}/
+    """
+    try:
+        from django.utils import timezone
+        
+        message = ContactMessage.objects.get(id=id)
+        
+        # Actualizar estado si se proporciona
+        new_status = request.data.get('status', None)
+        if new_status:
+            message.status = new_status
+            # Si se marca como leído por primera vez, actualizar read_at
+            if new_status == 'read' and not message.read_at:
+                message.read_at = timezone.now()
+        
+        # Actualizar notas del admin si se proporcionan
+        admin_notes = request.data.get('admin_notes', None)
+        if admin_notes is not None:
+            message.admin_notes = admin_notes
+        
+        message.save()
+        
+        return Response({
+            'success': True,
+            'message': 'Mensaje actualizado exitosamente',
+            'data': {
+                'id': message.id,
+                'status': message.status,
+                'status_display': message.get_status_display(),
+                'admin_notes': message.admin_notes,
+                'read_at': message.read_at.isoformat() if message.read_at else None,
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except ContactMessage.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Mensaje no encontrado'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error en update_contact_message: {str(e)}", exc_info=True)
+        return Response({
+            'success': False,
+            'message': 'Error al actualizar el mensaje'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

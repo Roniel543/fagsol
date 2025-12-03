@@ -13,7 +13,7 @@ import { PaymentsDashboard } from './PaymentsDashboard';
 export function StudentDashboard() {
     const router = useRouter();
     const { studentStats, isLoading, isError } = useDashboard();
-    const { loading: authLoading } = useAuth();
+    const { loadingUser: authLoading } = useAuth();
     const { application, hasApplication, isLoading: loadingApplication } = useMyInstructorApplication();
     const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
 

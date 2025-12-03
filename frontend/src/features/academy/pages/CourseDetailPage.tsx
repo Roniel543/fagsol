@@ -84,7 +84,7 @@ export default function CourseDetailPage() {
                                     Curso no encontrado
                                 </h2>
                                 <p className="text-gray-400 mb-4">
-                                    El curso con slug "{slug}" no existe o no está disponible.
+                                    El curso con slug &quot;{slug}&quot; no existe o no está disponible.
                                 </p>
                                 <button
                                     onClick={() => router.push('/instructor/courses')}
@@ -100,7 +100,7 @@ export default function CourseDetailPage() {
             );
         }
         return notFound();
-    }
+    } 
 
     const handleAddToCart = () => {
         // Validar si ya está en el carrito

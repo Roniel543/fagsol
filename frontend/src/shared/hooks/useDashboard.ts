@@ -10,10 +10,10 @@ import { useAuth } from './useAuth';
  * Hook para obtener estadísticas del dashboard según el rol
  */
 export function useDashboard() {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, loadingUser } = useAuth();
 
     // Esperar a que termine la verificación de autenticación antes de hacer la petición
-    const shouldFetch = !loading && isAuthenticated;
+    const shouldFetch = !loadingUser && isAuthenticated;
 
     const { data, error, isLoading, mutate } = useSWR<DashboardStatsResponse>(
         shouldFetch ? 'dashboard-stats' : null,
@@ -25,7 +25,7 @@ export function useDashboard() {
             revalidateOnReconnect: true,
             dedupingInterval: 60000, // Cache por 1 minuto
             // No revalidar si aún está cargando la autenticación
-            revalidateIfStale: !loading,
+            revalidateIfStale: !loadingUser,
         }
     );
 
@@ -71,7 +71,7 @@ export function useDashboard() {
         adminStats: data?.data && isAdminStats(data.data) ? data.data as AdminStats : null,
         instructorStats: data?.data && isInstructorStats(data.data) ? data.data as InstructorStats : null,
         studentStats: data?.data && isStudentStats(data.data) ? data.data as StudentStats : null,
-        isLoading: isLoading || loading,
+        isLoading: isLoading || loadingUser,
         isError: hasError,
         error: errorMessage ? new Error(errorMessage) : null,
         mutate,

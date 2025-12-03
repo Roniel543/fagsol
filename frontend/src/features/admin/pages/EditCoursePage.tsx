@@ -1,6 +1,7 @@
 'use client';
 
 import { Button, ProtectedRoute } from '@/shared/components';
+import { InstructorHeader } from '@/features/instructor/components/InstructorHeader';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { getCourseById } from '@/shared/services/courses';
 import { ArrowLeft, BookOpen, Layers, Lock } from 'lucide-react';
@@ -84,34 +85,52 @@ function EditCoursePageContent() {
             </div>
 
             {/* Header */}
-            <header className="relative bg-secondary-dark-gray/60 backdrop-blur-sm shadow-lg border-b border-primary-orange/20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                href={isInstructor ? '/instructor/courses' : '/admin/courses'}
-                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary-dark-gray/60 hover:bg-secondary-dark-gray border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 group"
-                            >
-                                <ArrowLeft className="w-5 h-5 text-primary-orange group-hover:text-amber-400" />
-                            </Link>
-                            <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
-                                    Editar Curso
-                                </h1>
-                                <p className="text-secondary-light-gray font-medium mt-1">
-                                    Modifica la información del curso
-                                </p>
-                            </div>
-                        </div>
-                        <Link href={isInstructor ? '/instructor/courses' : '/admin/courses'}>
+            {isInstructor ? (
+                <InstructorHeader
+                    title="Editar Curso"
+                    subtitle="Modifica la información del curso"
+                    showBackButton={true}
+                    backHref="/instructor/courses"
+                    backLabel="Volver a Mis Cursos"
+                    rightAction={
+                        <Link href="/instructor/courses">
                             <Button variant="secondary" size="lg" className="flex items-center space-x-2">
                                 <ArrowLeft className="w-4 h-4" />
                                 <span>Volver a Cursos</span>
                             </Button>
                         </Link>
+                    }
+                />
+            ) : (
+                <header className="relative bg-secondary-dark-gray/60 backdrop-blur-sm shadow-lg border-b border-primary-orange/20">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex justify-between items-center py-6">
+                            <div className="flex items-center space-x-4">
+                                <Link
+                                    href="/admin/courses"
+                                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary-dark-gray/60 hover:bg-secondary-dark-gray border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 group"
+                                >
+                                    <ArrowLeft className="w-5 h-5 text-primary-orange group-hover:text-amber-400" />
+                                </Link>
+                                <div>
+                                    <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
+                                        Editar Curso
+                                    </h1>
+                                    <p className="text-secondary-light-gray font-medium mt-1">
+                                        Modifica la información del curso
+                                    </p>
+                                </div>
+                            </div>
+                            <Link href="/admin/courses">
+                                <Button variant="secondary" size="lg" className="flex items-center space-x-2">
+                                    <ArrowLeft className="w-4 h-4" />
+                                    <span>Volver a Cursos</span>
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
-                </div>
-            </header>
+                </header>
+            )}
 
             {/* Main Content */}
             <main className="relative max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">

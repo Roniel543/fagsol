@@ -7,10 +7,14 @@ from presentation.views.dashboard_views import (
     get_dashboard_stats,
     get_admin_stats,
     get_instructor_stats,
-    get_student_stats
+    get_student_stats,
+    get_public_stats
 )
 
 urlpatterns = [
+    # Estadísticas públicas (sin autenticación)
+    path('stats/public/', get_public_stats, name='public_stats'),
+    
     # Estadísticas generales (según rol)
     path('stats/', get_dashboard_stats, name='dashboard_stats'),
     

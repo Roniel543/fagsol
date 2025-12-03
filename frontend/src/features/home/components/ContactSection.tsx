@@ -1,18 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Badge } from '@/shared/components';
+import { Badge, useToast } from '@/shared/components';
 import { MapPin, Phone, Mail, Clock, Send, CheckCircle2 } from 'lucide-react';
+import { sendContactMessage, ContactFormData } from '@/shared/services/contact';
 
 export function ContactSection() {
-    const [formData, setFormData] = useState({
+    const { showToast } = useToast();
+    const [formData, setFormData] = useState<ContactFormData>({
         name: '',
         phone: '',
         email: '',
         message: ''
     });
 
-    const [errors, setErrors] = useState({
+    const [errors, setErrors] = useState<Partial<Record<keyof ContactFormData, string>>>({
         name: '',
         phone: '',
         email: '',
@@ -77,16 +79,44 @@ export function ContactSection() {
         }
 
         setIsSubmitting(true);
+        setErrors({}); // Limpiar errores previos
 
-        // Simular envío (aquí irá la lógica real de envío)
-        setTimeout(() => {
-            setIsSubmitting(false);
-            setIsSuccess(true);
-            setFormData({ name: '', phone: '', email: '', message: '' });
+        try {
+            // Enviar mensaje al backend
+            const response = await sendContactMessage(formData);
+
+            if (response.success) {
+                // Éxito
+                setIsSuccess(true);
+                setFormData({ name: '', phone: '', email: '', message: '' });
+                showToast('Mensaje enviado exitosamente. Nos pondremos en contacto contigo pronto.', 'success');
+                
+                // Resetear success después de 5 segundos
+                setTimeout(() => setIsSuccess(false), 5000);
+            } else {
+                // Errores del backend
+                if (response.errors) {
+                    setErrors(response.errors);
+                    showToast('Por favor, corrige los errores en el formulario.', 'error');
+                } else {
+                    showToast(response.message || 'Error al enviar el mensaje. Por favor, inténtalo más tarde.', 'error');
+                }
+            }
+        } catch (error: any) {
+            // Error de red o del servidor
+            console.error('Error al enviar mensaje de contacto:', error);
             
-            // Resetear success después de 5 segundos
-            setTimeout(() => setIsSuccess(false), 5000);
-        }, 1500);
+            // El error puede venir de diferentes formas
+            if (error?.message?.includes('429') || error?.status === 429) {
+                showToast('Has enviado demasiados mensajes. Por favor, espera un momento antes de intentar nuevamente.', 'error');
+            } else if (error?.message) {
+                showToast(error.message, 'error');
+            } else {
+                showToast('Error al enviar el mensaje. Por favor, inténtalo más tarde.', 'error');
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const contactInfo = [
@@ -124,7 +154,7 @@ export function ContactSection() {
                 {/* Header */}
                 <div className="text-center mb-16">
                     <Badge variant="warning" className="mb-4">
-                        📧 Estamos Listos para Ayudarte
+                        Estamos Listos para Ayudarte
                     </Badge>
                     <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
                         <span className="text-primary-white">Contáctanos</span>

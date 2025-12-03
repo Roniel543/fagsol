@@ -448,3 +448,6 @@ LOGGING = {
 # Crear directorio de logs si no existe
 import os
 os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+
+#CONTACT_EMAIL = config('CONTACT_EMAIL', default='info@fagsol.com')

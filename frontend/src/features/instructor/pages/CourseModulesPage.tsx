@@ -1,6 +1,7 @@
 'use client';
 
 import { Button, LoadingSpinner, ProtectedRoute } from '@/shared/components';
+import { InstructorHeader } from '@/features/instructor/components/InstructorHeader';
 import { useToast } from '@/shared/components/Toast';
 import { useAdminModules, useDeleteModule } from '@/shared/hooks/useAdminModules';
 import { useCourse } from '@/shared/hooks/useCourses';
@@ -80,40 +81,29 @@ function CourseModulesPageContent() {
             </div>
 
             {/* Header */}
-            <header className="relative bg-secondary-dark-gray/60 backdrop-blur-sm shadow-lg border-b border-primary-orange/20">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                href={`/instructor/courses/${courseId}/edit`}
-                                className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary-dark-gray/60 hover:bg-secondary-dark-gray border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 group"
-                            >
-                                <ArrowLeft className="w-5 h-5 text-primary-orange group-hover:text-amber-400" />
-                            </Link>
-                            <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
-                                    Módulos: {course.title}
-                                </h1>
-                                <p className="text-secondary-light-gray font-medium mt-1">Gestiona los módulos y lecciones del curso</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            <Link href={`/instructor/courses/${courseId}/edit`}>
-                                <Button variant="secondary" size="lg" className="flex items-center space-x-2">
-                                    <ArrowLeft className="w-4 h-4" />
-                                    <span>Volver al Curso</span>
-                                </Button>
-                            </Link>
-                            <Link href={`/instructor/courses/${courseId}/modules/new`}>
-                                <Button variant="primary" size="lg" className="flex items-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
-                                    <Plus className="w-5 h-5" />
-                                    <span>Crear Módulo</span>
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <InstructorHeader
+                title={`Módulos: ${course.title}`}
+                subtitle="Gestiona los módulos y lecciones del curso"
+                showBackButton={true}
+                backHref={`/instructor/courses/${courseId}/edit`}
+                backLabel="Volver al Curso"
+                rightAction={
+                    <>
+                        <Link href={`/instructor/courses/${courseId}/edit`}>
+                            <Button variant="secondary" size="lg" className="flex items-center space-x-2">
+                                <ArrowLeft className="w-4 h-4" />
+                                <span>Volver al Curso</span>
+                            </Button>
+                        </Link>
+                        <Link href={`/instructor/courses/${courseId}/modules/new`}>
+                            <Button variant="primary" size="lg" className="flex items-center space-x-2 shadow-lg hover:shadow-primary-orange/50 transition-all duration-300">
+                                <Plus className="w-5 h-5" />
+                                <span>Crear Módulo</span>
+                            </Button>
+                        </Link>
+                    </>
+                }
+            />
 
             {/* Main Content */}
             <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

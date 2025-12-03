@@ -6,7 +6,7 @@ Proporciona estadísticas del dashboard según el rol del usuario
 import logging
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from infrastructure.services.dashboard_service import DashboardService
 from drf_yasg.utils import swagger_auto_schema
@@ -215,6 +215,67 @@ def get_student_stats(request):
         
     except Exception as e:
         logger.error(f"Error en get_student_stats: {str(e)}")
+        return Response({
+            'success': False,
+            'message': 'Error interno del servidor'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Obtiene estadísticas públicas para mostrar en la página de inicio. No requiere autenticación.',
+    responses={
+        200: openapi.Response(
+            description='Estadísticas públicas',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'data': {
+                        'students': 500,
+                        'courses': 50,
+                        'years_experience': 10,
+                        'instructors': {
+                            'active': 20,
+                            'courses_created': 50,
+                            'average_rating': 4.8
+                        }
+                    }
+                }
+            }
+        ),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    tags=['Dashboard']
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_public_stats(request):
+    """
+    Obtiene estadísticas públicas para la página de inicio
+    GET /api/v1/stats/public/
+    
+    No requiere autenticación. Retorna solo datos básicos y seguros:
+    - Total de estudiantes
+    - Total de cursos publicados
+    - Años de experiencia
+    """
+    try:
+        dashboard_service = DashboardService()
+        success, stats, error_message = dashboard_service.get_public_stats()
+        
+        if not success:
+            return Response({
+                'success': False,
+                'message': error_message
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({
+            'success': True,
+            'data': stats
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f"Error en get_public_stats: {str(e)}")
         return Response({
             'success': False,
             'message': 'Error interno del servidor'

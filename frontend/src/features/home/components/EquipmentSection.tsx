@@ -157,11 +157,14 @@ export function EquipmentSection() {
                             </div>
 
                             {/* CTA Button - Más prominente */}
-                            <button className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-bold text-lg rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary-orange/60 group/btn">
+                            <a
+                                href="#contacto"
+                                className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-bold text-lg rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:shadow-primary-orange/60 group/btn"
+                            >
                                 <ShoppingCart className="w-6 h-6 group-hover/btn:rotate-12 transition-transform duration-300" />
                                 <span>Solicitar Cotización</span>
                                 <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition-transform duration-300" />
-                            </button>
+                            </a>
                         </div>
                     </div>
 
@@ -219,10 +222,13 @@ export function EquipmentSection() {
                                 </div>
 
                                 {/* CTA Button */}
-                                <button className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-semibold text-sm rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/40 group/btn">
+                                <a
+                                    href="#contacto"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-semibold text-sm rounded-lg transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/40 group/btn"
+                                >
                                     <ShoppingCart className="w-4 h-4 group-hover/btn:rotate-12 transition-transform duration-300" />
                                     <span>Cotizar</span>
-                                </button>
+                                </a>
                             </div>
                         </div>
                     ))}
@@ -231,10 +237,10 @@ export function EquipmentSection() {
                 {/* Ver Catálogo Completo */}
                 <div className="text-center mt-12">
                     <a
-                        href="/marketplace"
+                        href="#contacto"
                         className="inline-flex items-center gap-2 px-8 py-4 bg-zinc-900 hover:bg-zinc-800 border-2 border-primary-orange text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-primary-orange/30 group"
                     >
-                        <span>Ver Catálogo Completo de Equipos Sostenibles</span>
+                        <span>Contactar para Ver Catálogo Completo de Equipos</span>
                         <svg className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                         </svg>

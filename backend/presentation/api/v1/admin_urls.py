@@ -49,6 +49,9 @@ from presentation.views.admin_views import (
     list_course_students,
     get_student_progress,
     get_course_status_counts,
+    # Gestión de mensajes de contacto
+    list_contact_messages,
+    update_contact_message,
 )
 
 urlpatterns = [
@@ -115,5 +118,9 @@ urlpatterns = [
     # Gestión de alumnos inscritos
     path('courses/<str:course_id>/students/', list_course_students, name='admin_list_course_students'),
     path('courses/<str:course_id>/students/<str:enrollment_id>/progress/', get_student_progress, name='admin_get_student_progress'),
+    
+    # Gestión de mensajes de contacto
+    path('contact-messages/', list_contact_messages, name='admin_list_contact_messages'),
+    path('contact-messages/<int:id>/', update_contact_message, name='admin_update_contact_message'),
 ]
 

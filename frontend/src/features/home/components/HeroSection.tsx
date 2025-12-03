@@ -1,8 +1,11 @@
 'use client';
 
 import { Button, AnimatedCounter } from '@/shared/components';
+import { usePublicStats } from '@/shared/hooks/usePublicStats';
 
 export function HeroSection() {
+    // Obtener estadísticas reales del backend con fallback
+    const { stats, isLoading } = usePublicStats();
     return (
         <section id="inicio" className="relative min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
             {/* Fondo de imagen con parallax */}
@@ -71,23 +74,35 @@ export function HeroSection() {
                     </Button>
                 </div>
 
-                {/* Stats con animación al aparecer */}
+                {/* Stats con animación al aparecer - Datos reales del backend */}
                 <div className="grid grid-cols-3 gap-6 sm:gap-8 mt-12 pt-8 border-t border-zinc-800 max-w-2xl mx-auto animate-fade-in" style={{ animationDelay: '0.9s' }}>
                     <div className="text-center group cursor-default">
                         <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-orange to-yellow-500 bg-clip-text text-transparent mb-1 group-hover:scale-110 transition-transform duration-300">
-                            <AnimatedCounter end={500} suffix="+" duration={2500} />
+                            {!isLoading ? (
+                                <AnimatedCounter end={stats.students} suffix="+" duration={2500} />
+                            ) : (
+                                <span className="animate-pulse">---</span>
+                            )}
                         </div>
                         <div className="text-xs sm:text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Estudiantes</div>
                     </div>
                     <div className="text-center group cursor-default">
                         <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-orange to-yellow-500 bg-clip-text text-transparent mb-1 group-hover:scale-110 transition-transform duration-300">
-                            <AnimatedCounter end={50} suffix="+" duration={2000} />
+                            {!isLoading ? (
+                                <AnimatedCounter end={stats.courses} suffix="+" duration={2000} />
+                            ) : (
+                                <span className="animate-pulse">---</span>
+                            )}
                         </div>
                         <div className="text-xs sm:text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Cursos</div>
                     </div>
                     <div className="text-center group cursor-default">
                         <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-orange to-yellow-500 bg-clip-text text-transparent mb-1 group-hover:scale-110 transition-transform duration-300">
-                            <AnimatedCounter end={10} suffix="+" duration={1500} />
+                            {!isLoading ? (
+                                <AnimatedCounter end={stats.years_experience} suffix="+" duration={1500} />
+                            ) : (
+                                <span className="animate-pulse">---</span>
+                            )}
                         </div>
                         <div className="text-xs sm:text-sm text-gray-400 group-hover:text-gray-300 transition-colors">Años Experiencia</div>
                     </div>

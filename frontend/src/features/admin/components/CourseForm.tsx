@@ -370,7 +370,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                         </div>
                         <div className="flex-1">
                             <h3 className="text-lg font-bold text-orange-200 mb-2 flex items-center space-x-2">
-                                <span>⚠️ El curso requiere cambios</span>
+                                <span>El curso requiere cambios</span>
                             </h3>
                             {courseReviewComments ? (
                                 <>
