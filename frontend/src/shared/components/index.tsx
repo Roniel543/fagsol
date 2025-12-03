@@ -77,6 +77,7 @@ interface InputProps {
     onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     placeholder?: string;
     required?: boolean;
+    disabled?: boolean;
     error?: string;
     className?: string;
     variant?: 'dark' | 'light'; // Nueva prop para variante
@@ -90,6 +91,7 @@ export function Input({
     onChange,
     placeholder,
     required = false,
+    disabled = false,
     error,
     className = '',
     variant = 'dark', // Por defecto dark para mantener compatibilidad
@@ -100,9 +102,9 @@ export function Input({
         : 'block text-sm font-medium text-primary-white mb-1';
     const inputClasses = isLight
         ? `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-red-300' : 'border-gray-300'
-        } placeholder-gray-400 text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm`
+        } placeholder-gray-400 text-gray-900 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`
         : `appearance-none relative block w-full px-4 py-3 border ${error ? 'border-red-500/50' : 'border-primary-orange/20'
-        } placeholder-secondary-light-gray text-primary-white bg-primary-black/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm backdrop-blur-sm transition-all duration-300`;
+        } placeholder-secondary-light-gray text-primary-white bg-primary-black/40 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm backdrop-blur-sm transition-all duration-300 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`;
 
     return (
         <div className={className}>
@@ -120,6 +122,7 @@ export function Input({
                 onChange={onChange}
                 placeholder={placeholder}
                 required={required}
+                disabled={disabled}
                 className={inputClasses}
             />
             {error && (

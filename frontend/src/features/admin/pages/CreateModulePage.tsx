@@ -26,7 +26,6 @@ function CreateModulePageContent() {
             </div>
         );
     }
-
     return (
         <div>
             {/* Header */}

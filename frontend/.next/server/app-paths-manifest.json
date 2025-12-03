@@ -1,7 +1,0 @@
-{
-  "/instructor/courses/page": "app/instructor/courses/page.js",
-  "/instructor/courses/[id]/edit/page": "app/instructor/courses/[id]/edit/page.js",
-  "/admin/courses/[id]/modules/page": "app/admin/courses/[id]/modules/page.js",
-  "/admin/courses/page": "app/admin/courses/page.js",
-  "/instructor/courses/[id]/modules/page": "app/instructor/courses/[id]/modules/page.js"
-}

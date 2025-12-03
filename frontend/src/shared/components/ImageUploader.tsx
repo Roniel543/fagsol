@@ -13,6 +13,7 @@ interface ImageUploaderProps {
     recommendedSize?: string;
     className?: string;
     error?: string;
+    disabled?: boolean;
 }
 
 export function ImageUploader({
@@ -23,6 +24,7 @@ export function ImageUploader({
     recommendedSize,
     className = '',
     error,
+    disabled = false,
 }: ImageUploaderProps) {
 
     const [preview, setPreview] = useState<string | null>(value || null);
@@ -53,6 +55,8 @@ export function ImageUploader({
     });
 
     const handleFileSelect = useCallback(async (file: File) => {
+        if (disabled) return;
+        
         // Crear preview inmediato desde el archivo local
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -71,7 +75,7 @@ export function ImageUploader({
             // Si falla la subida, mantener el preview local pero limpiar si es necesario
             // El error ya se muestra en el toast
         }
-    }, [uploadImage, imageType]);
+    }, [uploadImage, imageType, disabled]);
 
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -85,11 +89,13 @@ export function ImageUploader({
         e.stopPropagation();
         setDragActive(false);
 
+        if (disabled) return;
+
         const file = e.dataTransfer.files?.[0];
         if (file && file.type.startsWith('image/')) {
             handleFileSelect(file);
         }
-    }, [handleFileSelect]);
+    }, [handleFileSelect, disabled]);
 
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
@@ -104,6 +110,8 @@ export function ImageUploader({
     };
 
     const handleUrlSubmit = () => {
+        if (disabled) return;
+        
         if (urlInput.trim()) {
             // Validar URL básica
             try {
@@ -121,6 +129,8 @@ export function ImageUploader({
     };
 
     const handleRemove = () => {
+        if (disabled) return;
+        
         setPreview(null);
         setUrlInput('');
         onChange('');
@@ -158,14 +168,16 @@ export function ImageUploader({
                     className={`
                         relative border-2 border-dashed rounded-lg p-8
                         transition-all duration-300
-                        ${dragActive
+                        ${disabled 
+                            ? 'opacity-50 cursor-not-allowed border-primary-orange/20 bg-primary-black/20'
+                            : dragActive
                             ? 'border-primary-orange bg-primary-orange/10'
                             : 'border-primary-orange/30 bg-primary-black/40 hover:border-primary-orange/50'
                         }
                     `}
-                    onDrop={handleDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
+                    onDrop={disabled ? undefined : handleDrop}
+                    onDragOver={disabled ? undefined : handleDragOver}
+                    onDragLeave={disabled ? undefined : handleDragLeave}
                 >
                     <input
                         ref={fileInputRef}
@@ -173,7 +185,7 @@ export function ImageUploader({
                         accept="image/jpeg,image/png,image/webp"
                         onChange={handleFileInputChange}
                         className="hidden"
-                        disabled={uploading}
+                        disabled={uploading || disabled}
                     />
 
                     <div className="text-center">
@@ -194,7 +206,7 @@ export function ImageUploader({
                                 variant="primary"
                                 size="sm"
                                 onClick={switchToUploadMode}
-                                disabled={uploading}
+                                disabled={uploading || disabled}
                             >
                                 <Upload className="w-4 h-4 mr-2" />
                                 Subir Imagen
@@ -204,7 +216,7 @@ export function ImageUploader({
                                 variant="secondary"
                                 size="sm"
                                 onClick={switchToUrlMode}
-                                disabled={uploading}
+                                disabled={uploading || disabled}
                             >
                                 <LinkIcon className="w-4 h-4 mr-2" />
                                 Usar URL
@@ -233,9 +245,10 @@ export function ImageUploader({
                             value={urlInput}
                             onChange={(e) => setUrlInput(e.target.value)}
                             placeholder="https://ejemplo.com/imagen.jpg"
-                            className="flex-1 px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-primary-white placeholder-secondary-light-gray"
+                            disabled={disabled}
+                            className={`flex-1 px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-primary-white placeholder-secondary-light-gray ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
+                                if (e.key === 'Enter' && !disabled) {
                                     handleUrlSubmit();
                                 }
                             }}
@@ -245,7 +258,7 @@ export function ImageUploader({
                             variant="primary"
                             size="sm"
                             onClick={handleUrlSubmit}
-                            disabled={!urlInput.trim()}
+                            disabled={!urlInput.trim() || disabled}
                         >
                             Usar URL
                         </Button>
@@ -257,20 +270,23 @@ export function ImageUploader({
                                 setIsUrlMode(false);
                                 setUrlInput('');
                             }}
+                            disabled={disabled}
                         >
                             Cancelar
                         </Button>
                     </div>
-                    <p className="text-xs text-secondary-light-gray">
-                        O puedes{' '}
-                        <button
-                            type="button"
-                            onClick={switchToUploadMode}
-                            className="text-primary-orange hover:underline"
-                        >
-                            subir una imagen desde tu computadora
-                        </button>
-                    </p>
+                    {!disabled && (
+                        <p className="text-xs text-secondary-light-gray">
+                            O puedes{' '}
+                            <button
+                                type="button"
+                                onClick={switchToUploadMode}
+                                className="text-primary-orange hover:underline"
+                            >
+                                subir una imagen desde tu computadora
+                            </button>
+                        </p>
+                    )}
                 </div>
             )}
 
@@ -286,13 +302,15 @@ export function ImageUploader({
                                 showToast('❌ Error al cargar la imagen', 'error');
                             }}
                         />
-                        <button
-                            type="button"
-                            onClick={handleRemove}
-                            className="absolute top-2 right-2 w-8 h-8 bg-red-500/90 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors"
-                        >
-                            <X className="w-4 h-4 text-white" />
-                        </button>
+                        {!disabled && (
+                            <button
+                                type="button"
+                                onClick={handleRemove}
+                                className="absolute top-2 right-2 w-8 h-8 bg-red-500/90 hover:bg-red-500 rounded-full flex items-center justify-center transition-colors"
+                            >
+                                <X className="w-4 h-4 text-white" />
+                            </button>
+                        )}
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                         <p className="text-xs text-secondary-light-gray">
@@ -308,6 +326,7 @@ export function ImageUploader({
                                     setIsUrlMode(true);
                                     setUrlInput(value || '');
                                 }}
+                                disabled={disabled}
                             >
                                 Cambiar
                             </Button>

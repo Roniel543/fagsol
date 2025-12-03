@@ -173,6 +173,18 @@ class Course(models.Model):
     def can_request_review(self):
         """Verifica si el curso puede solicitar revisión (debe estar en draft o needs_revision)"""
         return self.status in ['draft', 'needs_revision'] and self.is_active
+    
+    def can_be_edited_by_instructor(self):
+        """
+        Verifica si el curso puede ser editado por un instructor.
+        
+        Los instructores solo pueden editar cursos en 'draft' o 'needs_revision'.
+        No pueden editar cursos en 'pending_review' o 'published'.
+        
+        Returns:
+            bool: True si el curso puede ser editado por un instructor
+        """
+        return self.status in ['draft', 'needs_revision'] and self.is_active
 
 
 class Module(models.Model):

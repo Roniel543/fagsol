@@ -5,11 +5,15 @@ Maneja la lógica de negocio para solicitudes de instructores
 
 import logging
 from typing import Dict, Optional, Tuple
+from datetime import timedelta
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from apps.core.models import InstructorApplication, UserProfile
 
 logger = logging.getLogger('apps')
+
+# Días que deben pasar antes de poder volver a aplicar después de un rechazo
+REAPPLY_COOLDOWN_DAYS = 30
 
 
 class InstructorApplicationService:
@@ -66,21 +70,33 @@ class InstructorApplicationService:
             if pending_application:
                 return False, None, "Ya tienes una solicitud pendiente. Espera a que sea revisada."
             
-            # 3. Validar campos requeridos
+            # 3. Validar tiempo de espera si hubo un rechazo reciente
+            last_rejected = InstructorApplication.objects.filter(
+                user=user,
+                status='rejected'
+            ).order_by('-reviewed_at').first()
+            
+            if last_rejected and last_rejected.reviewed_at:
+                days_since_rejection = (timezone.now() - last_rejected.reviewed_at).days
+                if days_since_rejection < REAPPLY_COOLDOWN_DAYS:
+                    days_remaining = REAPPLY_COOLDOWN_DAYS - days_since_rejection
+                    return False, None, f"Debes esperar {days_remaining} día(s) más antes de volver a aplicar. Tu última solicitud fue rechazada hace {days_since_rejection} día(s)."
+            
+            # 4. Validar campos requeridos
             if not motivation or not motivation.strip():
                 return False, None, "La motivación es requerida. Cuéntanos por qué quieres ser instructor."
             
-            # 4. Validar años de experiencia
+            # 5. Validar años de experiencia
             if experience_years < 0:
                 experience_years = 0
             
-            # 5. Validar URL del portfolio si se proporciona
+            # 6. Validar URL del portfolio si se proporciona
             if portfolio_url and portfolio_url.strip():
                 portfolio_url = portfolio_url.strip()
                 if not portfolio_url.startswith(('http://', 'https://')):
                     return False, None, "La URL del portfolio debe comenzar con http:// o https://"
             
-            # 6. Crear la solicitud
+            # 7. Crear la solicitud
             application = InstructorApplication.objects.create(
                 user=user,
                 professional_title=professional_title.strip() if professional_title else '',
@@ -215,4 +231,37 @@ class InstructorApplicationService:
         except Exception as e:
             logger.error(f'Error al obtener solicitud de usuario {user.email}: {str(e)}')
             return None
+    
+    def can_reapply(self, user) -> Tuple[bool, Optional[int]]:
+        """
+        Verifica si un usuario puede volver a aplicar después de un rechazo
+        
+        Args:
+            user: Usuario
+        
+        Returns:
+            Tuple[can_reapply, days_remaining]
+            - can_reapply: True si puede aplicar, False si no
+            - days_remaining: Días que faltan para poder aplicar (None si puede aplicar ahora)
+        """
+        try:
+            last_rejected = InstructorApplication.objects.filter(
+                user=user,
+                status='rejected'
+            ).order_by('-reviewed_at').first()
+            
+            if not last_rejected or not last_rejected.reviewed_at:
+                return True, None
+            
+            days_since_rejection = (timezone.now() - last_rejected.reviewed_at).days
+            
+            if days_since_rejection >= REAPPLY_COOLDOWN_DAYS:
+                return True, None
+            else:
+                days_remaining = REAPPLY_COOLDOWN_DAYS - days_since_rejection
+                return False, days_remaining
+                
+        except Exception as e:
+            logger.error(f'Error al verificar si puede volver a aplicar para {user.email}: {str(e)}')
+            return True, None  # En caso de error, permitir aplicar
 

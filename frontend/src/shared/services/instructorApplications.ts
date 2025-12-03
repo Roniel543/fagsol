@@ -30,6 +30,9 @@ export interface InstructorApplication {
     rejection_reason?: string | null;
     created_at: string;
     updated_at: string;
+    // Información sobre volver a aplicar (solo si status === 'rejected')
+    can_reapply?: boolean | null;
+    days_remaining?: number | null;
 }
 
 export interface InstructorApplicationsResponse {
@@ -100,5 +103,25 @@ export async function rejectInstructorApplication(
         }
     );
     return response as unknown as ApplicationActionResponse;
+}
+
+/**
+ * Obtiene la solicitud de instructor del usuario autenticado
+ * Permite al usuario ver el estado de su propia solicitud
+ */
+export interface MyInstructorApplicationResponse {
+    success: boolean;
+    data?: InstructorApplication;
+    message?: string;
+}
+
+export async function getMyInstructorApplication(): Promise<MyInstructorApplicationResponse> {
+    const response = await apiRequest<MyInstructorApplicationResponse>(
+        '/auth/my-instructor-application/',
+        {
+            method: 'GET',
+        }
+    );
+    return response as unknown as MyInstructorApplicationResponse;
 }
 
