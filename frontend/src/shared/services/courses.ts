@@ -194,7 +194,7 @@ export interface CreateCourseRequest {
     short_description?: string;
     price: number;
     currency?: string;
-    status?: 'draft' | 'published' | 'archived';
+    status?: 'draft' | 'pending_review' | 'needs_revision' | 'published' | 'archived';
     category?: string;
     level?: 'beginner' | 'intermediate' | 'advanced';
     thumbnail_url?: string;

@@ -253,7 +253,37 @@ class CourseService:
                     if course.status == 'archived' and status != 'archived':
                         course.is_active = True
                     
+                    # Si se cambia a needs_revision y se proporcionan comentarios, guardarlos
+                    if status == 'needs_revision' and 'review_comments' in kwargs:
+                        review_comments = kwargs['review_comments']
+                        if review_comments and review_comments.strip():
+                            # Solo admins pueden agregar comentarios de revisión
+                            if is_admin(user):
+                                from django.utils import timezone
+                                course.review_comments = review_comments.strip()[:2000]  # Limitar a 2000 caracteres
+                                course.reviewed_by = user
+                                course.reviewed_at = timezone.now()
+                    
                     course.status = status
+            
+            # Manejar comentarios de revisión independientemente del cambio de estado
+            # Esto permite actualizar comentarios incluso si el curso ya está en needs_revision
+            if 'review_comments' in kwargs:
+                review_comments = kwargs['review_comments']
+                # Solo permitir si el curso está o estará en needs_revision
+                final_status = kwargs.get('status', course.status)
+                
+                if final_status == 'needs_revision' and is_admin(user):
+                    if review_comments and review_comments.strip():
+                        from django.utils import timezone
+                        course.review_comments = review_comments.strip()[:2000]
+                        course.reviewed_by = user
+                        course.reviewed_at = timezone.now()
+                    elif review_comments == '' or review_comments is None:
+                        # Si se envía vacío, limpiar comentarios (solo admin)
+                        course.review_comments = None
+                        course.reviewed_by = None
+                        course.reviewed_at = None
             
             if 'thumbnail_url' in kwargs:
                 thumbnail_url = kwargs['thumbnail_url']

@@ -22,7 +22,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
         short_description: '',
         price: 0,
         currency: 'PEN',
-        status: 'draft',
+        status: 'draft' as 'draft' | 'pending_review' | 'needs_revision' | 'published' | 'archived',
         category: 'General',
         level: 'beginner',
         thumbnail_url: '',
@@ -45,6 +45,8 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
     const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewComments, setReviewComments] = useState<string>(''); // Comentarios de revisión (solo para admin)
+    const [courseReviewComments, setCourseReviewComments] = useState<string | null>(null); // Comentarios del curso (para mostrar al instructor)
     const router = useRouter();
 
     // Hooks para solicitar revisión (FASE 2)
@@ -81,6 +83,18 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                     provider: (course as any).provider || 'fagsol',
                 });
                 setCurrentStatus(courseStatus);
+                // Cargar comentarios de revisión si existen
+                const reviewCommentsFromBackend = (course as any).review_comments;
+
+                // Cargar comentarios en ambos estados (para admin e instructor)
+                if (reviewCommentsFromBackend) {
+                    setReviewComments(reviewCommentsFromBackend);
+                    setCourseReviewComments(reviewCommentsFromBackend);
+                } else {
+                    // Limpiar si no hay comentarios
+                    setReviewComments('');
+                    setCourseReviewComments(null);
+                }
             } else {
                 const errorMessage = (response as any).message || 'Error al cargar el curso';
                 setError(errorMessage);
@@ -247,6 +261,17 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                     delete updateData.status;
                 }
 
+                // Si el admin está editando y hay comentarios de revisión, incluirlos
+                // Esto aplica tanto si cambia el estado a needs_revision como si el curso ya está en needs_revision
+                if (user?.role === 'admin') {
+                    const newStatus = updateData.status || currentStatus;
+                    // Solo incluir comentarios si el estado es o será needs_revision
+                    if (newStatus === 'needs_revision') {
+                        // Incluir comentarios incluso si están vacíos (para permitir limpiarlos)
+                        (updateData as any).review_comments = reviewComments.trim();
+                    }
+                }
+
                 response = await updateCourse(courseId, updateData);
             } else {
                 // Crear curso
@@ -320,7 +345,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
     }
 
     const isInstructor = user?.role === 'instructor';
-    
+
     // Determinar si el formulario debe estar deshabilitado para instructores
     const isFormDisabled: boolean = !!(courseId && isInstructor && (currentStatus === 'pending_review' || currentStatus === 'published'));
 
@@ -332,6 +357,50 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                     <div className="flex items-start space-x-3">
                         <AlertCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
                         <p className="text-sm font-medium">{error}</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Alerta de comentarios de revisión (solo para instructores cuando el curso requiere cambios) */}
+            {isInstructor && currentStatus === 'needs_revision' && (
+                <div className="relative bg-orange-900/30 border border-orange-500/50 text-orange-200 px-6 py-5 rounded-xl backdrop-blur-sm shadow-lg mb-6">
+                    <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-500 rounded-lg flex items-center justify-center shadow-lg">
+                            <AlertTriangle className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-lg font-bold text-orange-200 mb-2 flex items-center space-x-2">
+                                <span>⚠️ El curso requiere cambios</span>
+                            </h3>
+                            {courseReviewComments ? (
+                                <>
+                                    <p className="text-sm text-orange-200/90 mb-3">
+                                        El administrador ha revisado tu curso y ha solicitado los siguientes cambios:
+                                    </p>
+                                    <div className="bg-primary-black/40 border border-orange-500/30 rounded-lg p-4 mt-3">
+                                        <p className="text-sm text-primary-white whitespace-pre-wrap leading-relaxed">
+                                            {courseReviewComments}
+                                        </p>
+                                    </div>
+                                    <p className="text-xs text-orange-200/70 mt-3">
+                                        Por favor, realiza los cambios solicitados y vuelve a solicitar revisión cuando esté listo.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-orange-200/90 mb-3">
+                                        El administrador ha marcado tu curso como "Requiere Cambios".
+                                    </p>
+                                    <p className="text-sm text-orange-200/90 mb-3">
+                                        Por favor, revisa el contenido de tu curso y realiza las mejoras necesarias.
+                                        Una vez completados los cambios, puedes volver a solicitar revisión.
+                                    </p>
+                                    <p className="text-xs text-orange-200/70 mt-3">
+                                        💡 <strong>Tip:</strong> Si necesitas más detalles sobre qué cambios realizar, contacta al administrador.
+                                    </p>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -528,6 +597,34 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                 ]}
                                 variant="dark"
                             />
+                        </div>
+                    )}
+
+                    {/* Campo de comentarios de revisión (solo para admin cuando cambia a needs_revision) */}
+                    {user?.role === 'admin' && formData.status === 'needs_revision' && (
+                        <div>
+                            <label className="flex text-sm font-medium text-primary-white mb-2 items-center space-x-2">
+                                <AlertCircle className="w-4 h-4 text-primary-orange" />
+                                <span>Comentarios de Revisión</span>
+                                <span className="text-xs text-secondary-light-gray">(Opcional pero recomendado)</span>
+                            </label>
+                            <textarea
+                                value={reviewComments}
+                                onChange={(e) => setReviewComments(e.target.value)}
+                                placeholder="Explica qué cambios requiere el curso. Estos comentarios serán visibles para el instructor."
+                                rows={4}
+                                maxLength={2000}
+                                disabled={isFormDisabled}
+                                className="block w-full px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange sm:text-sm text-primary-white placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+                            />
+                            <div className="mt-2 flex items-center justify-between">
+                                <p className="text-xs text-secondary-light-gray">
+                                    {reviewComments.length}/2000 caracteres
+                                </p>
+                                <p className="text-xs text-secondary-light-gray">
+                                    El instructor verá estos comentarios cuando revise su curso
+                                </p>
+                            </div>
                         </div>
                     )}
 

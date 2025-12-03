@@ -225,33 +225,51 @@ def get_course_by_slug(request, slug):
         if request.user.is_authenticated and course.created_by:
             is_creator = course.created_by.id == request.user.id
         
+        # Preparar datos de respuesta
+        response_data = {
+            'id': course.id,
+            'title': course.title,
+            'slug': course.slug,
+            'description': course.description,
+            'short_description': course.short_description,
+            'price': float(course.price),
+            'discount_price': float(course.discount_price) if course.discount_price else None,
+            'currency': course.currency,
+            'thumbnail_url': course.thumbnail_url,
+            'banner_url': course.banner_url,
+            'status': course.status,
+            'category': course.category,
+            'level': course.level,
+            'provider': course.provider,
+            'tags': course.tags,
+            'hours': course.hours,
+            'rating': float(course.rating),
+            'ratings_count': course.ratings_count,
+            'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+            'modules': modules,
+            'is_enrolled': is_enrolled,
+            'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
+            'created_at': course.created_at.isoformat(),
+        }
+        
+        # Incluir información de revisión si el curso está en needs_revision y el usuario es el creador o admin
+        if course.status == 'needs_revision' and (is_creator or (request.user.is_authenticated and is_admin(request.user))):
+            # Incluir comentarios si existen
+            if course.review_comments:
+                response_data['review_comments'] = course.review_comments
+            # Incluir información del revisor si existe
+            if course.reviewed_by:
+                response_data['reviewed_by'] = {
+                    'id': course.reviewed_by.id,
+                    'email': course.reviewed_by.email,
+                    'username': course.reviewed_by.username,
+                }
+            if course.reviewed_at:
+                response_data['reviewed_at'] = course.reviewed_at.isoformat()
+        
         return Response({
             'success': True,
-            'data': {
-                'id': course.id,
-                'title': course.title,
-                'slug': course.slug,
-                'description': course.description,
-                'short_description': course.short_description,
-                'price': float(course.price),
-                'discount_price': float(course.discount_price) if course.discount_price else None,
-                'currency': course.currency,
-                'thumbnail_url': course.thumbnail_url,
-                'banner_url': course.banner_url,
-                'status': course.status,
-                'category': course.category,
-                'level': course.level,
-                'provider': course.provider,
-                'tags': course.tags,
-                'hours': course.hours,
-                'rating': float(course.rating),
-                'ratings_count': course.ratings_count,
-                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
-                'modules': modules,
-                'is_enrolled': is_enrolled,
-                'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
-                'created_at': course.created_at.isoformat(),
-            }
+            'data': response_data
         }, status=status.HTTP_200_OK)
         
     except Course.DoesNotExist:
@@ -342,33 +360,52 @@ def get_course(request, course_id):
         if request.user.is_authenticated and course.created_by:
             is_creator = course.created_by.id == request.user.id
         
+        # Preparar datos de respuesta
+        response_data = {
+            'id': course.id,
+            'title': course.title,
+            'slug': course.slug,
+            'description': course.description,
+            'short_description': course.short_description,
+            'price': float(course.price),
+            'discount_price': float(course.discount_price) if course.discount_price else None,
+            'currency': course.currency,
+            'thumbnail_url': course.thumbnail_url,
+            'banner_url': course.banner_url,
+            'status': course.status,
+            'category': course.category,
+            'level': course.level,
+            'provider': course.provider,
+            'tags': course.tags,
+            'hours': course.hours,
+            'rating': float(course.rating),
+            'ratings_count': course.ratings_count,
+            'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+            'modules': modules,
+            'is_enrolled': is_enrolled,
+            'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
+            'created_at': course.created_at.isoformat(),
+        }
+        
+        # Incluir información de revisión si existe (solo para creadores del curso o admins)
+        # Siempre incluir información de revisión si el curso está en needs_revision y el usuario es el creador o admin
+        if course.status == 'needs_revision' and (is_creator or (request.user.is_authenticated and is_admin(request.user))):
+            # Incluir comentarios si existen
+            if course.review_comments:
+                response_data['review_comments'] = course.review_comments
+            # Incluir información del revisor si existe
+            if course.reviewed_by:
+                response_data['reviewed_by'] = {
+                    'id': course.reviewed_by.id,
+                    'email': course.reviewed_by.email,
+                    'username': course.reviewed_by.username,
+                }
+            if course.reviewed_at:
+                response_data['reviewed_at'] = course.reviewed_at.isoformat()
+        
         return Response({
             'success': True,
-            'data': {
-                'id': course.id,
-                'title': course.title,
-                'slug': course.slug,
-                'description': course.description,
-                'short_description': course.short_description,
-                'price': float(course.price),
-                'discount_price': float(course.discount_price) if course.discount_price else None,
-                'currency': course.currency,
-                'thumbnail_url': course.thumbnail_url,
-                'banner_url': course.banner_url,
-                'status': course.status,
-                'category': course.category,
-                'level': course.level,
-                'provider': course.provider,
-                'tags': course.tags,
-                'hours': course.hours,
-                'rating': float(course.rating),
-                'ratings_count': course.ratings_count,
-                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
-                'modules': modules,
-                'is_enrolled': is_enrolled,
-                'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
-                'created_at': course.created_at.isoformat(),
-            }
+            'data': response_data
         }, status=status.HTTP_200_OK)
         
     except Course.DoesNotExist:
@@ -904,6 +941,8 @@ def update_course(request, course_id):
                 kwargs['hours'] = int(request.data['hours'])
             except (ValueError, TypeError):
                 pass
+        if 'review_comments' in request.data:
+            kwargs['review_comments'] = request.data['review_comments']
         if 'instructor' in request.data:
             kwargs['instructor'] = request.data['instructor']
         if 'tags' in request.data:

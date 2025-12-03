@@ -46,14 +46,14 @@ function CreateCoursePageContent() {
                             >
                                 <ArrowLeft className="w-5 h-5 text-secondary-light-gray group-hover:text-primary-orange transition-colors" />
                             </Link>
-                            <div>
+                        <div>
                                 <div className="flex items-center space-x-3 mb-2">
                                     <div className="w-12 h-12 bg-gradient-to-br from-primary-orange to-amber-500 rounded-lg flex items-center justify-center shadow-lg">
                                         <BookOpen className="w-6 h-6 text-white" />
                                     </div>
                                     <h1 className="text-3xl font-bold text-primary-white bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
-                                        Crear Nuevo Curso
-                                    </h1>
+                                Crear Nuevo Curso
+                            </h1>
                                 </div>
                                 <p className="text-secondary-light-gray font-medium">
                                     {isInstructor
