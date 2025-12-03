@@ -1021,7 +1021,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                             const result = await requestReview(courseId!);
                                             if (result.success) {
                                                 setShowReviewModal(false);
-                                                showToast('✅ Revisión solicitada exitosamente. El administrador revisará tu curso.', 'success');
+                                                showToast('Revisión solicitada exitosamente. El administrador revisará tu curso.', 'success');
                                                 // Recargar el curso para actualizar el estado
                                                 loadCourse();
                                             } else {
