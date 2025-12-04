@@ -1,7 +1,7 @@
 # 📋 Contexto del Proyecto - FagSol Escuela Virtual
 
-**Fecha:** 2025-01-12  
-**Última actualización:** Sistema de Permisos Django - COMPLETADO ✅
+**Fecha:** 2025-01-27  
+**Última actualización:** Sincronización de Autenticación entre Pestañas - COMPLETADO ✅
 
 ---
 
@@ -32,10 +32,24 @@ Plataforma educativa en línea con:
 - ✅ Páginas de login y registro
 - ✅ Hook `useAuth` para gestión de autenticación
 - ✅ Componente `ProtectedRoute` para rutas protegidas
-- ✅ Persistencia de sesión (sessionStorage)
+- ✅ Persistencia de sesión (sessionStorage para access token, localStorage para refresh token)
 - ✅ Validación de token en carga inicial
+- ✅ **Sincronización entre pestañas con BroadcastChannel API** (NUEVO)
 
-**Estado:** ✅ **FUNCIONANDO**
+**Sincronización entre Pestañas (BroadcastChannel):**
+- ✅ Login sincroniza automáticamente en todas las pestañas
+- ✅ Logout sincroniza automáticamente en todas las pestañas
+- ✅ Register sincroniza automáticamente en todas las pestañas
+- ✅ Refresh token en localStorage (compartido entre pestañas) con expiración
+- ✅ Access token en sessionStorage (no compartido, más seguro)
+- ✅ Tab ID único para evitar loops infinitos
+- ✅ Manejo de race conditions con `isProcessingAuth` flag
+
+**Archivos Clave:**
+- `frontend/src/shared/hooks/useAuth.tsx` - BroadcastChannel listener y sincronización
+- `frontend/src/shared/utils/tokenStorage.ts` - Gestión de tokens con localStorage para refresh token
+
+**Estado:** ✅ **FUNCIONANDO** - Todas las pruebas pasadas (4/4)
 
 ---
 
@@ -196,7 +210,9 @@ frontend/
 - ✅ TypeScript
 - ✅ Tailwind CSS
 - ✅ SWR para data fetching
-- ✅ sessionStorage para tokens
+- ✅ sessionStorage para access tokens (seguridad)
+- ✅ localStorage para refresh tokens (sincronización entre pestañas)
+- ✅ BroadcastChannel API para comunicación entre pestañas
 
 ---
 
@@ -205,6 +221,7 @@ frontend/
 | Funcionalidad | Backend | Frontend | Estado |
 |--------------|---------|----------|--------|
 | Autenticación | ✅ | ✅ | ✅ Completo |
+| Sincronización entre Pestañas | N/A | ✅ | ✅ Completo (BroadcastChannel) |
 | Permisos/Roles | ✅ | ✅ | ✅ Completo |
 | CRUD Cursos | ✅ | ✅ | ✅ Completo |
 | Pagos | ✅ | ✅ | ✅ Completo |
@@ -336,6 +353,7 @@ npm run build
 
 ---
 
-**Última actualización:** 2025-01-12  
-**Sistema de Permisos:** ✅ COMPLETADO Y VERIFICADO
+**Última actualización:** 2025-01-27  
+**Sistema de Permisos:** ✅ COMPLETADO Y VERIFICADO  
+**Sincronización entre Pestañas:** ✅ COMPLETADO Y VERIFICADO (4/4 pruebas pasadas)
 

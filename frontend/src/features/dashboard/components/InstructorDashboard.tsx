@@ -528,7 +528,7 @@ export function InstructorDashboard() {
                                                     <span>Archivado</span>
                                                 </Button>
                                             ) : course.status === 'published' && course.slug ? (
-                                                <Link href={`/academy/course/${course.slug}`} target="_blank" rel="noopener noreferrer">
+                                                <Link href={`/academy/course/${course.slug}`}>
                                                     <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
                                                         <span>Ver</span>
                                                         <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />

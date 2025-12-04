@@ -37,6 +37,7 @@ export interface AdminStats {
     popular_courses: Array<{
         id: string;
         title: string;
+        slug?: string;
         enrollments: number;
         status: string;
     }>;
@@ -72,6 +73,7 @@ export interface InstructorStats {
     popular_courses: Array<{
         id: string;
         title: string;
+        slug?: string;
         enrollments: number;
         status: string;
     }>;

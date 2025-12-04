@@ -4,6 +4,7 @@ import { authAPI } from '@/shared/services/api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '@/shared/types';
 import {
     clearTokens,
+    getRefreshToken,
     getUserData,
     migrateTokensFromLocalStorage,
     setTokens,
@@ -56,6 +57,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Flag para evitar revalidaciones durante login/logout en la misma pestaña
     const isProcessingAuth = useRef(false);
+    
+    // ID único de esta pestaña para identificar mensajes propios
+    const tabId = useRef(Math.random().toString(36).substring(7));
 
     useEffect(() => {
         /**
@@ -173,19 +177,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let authChannel: BroadcastChannel | null = null;
         if (typeof BroadcastChannel !== 'undefined') {
             authChannel = new BroadcastChannel('auth-sync');
+            
             authChannel.onmessage = (event) => {
                 // Ignorar mensajes de la misma pestaña (evitar loops)
-                if (event.data.source === 'same-tab') {
+                if (event.data.tabId === tabId.current) {
                     return;
                 }
 
                 if (event.data.type === 'TOKEN_UPDATED') {
-                    // Solo revalidar si no estamos procesando auth en esta pestaña
-                    // y hay token disponible (otra pestaña hizo login)
+                    // Cuando otra pestaña hace login, intentar obtener un nuevo access token
+                    // usando el refresh token que está en localStorage (se comparte entre pestañas)
                     if (!isProcessingAuth.current) {
                         const currentToken = sessionStorage.getItem('access_token');
+                        
                         if (currentToken) {
+                            // Si ya hay token, simplemente revalidar
                             validateUserInBackground();
+                        } else {
+                            // Si no hay token, intentar usar refresh token de localStorage para obtener uno nuevo
+                            // Usar getRefreshToken() que maneja el formato JSON y expiración
+                            const refreshToken = getRefreshToken();
+                            
+                            if (refreshToken) {
+                                // Intentar refrescar el token
+                                (async () => {
+                                    try {
+                                        const { refreshAccessToken } = await import('@/shared/services/api');
+                                        const newToken = await refreshAccessToken();
+                                        
+                                        if (newToken) {
+                                            // Si se obtuvo un nuevo token, revalidar usuario
+                                            validateUserInBackground();
+                                        } else {
+                                            console.warn('[BroadcastChannel] No se pudo obtener nuevo access token');
+                                        }
+                                    } catch (error) {
+                                        console.error('[BroadcastChannel] Error refreshing token:', error);
+                                    }
+                                })();
+                            } else {
+                                console.warn('[BroadcastChannel] No hay refresh token disponible');
+                            }
                         }
                     }
                 } else if (event.data.type === 'LOGOUT') {
@@ -222,14 +254,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setLoadingUser(false);
 
                 // Notificar a otras pestañas que hay un nuevo token (sin compartir el token)
-                // Marcar como 'same-tab' para que esta pestaña ignore el mensaje
+                // Incluir tabId para que esta pestaña ignore su propio mensaje
                 if (typeof BroadcastChannel !== 'undefined') {
                     const channel = new BroadcastChannel('auth-sync');
                     channel.postMessage({
                         type: 'TOKEN_UPDATED',
-                        source: 'same-tab'
+                        tabId: tabId.current
                     });
                     channel.close();
+                } else {
+                    console.warn('[BroadcastChannel] No disponible en este navegador');
                 }
             } else {
                 isProcessingAuth.current = false;
@@ -256,11 +290,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Resetear el flag después de un pequeño delay para permitir que el estado se actualice
             setTimeout(() => {
                 isProcessingAuth.current = false;
-            }, 500);
+            }, 300);
         }
     };
 
     const register = async (userData: RegisterRequest): Promise<AuthResponse> => {
+        // Marcar que estamos procesando registro para evitar revalidaciones
+        isProcessingAuth.current = true;
+
         try {
             const response = await authAPI.register(userData);
 
@@ -269,15 +306,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setTokens(response.tokens.access, response.tokens.refresh);
                 setUserData(response.user);
                 setUser(response.user);
+                setLoadingUser(false);
+
+                // Notificar a otras pestañas que hay un nuevo token (sin compartir el token)
+                // Incluir tabId para que esta pestaña ignore su propio mensaje
+                if (typeof BroadcastChannel !== 'undefined') {
+                    const channel = new BroadcastChannel('auth-sync');
+                    channel.postMessage({
+                        type: 'TOKEN_UPDATED',
+                        tabId: tabId.current
+                    });
+                    channel.close();
+                } else {
+                    console.warn('[BroadcastChannel] No disponible en este navegador');
+                }
+            } else {
+                isProcessingAuth.current = false;
             }
 
             return response;
         } catch (error) {
             console.error('Register error:', error);
+            isProcessingAuth.current = false;
             return {
                 success: false,
                 message: 'Error de conexión con el servidor'
             };
+        } finally {
+            // Resetear el flag después de un pequeño delay
+            setTimeout(() => {
+                isProcessingAuth.current = false;
+            }, 500);
         }
     };
 
@@ -301,7 +360,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const channel = new BroadcastChannel('auth-sync');
                 channel.postMessage({
                     type: 'LOGOUT',
-                    source: 'same-tab'
+                    tabId: tabId.current
                 });
                 channel.close();
             }
