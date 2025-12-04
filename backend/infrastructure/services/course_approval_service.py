@@ -286,17 +286,20 @@ class CourseApprovalService:
                 return False, [], f"Estado de filtro inválido. Valores permitidos: {', '.join(ALLOWED_STATUSES)}"
             
             # Query base
-            # Si el filtro es 'archived', no filtrar por is_active (los archivados pueden estar inactivos)
-            # Para otros estados, solo mostrar cursos activos
+            # Si el filtro es 'archived', mostrar solo cursos archivados (pueden estar inactivos)
+            # Para otros estados (incluyendo None/todos), excluir cursos archivados
             if status_filter == 'archived':
-                queryset = Course.objects.all().select_related('created_by', 'reviewed_by')
+                queryset = Course.objects.filter(
+                    status='archived'
+                ).select_related('created_by', 'reviewed_by')
             else:
+                # Para 'todos' y otros estados, excluir explícitamente los cursos archivados
                 queryset = Course.objects.filter(
                     is_active=True
-                ).select_related('created_by', 'reviewed_by')
+                ).exclude(status='archived').select_related('created_by', 'reviewed_by')
             
-            # Aplicar filtro si existe (ya validado arriba)
-            if status_filter:
+            # Aplicar filtro si existe y no es 'archived' (ya aplicado arriba)
+            if status_filter and status_filter != 'archived':
                 queryset = queryset.filter(status=status_filter)
             
             queryset = queryset.order_by('-created_at')
@@ -354,15 +357,15 @@ class CourseApprovalService:
         try:
             from apps.courses.models import Course
             
-            # Contadores: todos los estados cuentan solo cursos activos
-            # Para archived, también incluimos inactivos ya que es un estado de eliminación lógica
+            # Contadores: todos los estados cuentan solo cursos activos, excluyendo archivados
+            # Para archived, incluimos todos los cursos con status='archived' (pueden estar inactivos)
             counts = {
-                'all': Course.objects.filter(is_active=True).count(),  # Solo activos
+                'all': Course.objects.filter(is_active=True).exclude(status='archived').count(),  # Solo activos, sin archivados
                 'published': Course.objects.filter(status='published', is_active=True).count(),
                 'draft': Course.objects.filter(status='draft', is_active=True).count(),
                 'pending_review': Course.objects.filter(status='pending_review', is_active=True).count(),
                 'needs_revision': Course.objects.filter(status='needs_revision', is_active=True).count(),
-                'archived': Course.objects.filter(status='archived').count(),  # Incluye inactivos (soft delete)
+                'archived': Course.objects.filter(status='archived').count(),  # Todos los archivados (pueden estar inactivos)
             }
             
             return True, counts, ""

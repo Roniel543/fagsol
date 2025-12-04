@@ -281,6 +281,67 @@ def can_edit_course(user, course):
     return False
 
 
+def can_delete_course(user, course):
+    """
+    Policy: Verifica si el usuario puede eliminar un curso.
+    
+    Reglas:
+    - Admin: Puede eliminar cualquier curso (pero se recomienda validar estudiantes)
+    - Instructor: Solo puede eliminar sus propios cursos que:
+        * Estén en estado 'draft' o 'needs_revision'
+        * NO tengan estudiantes inscritos (enrollments activos)
+    - Otros: No pueden eliminar cursos
+    
+    Args:
+        user: Usuario de Django
+        course: Instancia de Course
+    
+    Returns:
+        Tuple[bool, str]: (puede_eliminar, mensaje_explicativo)
+    """
+    if not user or not user.is_authenticated:
+        return False, "Debes estar autenticado para eliminar cursos"
+    
+    user_role = get_user_role(user)
+    
+    # Admin puede eliminar cualquier curso
+    if user_role == ROLE_ADMIN:
+        # Verificar si hay estudiantes inscritos (advertencia, no bloqueo)
+        from apps.users.models import Enrollment
+        enrollments_count = Enrollment.objects.filter(
+            course=course,
+            status__in=['active', 'completed']
+        ).count()
+        
+        if enrollments_count > 0:
+            return True, f"Advertencia: Este curso tiene {enrollments_count} estudiante(s) inscrito(s). Se recomienda contactar a los estudiantes antes de eliminar."
+        return True, ""
+    
+    # Instructor solo puede eliminar sus propios cursos
+    if user_role == ROLE_INSTRUCTOR:
+        # Verificar que es el creador del curso
+        if not course.created_by or course.created_by.id != user.id:
+            return False, "Solo puedes eliminar tus propios cursos"
+        
+        # Verificar estado del curso
+        if course.status not in ['draft', 'needs_revision']:
+            return False, "Solo puedes eliminar cursos en estado 'Borrador' o 'Requiere Cambios'. Para eliminar cursos publicados, contacta a un administrador."
+        
+        # Verificar si hay estudiantes inscritos
+        from apps.users.models import Enrollment
+        enrollments_count = Enrollment.objects.filter(
+            course=course,
+            status__in=['active', 'completed']
+        ).count()
+        
+        if enrollments_count > 0:
+            return False, f"No puedes eliminar este curso porque tiene {enrollments_count} estudiante(s) inscrito(s). Contacta a un administrador si necesitas eliminar este curso."
+        
+        return True, ""
+    
+    return False, "No tienes permiso para eliminar cursos"
+
+
 def can_access_course_content(user, course):
     """
     Policy: Verifica si el usuario puede acceder al contenido completo de un curso.

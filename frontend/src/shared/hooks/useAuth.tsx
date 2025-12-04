@@ -10,7 +10,7 @@ import {
     setUserData
 } from '@/shared/utils/tokenStorage';
 import { useRouter } from 'next/navigation';
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
 interface AuthContextType {
     user: User | null;
@@ -26,20 +26,20 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function loadInitialUserSnapshot(): User | null {
     if (typeof window === 'undefined') return null;
-    
+
     try {
         // Migrar tokens de localStorage a sessionStorage (compatibilidad)
         migrateTokensFromLocalStorage();
-        
+
         // Cargar snapshot del usuario desde sessionStorage
         const userSnapshot = getUserData();
         const accessToken = sessionStorage.getItem('access_token');
-        
+
         // Solo retornar snapshot si hay token y datos de usuario
         if (accessToken && userSnapshot) {
             return userSnapshot as User;
         }
-        
+
         return null;
     } catch (error) {
         console.error('Error loading initial user snapshot:', error);
@@ -53,6 +53,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loadingUser, setLoadingUser] = useState(true);
     const router = useRouter();
+
+    // Flag para evitar revalidaciones durante login/logout en la misma pestaña
+    const isProcessingAuth = useRef(false);
 
     useEffect(() => {
         /**
@@ -69,13 +72,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
-        loadSnapshot();
-
         /**
          * Valida el usuario en background con la API
          * Esto actualiza el estado con datos frescos del servidor
          */
         const validateUserInBackground = async () => {
+            // Evitar revalidar si estamos procesando login/logout
+            if (isProcessingAuth.current) {
+                return;
+            }
             const accessToken = typeof window !== 'undefined'
                 ? sessionStorage.getItem('access_token')
                 : null;
@@ -157,10 +162,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
+        // Cargar snapshot inicial y validar usuario
+        loadSnapshot();
         validateUserInBackground();
+
+        /**
+         * Escuchar eventos de sincronización entre pestañas usando BroadcastChannel
+         * Solo para sincronizar cuando otra pestaña hace login/logout
+         */
+        let authChannel: BroadcastChannel | null = null;
+        if (typeof BroadcastChannel !== 'undefined') {
+            authChannel = new BroadcastChannel('auth-sync');
+            authChannel.onmessage = (event) => {
+                // Ignorar mensajes de la misma pestaña (evitar loops)
+                if (event.data.source === 'same-tab') {
+                    return;
+                }
+
+                if (event.data.type === 'TOKEN_UPDATED') {
+                    // Solo revalidar si no estamos procesando auth en esta pestaña
+                    // y hay token disponible (otra pestaña hizo login)
+                    if (!isProcessingAuth.current) {
+                        const currentToken = sessionStorage.getItem('access_token');
+                        if (currentToken) {
+                            validateUserInBackground();
+                        }
+                    }
+                } else if (event.data.type === 'LOGOUT') {
+                    // Cerrar sesión cuando otra pestaña cierra sesión
+                    if (!isProcessingAuth.current) {
+                        clearTokens();
+                        setUser(null);
+                        setLoadingUser(false);
+                    }
+                }
+            };
+        }
+
+        // Cleanup: cerrar el canal cuando el componente se desmonte
+        return () => {
+            if (authChannel) {
+                authChannel.close();
+            }
+        };
     }, []);
 
     const login = async (credentials: LoginRequest): Promise<AuthResponse> => {
+        // Marcar que estamos procesando login para evitar revalidaciones
+        isProcessingAuth.current = true;
+
         try {
             const response = await authAPI.login(credentials.email, credentials.password);
 
@@ -169,11 +219,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setTokens(response.tokens.access, response.tokens.refresh);
                 setUserData(response.user);
                 setUser(response.user);
+                setLoadingUser(false);
+
+                // Notificar a otras pestañas que hay un nuevo token (sin compartir el token)
+                // Marcar como 'same-tab' para que esta pestaña ignore el mensaje
+                if (typeof BroadcastChannel !== 'undefined') {
+                    const channel = new BroadcastChannel('auth-sync');
+                    channel.postMessage({
+                        type: 'TOKEN_UPDATED',
+                        source: 'same-tab'
+                    });
+                    channel.close();
+                }
+            } else {
+                isProcessingAuth.current = false;
             }
 
             return response;
         } catch (error) {
             console.error('Login error:', error);
+            isProcessingAuth.current = false;
 
             // Extraer el mensaje de error si está disponible
             let errorMessage = 'Error de conexión con el servidor';
@@ -187,6 +252,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 success: false,
                 message: errorMessage
             };
+        } finally {
+            // Resetear el flag después de un pequeño delay para permitir que el estado se actualice
+            setTimeout(() => {
+                isProcessingAuth.current = false;
+            }, 500);
         }
     };
 
@@ -212,6 +282,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const logout = async () => {
+        // Marcar que estamos procesando logout
+        isProcessingAuth.current = true;
+
         try {
             // Invalidar token en el servidor
             await authAPI.logout();
@@ -221,6 +294,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Siempre limpiar tokens localmente
             clearTokens();
             setUser(null);
+            setLoadingUser(false);
+
+            // Notificar a otras pestañas que se cerró sesión
+            if (typeof BroadcastChannel !== 'undefined') {
+                const channel = new BroadcastChannel('auth-sync');
+                channel.postMessage({
+                    type: 'LOGOUT',
+                    source: 'same-tab'
+                });
+                channel.close();
+            }
+
+            // Resetear el flag después de un pequeño delay
+            setTimeout(() => {
+                isProcessingAuth.current = false;
+            }, 300);
+
             router.push('/auth/login');
         }
     };

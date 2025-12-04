@@ -58,13 +58,13 @@ function EditCoursePageContent() {
 
     if (!courseId) {
         return (
-            <div className="min-h-screen bg-primary-black flex items-center justify-center p-4">
-                <div className="bg-secondary-dark-gray/60 backdrop-blur-sm border border-red-500/30 rounded-xl shadow-lg p-8 text-center max-w-md w-full">
-                    <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <BookOpen className="w-8 h-8 text-red-400" />
+            <div className={`min-h-screen ${isInstructor ? 'bg-primary-black' : 'bg-white'} flex items-center justify-center p-4`}>
+                <div className={`${isInstructor ? 'bg-secondary-dark-gray/60 backdrop-blur-sm border border-red-500/30' : 'bg-red-50 border border-red-200'} rounded-xl shadow-lg p-8 text-center max-w-md w-full`}>
+                    <div className={`w-16 h-16 ${isInstructor ? 'bg-red-500/20' : 'bg-red-100'} rounded-full flex items-center justify-center mx-auto mb-4`}>
+                        <BookOpen className={`w-8 h-8 ${isInstructor ? 'text-red-400' : 'text-red-600'}`} />
                     </div>
-                    <h3 className="text-xl font-bold text-primary-white mb-2">ID de curso no válido</h3>
-                    <p className="text-secondary-light-gray mb-6">No se pudo encontrar el curso que intentas editar.</p>
+                    <h3 className={`text-xl font-bold ${isInstructor ? 'text-primary-white' : 'text-gray-900'} mb-2`}>ID de curso no válido</h3>
+                    <p className={`${isInstructor ? 'text-secondary-light-gray' : 'text-gray-600'} mb-6`}>No se pudo encontrar el curso que intentas editar.</p>
                     <Link href={user?.role === 'instructor' ? '/instructor/courses' : '/admin/courses'}>
                         <Button variant="primary" className="flex items-center space-x-2 mx-auto">
                             <ArrowLeft className="w-4 h-4" />
@@ -77,12 +77,14 @@ function EditCoursePageContent() {
     }
 
     return (
-        <div className="min-h-screen bg-primary-black text-primary-white relative overflow-hidden">
-            {/* Elementos decorativos de fondo */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute top-20 right-10 w-72 h-72 bg-primary-orange/5 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl"></div>
-            </div>
+        <div className={`min-h-screen ${isInstructor ? 'bg-primary-black text-primary-white' : 'bg-white text-gray-900'} relative overflow-hidden`}>
+            {/* Elementos decorativos de fondo (solo para instructor) */}
+            {isInstructor && (
+                <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    <div className="absolute top-20 right-10 w-72 h-72 bg-primary-orange/5 rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl"></div>
+                </div>
+            )}
 
             {/* Header */}
             {isInstructor ? (
@@ -102,21 +104,21 @@ function EditCoursePageContent() {
                     }
                 />
             ) : (
-                <header className="relative bg-secondary-dark-gray/60 backdrop-blur-sm shadow-lg border-b border-primary-orange/20">
+                <header className="relative bg-white shadow-sm border-b border-gray-200">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="flex justify-between items-center py-6">
                             <div className="flex items-center space-x-4">
                                 <Link
                                     href="/admin/courses"
-                                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-secondary-dark-gray/60 hover:bg-secondary-dark-gray border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 group"
+                                    className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-300 transition-all duration-200 group"
                                 >
-                                    <ArrowLeft className="w-5 h-5 text-primary-orange group-hover:text-amber-400" />
+                                    <ArrowLeft className="w-5 h-5 text-gray-700 group-hover:text-primary-orange transition-colors" />
                                 </Link>
                                 <div>
-                                    <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-orange to-amber-400 bg-clip-text text-transparent">
+                                    <h1 className="text-3xl font-bold text-gray-900">
                                         Editar Curso
                                     </h1>
-                                    <p className="text-secondary-light-gray font-medium mt-1">
+                                    <p className="text-gray-600 font-medium mt-1">
                                         Modifica la información del curso
                                     </p>
                                 </div>
@@ -133,11 +135,11 @@ function EditCoursePageContent() {
             )}
 
             {/* Main Content */}
-            <main className="relative max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <main className={`relative max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 ${isInstructor ? '' : 'bg-white'}`}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Columna principal del formulario */}
                     <div className="lg:col-span-2">
-                        <div className="bg-secondary-dark-gray/60 border border-primary-orange/20 rounded-xl shadow-lg p-8 backdrop-blur-sm">
+                        <div className={`${isInstructor ? 'bg-secondary-dark-gray/60 border border-primary-orange/20 backdrop-blur-sm' : 'bg-white border border-gray-200'} rounded-xl shadow-lg p-8`}>
                             <CourseForm courseId={courseId} onSuccess={handleSuccess} />
                         </div>
                     </div>

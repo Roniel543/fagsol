@@ -22,6 +22,66 @@ from drf_yasg import openapi
 logger = logging.getLogger('apps')
 
 
+def get_course_instructor_info(course, provider):
+    """
+    Determina la información del instructor basada en el provider y el creador del curso.
+    
+    Si provider='instructor' y el campo instructor está vacío o tiene el default,
+    usa la información del creador del curso.
+    
+    Args:
+        course: Instancia del modelo Course
+        provider: 'instructor' o 'fagsol'
+    
+    Returns:
+        dict: Información del instructor con id y name
+    """
+    from apps.users.permissions import get_user_role, ROLE_INSTRUCTOR
+    
+    # Si el provider es 'instructor', priorizar info del creador
+    if provider == 'instructor' and course.created_by:
+        creator_role = get_user_role(course.created_by)
+        if creator_role == ROLE_INSTRUCTOR:
+            # Verificar si el campo instructor tiene datos válidos (no es el default)
+            instructor_data = course.instructor if course.instructor else {}
+            instructor_name = instructor_data.get('name', '') if isinstance(instructor_data, dict) else ''
+            instructor_id = instructor_data.get('id', '') if isinstance(instructor_data, dict) else ''
+            
+            # Si el instructor está vacío, es el default, o tiene el ID default, usar info del creador
+            if (not instructor_data or 
+                not instructor_name or 
+                instructor_name == 'Equipo Fagsol' or 
+                instructor_id == 'i-001' or
+                (not instructor_name and not instructor_id)):
+                # Usar información del creador
+                full_name = f"{course.created_by.first_name or ''} {course.created_by.last_name or ''}".strip()
+                if not full_name:
+                    full_name = course.created_by.first_name or course.created_by.last_name
+                if not full_name and course.created_by.email:
+                    full_name = course.created_by.email.split('@')[0]
+                if not full_name:
+                    full_name = 'Instructor'
+                
+                return {
+                    'id': f"i-{course.created_by.id}",
+                    'name': full_name,
+                }
+    
+    # Si hay datos de instructor válidos y no es el default, usarlos
+    if course.instructor and isinstance(course.instructor, dict):
+        instructor_data = course.instructor
+        instructor_name = instructor_data.get('name', '')
+        if instructor_name and instructor_name != 'Equipo Fagsol':
+            return {
+                'id': instructor_data.get('id', 'i-001'),
+                'name': instructor_name,
+                'title': instructor_data.get('title'),
+            }
+    
+    # Default: Equipo Fagsol
+    return {'id': 'i-001', 'name': 'Equipo Fagsol'}
+
+
 @swagger_auto_schema(
     method='get',
     operation_description='Lista todos los cursos disponibles según los permisos del usuario',
@@ -102,8 +162,23 @@ def list_courses(request):
                 filtered_courses.append(course)
         
         # Serializar
+        from apps.users.permissions import get_user_role, ROLE_INSTRUCTOR
         courses = []
         for course in filtered_courses:
+            # Determinar provider basado en el rol del creador del curso
+            # Si el creador es instructor, provider = 'instructor'
+            # Si el creador es admin, provider = 'fagsol'
+            provider = 'fagsol'  # Por defecto
+            if course.created_by:
+                creator_role = get_user_role(course.created_by)
+                if creator_role == ROLE_INSTRUCTOR:
+                    provider = 'instructor'
+                else:
+                    provider = 'fagsol'
+            
+            # Obtener información del instructor correcta
+            instructor_info = get_course_instructor_info(course, provider)
+            
             courses.append({
                 'id': course.id,
                 'title': course.title,
@@ -116,12 +191,12 @@ def list_courses(request):
                 'status': course.status,
                 'category': course.category,
                 'level': course.level,
-                'provider': course.provider,
+                'provider': provider,  # Provider determinado por el creador
                 'tags': course.tags,
                 'hours': course.hours,
                 'rating': float(course.rating),
                 'ratings_count': course.ratings_count,
-                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+                'instructor': instructor_info,  # Instructor determinado correctamente
                 'created_at': course.created_at.isoformat(),
             })
         
@@ -225,6 +300,19 @@ def get_course_by_slug(request, slug):
         if request.user.is_authenticated and course.created_by:
             is_creator = course.created_by.id == request.user.id
         
+        # Determinar provider basado en el rol del creador del curso
+        from apps.users.permissions import get_user_role, ROLE_INSTRUCTOR
+        provider = 'fagsol'  # Por defecto
+        if course.created_by:
+            creator_role = get_user_role(course.created_by)
+            if creator_role == ROLE_INSTRUCTOR:
+                provider = 'instructor'
+            else:
+                provider = 'fagsol'
+        
+        # Obtener información del instructor correcta
+        instructor_info = get_course_instructor_info(course, provider)
+        
         # Preparar datos de respuesta
         response_data = {
             'id': course.id,
@@ -240,12 +328,12 @@ def get_course_by_slug(request, slug):
             'status': course.status,
             'category': course.category,
             'level': course.level,
-            'provider': course.provider,
+            'provider': provider,  # Provider determinado por el creador
             'tags': course.tags,
             'hours': course.hours,
             'rating': float(course.rating),
             'ratings_count': course.ratings_count,
-            'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+            'instructor': instructor_info,  # Instructor determinado correctamente
             'modules': modules,
             'is_enrolled': is_enrolled,
             'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
@@ -360,6 +448,19 @@ def get_course(request, course_id):
         if request.user.is_authenticated and course.created_by:
             is_creator = course.created_by.id == request.user.id
         
+        # Determinar provider basado en el rol del creador del curso
+        from apps.users.permissions import get_user_role, ROLE_INSTRUCTOR
+        provider = 'fagsol'  # Por defecto
+        if course.created_by:
+            creator_role = get_user_role(course.created_by)
+            if creator_role == ROLE_INSTRUCTOR:
+                provider = 'instructor'
+            else:
+                provider = 'fagsol'
+        
+        # Obtener información del instructor correcta
+        instructor_info = get_course_instructor_info(course, provider)
+        
         # Preparar datos de respuesta
         response_data = {
             'id': course.id,
@@ -375,12 +476,12 @@ def get_course(request, course_id):
             'status': course.status,
             'category': course.category,
             'level': course.level,
-            'provider': course.provider,
+            'provider': provider,  # Provider determinado por el creador
             'tags': course.tags,
             'hours': course.hours,
             'rating': float(course.rating),
             'ratings_count': course.ratings_count,
-            'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+            'instructor': instructor_info,  # Instructor determinado correctamente
             'modules': modules,
             'is_enrolled': is_enrolled,
             'is_creator': is_creator,  # Indica si el usuario actual es el creador del curso
@@ -649,13 +750,23 @@ def list_instructor_courses(request):
         search = request.query_params.get('search', '').strip()
         
         # Query base: cursos creados por el instructor
-        queryset = Course.objects.filter(
-            created_by=request.user,
-            is_active=True
-        )
+        # Si el filtro es 'archived', incluir cursos archivados (is_active=False)
+        # Si el filtro es 'all', excluir cursos archivados (solo activos)
+        # Para otros estados, solo mostrar cursos activos
+        if status_filter == 'archived':
+            queryset = Course.objects.filter(
+                created_by=request.user,
+                status='archived'
+            )
+        else:
+            # Para 'all' y otros estados, excluir cursos archivados
+            queryset = Course.objects.filter(
+                created_by=request.user,
+                is_active=True
+            ).exclude(status='archived')
         
-        # Filtrar por estado
-        if status_filter and status_filter != 'all':
+        # Filtrar por estado (si no es 'all' ni 'archived')
+        if status_filter and status_filter != 'all' and status_filter != 'archived':
             queryset = queryset.filter(status=status_filter)
         
         # Búsqueda por título
@@ -665,6 +776,9 @@ def list_instructor_courses(request):
         # Ordenar por fecha de creación (más recientes primero)
         queryset = queryset.order_by('-created_at')
         
+        # Importar funciones necesarias
+        from apps.users.permissions import get_user_role, ROLE_INSTRUCTOR
+        
         # Serializar cursos con información adicional
         courses = []
         for course in queryset:
@@ -673,6 +787,18 @@ def list_instructor_courses(request):
                 course=course,
                 status__in=['active', 'completed']
             ).count()
+            
+            # Determinar provider basado en el rol del creador del curso
+            provider = 'fagsol'  # Por defecto
+            if course.created_by:
+                creator_role = get_user_role(course.created_by)
+                if creator_role == ROLE_INSTRUCTOR:
+                    provider = 'instructor'
+                else:
+                    provider = 'fagsol'
+            
+            # Obtener información del instructor correcta
+            instructor_info = get_course_instructor_info(course, provider)
             
             courses.append({
                 'id': course.id,
@@ -688,13 +814,13 @@ def list_instructor_courses(request):
                 'status': course.status,
                 'category': course.category,
                 'level': course.level,
-                'provider': course.provider,
+                'provider': provider,  # Provider determinado por el creador
                 'tags': course.tags or [],
                 'hours': course.hours,
                 'rating': float(course.rating),
                 'ratings_count': course.ratings_count,
                 'enrollments': enrollments_count,
-                'instructor': course.instructor if course.instructor else {'id': 'i-001', 'name': 'Equipo Fagsol'},
+                'instructor': instructor_info,  # Instructor determinado correctamente
                 'created_at': course.created_at.isoformat(),
                 'updated_at': course.updated_at.isoformat(),
             })
@@ -1002,7 +1128,7 @@ def update_course(request, course_id):
 
 @swagger_auto_schema(
     method='delete',
-    operation_description='Elimina (archiva) un curso. Solo administradores pueden eliminar cursos',
+    operation_description='Elimina (archiva) un curso. Administradores pueden eliminar cualquier curso. Instructores solo pueden eliminar sus propios cursos en draft/needs_revision sin estudiantes.',
     manual_parameters=[
         openapi.Parameter(
             'course_id',
@@ -1014,7 +1140,7 @@ def update_course(request, course_id):
     ],
     responses={
         200: openapi.Response(description='Curso eliminado exitosamente'),
-        403: openapi.Response(description='Solo los administradores pueden eliminar cursos'),
+        403: openapi.Response(description='No tienes permiso para eliminar este curso'),
         404: openapi.Response(description='Curso no encontrado'),
         500: openapi.Response(description='Error interno del servidor')
     },
@@ -1022,13 +1148,14 @@ def update_course(request, course_id):
     tags=['Cursos']
 )
 @api_view(['DELETE'])
-@permission_classes([IsAuthenticated, IsAdmin])
+@permission_classes([IsAuthenticated, IsAdminOrInstructor])
 def delete_course(request, course_id):
     """
     Elimina (archiva) un curso (soft delete)
     DELETE /api/v1/courses/{course_id}/
     
-    Solo administradores pueden eliminar cursos
+    - Administradores: Pueden eliminar cualquier curso
+    - Instructores: Solo pueden eliminar sus propios cursos en estado 'draft' o 'needs_revision' sin estudiantes inscritos
     """
     try:
         # 1. Usar servicio para eliminar curso
@@ -1045,10 +1172,14 @@ def delete_course(request, course_id):
                 'message': error_message
             }, status=status_code)
         
-        # 2. Retornar respuesta
+        # 2. Retornar respuesta (incluir advertencia si existe)
+        response_message = 'Curso eliminado exitosamente'
+        if error_message and "Advertencia" in error_message:
+            response_message = error_message
+        
         return Response({
             'success': True,
-            'message': 'Curso eliminado exitosamente'
+            'message': response_message
         }, status=status.HTTP_200_OK)
         
     except Exception as e:

@@ -1,66 +1,86 @@
 'use client';
 
-import { Button, Card, LoadingSpinner, ProtectedRoute } from '@/shared/components';
+import { Button, LoadingSpinner, Modal, ProtectedRoute, useToast } from '@/shared/components';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useAllCoursesAdmin, useCourseStatusCounts } from '@/shared/hooks/useCourses';
 import { deleteCourse } from '@/shared/services/courses';
-import { BookOpen, Edit, Eye, FileText, Filter, Trash2, Users, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, Edit, Eye, FileText, Filter, MoreVertical, Trash2, Users, X } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
+import { mutate as swrMutate } from 'swr';
 
 type StatusFilter = 'pending_review' | 'needs_revision' | 'published' | 'draft' | 'archived' | undefined;
 
 function CoursesAdminPageContent() {
     const router = useRouter();
     const { user } = useAuth();
+    const { showToast } = useToast();
     const [statusFilter, setStatusFilter] = useState<StatusFilter>(undefined);
     const { courses, isLoading, mutate } = useAllCoursesAdmin(statusFilter);
     const { counts, isLoading: isLoadingCounts } = useCourseStatusCounts();
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [courseToDelete, setCourseToDelete] = useState<string | null>(null);
 
-    const handleDelete = async (courseId: string) => {
-        if (!confirm('¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer.')) {
-            return;
-        }
+    const handleDeleteClick = (courseId: string) => {
+        setCourseToDelete(courseId);
+        setShowDeleteModal(true);
+    };
 
-        setDeletingId(courseId);
+    const handleDeleteConfirm = async () => {
+        if (!courseToDelete) return;
+
+        setDeletingId(courseToDelete);
         setError(null);
+        setShowDeleteModal(false);
 
         try {
-            const result = await deleteCourse(courseId);
+            const result = await deleteCourse(courseToDelete);
             if (result.success) {
+                showToast('Curso eliminado exitosamente', 'success');
                 // Revalidar la lista de cursos y contadores
                 mutate();
+                // Invalidar caché del dashboard para que se actualice inmediatamente
+                swrMutate('dashboard-stats');
             } else {
+                showToast(`${result.message || 'Error al eliminar el curso'}`, 'error');
                 setError(result.message || 'Error al eliminar el curso');
             }
         } catch (err: any) {
+            showToast(`❌ ${err.message || 'Error al eliminar el curso'}`, 'error');
             setError(err.message || 'Error al eliminar el curso');
         } finally {
             setDeletingId(null);
+            setCourseToDelete(null);
         }
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeleteModal(false);
+        setCourseToDelete(null);
     };
 
     const getStatusBadge = (course: any) => {
         const status = (course as any).status || 'draft';
         const colors = {
-            published: 'bg-green-100 text-green-800 border border-green-300',
-            draft: 'bg-gray-100 text-gray-800 border border-gray-300',
-            pending_review: 'bg-yellow-100 text-yellow-800 border border-yellow-300',
-            needs_revision: 'bg-orange-100 text-orange-800 border border-orange-300',
-            archived: 'bg-red-100 text-red-800 border border-red-300',
+            published: 'bg-green-600 text-white border border-green-700',
+            draft: 'bg-gray-600 text-white border border-gray-700',
+            pending_review: 'bg-yellow-600 text-white border border-yellow-700',
+            needs_revision: 'bg-orange-600 text-white border border-orange-700',
+            archived: 'bg-red-600 text-white border border-red-700',
         };
         const labels = {
             published: 'Publicado',
             draft: 'Borrador',
-            pending_review: 'Pendiente de Revisión',
+            pending_review: 'Pendiente',
             needs_revision: 'Requiere Cambios',
             archived: 'Archivado',
         };
         return (
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status as keyof typeof colors] || colors.draft}`}>
+            <span className={`px-3 py-1 rounded-md text-xs font-bold shadow-sm ${colors[status as keyof typeof colors] || colors.draft}`}>
                 {labels[status as keyof typeof labels] || status}
             </span>
         );
@@ -76,9 +96,9 @@ function CoursesAdminPageContent() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-white">
             {/* Header */}
-            <header className="bg-white shadow">
+            <header className="bg-white shadow-sm border-b border-gray-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center py-6">
                         <div>
@@ -134,10 +154,9 @@ function CoursesAdminPageContent() {
                                     className={`
                                         px-4 py-2 rounded-lg text-sm font-medium transition-all
                                         flex items-center gap-2
-                                        ${
-                                            statusFilter === filter.key
-                                                ? 'bg-blue-600 text-white shadow-md'
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                                        ${statusFilter === filter.key
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                         }
                                     `}
                                     disabled={isLoadingCounts}
@@ -147,10 +166,9 @@ function CoursesAdminPageContent() {
                                         <span
                                             className={`
                                                 px-2 py-0.5 rounded-full text-xs font-bold
-                                                ${
-                                                    statusFilter === filter.key
-                                                        ? 'bg-blue-500 text-white'
-                                                        : 'bg-gray-200 text-gray-700'
+                                                ${statusFilter === filter.key
+                                                    ? 'bg-blue-500 text-white'
+                                                    : 'bg-gray-200 text-gray-700'
                                                 }
                                             `}
                                         >
@@ -185,8 +203,8 @@ function CoursesAdminPageContent() {
                     {!isLoading && (
                         <>
                             {courses.length === 0 ? (
-                                <Card className="p-8 text-center">
-                                    <p className="text-gray-900 mb-4">
+                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+                                    <p className="text-gray-900 mb-4 font-medium">
                                         {statusFilter
                                             ? `No hay cursos con estado "${filterButtons.find((f) => f.key === statusFilter)?.label || statusFilter}".`
                                             : 'No hay cursos creados aún.'}
@@ -204,10 +222,10 @@ function CoursesAdminPageContent() {
                                             Ver Todos los Cursos
                                         </Button>
                                     )}
-                                </Card>
+                                </div>
                             ) : (
-                                <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                                <div className="bg-white">
+                                    <div className="mb-4">
                                         <p className="text-sm text-gray-700">
                                             Mostrando <span className="font-semibold">{courses.length}</span>{' '}
                                             {courses.length === 1 ? 'curso' : 'cursos'}
@@ -222,107 +240,162 @@ function CoursesAdminPageContent() {
                                             )}
                                         </p>
                                     </div>
-                                    <ul className="divide-y divide-gray-200">
+                                    {/* Grid de Cards */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {courses.map((course) => (
-                                            <li key={course.id}>
-                                                <div className="px-4 py-4 sm:px-6 hover:bg-gray-50">
-                                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                                                        <div className="flex items-start space-x-4 flex-1 min-w-0">
-                                                            {course.thumbnail_url && (
-                                                                <img
-                                                                    src={course.thumbnail_url}
-                                                                    alt={course.title}
-                                                                    className="h-16 w-16 object-cover rounded flex-shrink-0"
-                                                                />
-                                                            )}
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex flex-wrap items-center gap-2">
-                                                                    <h3 className="text-lg font-medium text-gray-900 truncate">
-                                                                        {course.title}
-                                                                    </h3>
-                                                                    {getStatusBadge(course)}
-                                                                </div>
-                                                                <p className="text-sm text-gray-500 line-clamp-2 mt-1">
-                                                                    {course.short_description || course.description}
-                                                                </p>
-                                                                <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500">
-                                                                    <span>Precio: S/ {course.price}</span>
-                                                                    {course.category && (
-                                                                        <>
-                                                                            <span className="hidden sm:inline">•</span>
-                                                                            <span>Categoría: {course.category}</span>
-                                                                        </>
-                                                                    )}
-                                                                    {course.level && (
-                                                                        <>
-                                                                            <span className="hidden sm:inline">•</span>
-                                                                            <span>Nivel: {course.level}</span>
-                                                                        </>
-                                                                    )}
-                                                                </div>
-                                                            </div>
+                                            <div
+                                                key={course.id}
+                                                className={`group relative bg-white rounded-lg shadow-sm border border-gray-300 hover:shadow-md hover:border-gray-400 transition-all duration-200 ${openMenuId === course.id ? 'overflow-visible' : 'overflow-hidden'}`}
+                                            >
+                                                {/* Thumbnail */}
+                                                <div className="relative h-48 bg-gray-100 overflow-hidden">
+                                                    {course.thumbnail_url ? (
+                                                        <img
+                                                            src={course.thumbnail_url}
+                                                            alt={course.title}
+                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                                            <BookOpen className="w-16 h-16 text-gray-400" />
                                                         </div>
-                                                        <div className="flex flex-col sm:flex-row gap-2 lg:flex-col lg:items-end lg:min-w-[200px]">
-                                                            {/* Botones principales */}
-                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                <Link href={`/academy/course/${course.slug}`} className="flex-shrink-0">
-                                                                    <Button variant="secondary" size="sm" className="w-full sm:w-auto">
-                                                                        <Eye className="w-4 h-4 mr-1" />
-                                                                        Ver
-                                                                    </Button>
-                                                                </Link>
-                                                                <Link href={`/admin/courses/${course.id}/edit`} className="flex-shrink-0">
-                                                                    <Button variant="primary" size="sm" className="w-full sm:w-auto">
-                                                                        <Edit className="w-4 h-4 mr-1" />
-                                                                        Editar
-                                                                    </Button>
-                                                                </Link>
-                                                                {user?.role === 'admin' && (
-                                                                    <Button
-                                                                        variant="danger"
-                                                                        size="sm"
-                                                                        onClick={() => handleDelete(course.id)}
-                                                                        disabled={deletingId === course.id}
-                                                                        className="w-full sm:w-auto"
-                                                                    >
-                                                                        <Trash2 className="w-4 h-4 mr-1" />
-                                                                        {deletingId === course.id ? 'Eliminando...' : 'Eliminar'}
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                            {/* Enlaces de gestión */}
-                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                <Link href={`/admin/courses/${course.id}/modules`} className="flex-shrink-0">
-                                                                    <Button variant="secondary" size="sm" className="text-xs w-full sm:w-auto">
-                                                                        <BookOpen className="w-3 h-3 mr-1" />
-                                                                        Módulos
-                                                                    </Button>
-                                                                </Link>
-                                                                <Link href={`/admin/courses/${course.id}/materials`} className="flex-shrink-0">
-                                                                    <Button variant="secondary" size="sm" className="text-xs w-full sm:w-auto">
-                                                                        <FileText className="w-3 h-3 mr-1" />
-                                                                        Materiales
-                                                                    </Button>
-                                                                </Link>
-                                                                <Link href={`/admin/courses/${course.id}/students`} className="flex-shrink-0">
-                                                                    <Button variant="secondary" size="sm" className="text-xs w-full sm:w-auto">
-                                                                        <Users className="w-3 h-3 mr-1" />
-                                                                        Alumnos
-                                                                    </Button>
-                                                                </Link>
-                                                            </div>
+                                                    )}
+                                                    {/* Overlay con badge de estado */}
+                                                    <div className="absolute top-3 left-3 z-10">
+                                                        {getStatusBadge(course)}
+                                                    </div>
+                                                    {/* Menú de acciones en hover */}
+                                                    <div className="absolute top-3 right-3 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                        <div className="relative">
+                                                            <button
+                                                                onClick={() => setOpenMenuId(openMenuId === course.id ? null : course.id)}
+                                                                className="p-2 bg-white rounded-md shadow-md hover:bg-gray-50 transition-colors border border-gray-200"
+                                                            >
+                                                                <MoreVertical className="w-4 h-4 text-gray-800" />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </div>
-                                            </li>
+
+                                                {/* Dropdown fuera del thumbnail para evitar cortes */}
+                                                {openMenuId === course.id && (
+                                                    <>
+                                                        <div
+                                                            className="fixed inset-0 z-30"
+                                                            onClick={() => setOpenMenuId(null)}
+                                                        ></div>
+                                                        <div className="absolute top-14 right-3 w-48 bg-white rounded-md shadow-lg border border-gray-300 z-40 py-1">
+                                                            <Link
+                                                                href={`/academy/course/${course.slug}`}
+                                                                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 transition-colors"
+                                                                onClick={() => setOpenMenuId(null)}
+                                                            >
+                                                                <Eye className="w-4 h-4 text-gray-700" />
+                                                                Ver Curso
+                                                            </Link>
+                                                            <Link
+                                                                href={`/admin/courses/${course.id}/modules`}
+                                                                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 transition-colors"
+                                                                onClick={() => setOpenMenuId(null)}
+                                                            >
+                                                                <BookOpen className="w-4 h-4 text-gray-700" />
+                                                                Módulos
+                                                            </Link>
+                                                            <Link
+                                                                href={`/admin/courses/${course.id}/materials`}
+                                                                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 transition-colors"
+                                                                onClick={() => setOpenMenuId(null)}
+                                                            >
+                                                                <FileText className="w-4 h-4 text-gray-700" />
+                                                                Materiales
+                                                            </Link>
+                                                            <Link
+                                                                href={`/admin/courses/${course.id}/students`}
+                                                                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-800 hover:bg-gray-100 transition-colors"
+                                                                onClick={() => setOpenMenuId(null)}
+                                                            >
+                                                                <Users className="w-4 h-4 text-gray-700" />
+                                                                Alumnos
+                                                            </Link>
+                                                            {user?.role === 'admin' && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setOpenMenuId(null);
+                                                                        handleDeleteClick(course.id);
+                                                                    }}
+                                                                    disabled={deletingId === course.id}
+                                                                    className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                    {deletingId === course.id ? 'Eliminando...' : 'Eliminar'}
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </>
+                                                )}
+
+                                                {/* Contenido del Card */}
+                                                <div className="p-5">
+                                                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-orange transition-colors">
+                                                        {course.title}
+                                                    </h3>
+                                                    <p className="text-sm text-gray-700 line-clamp-2 mb-4 min-h-[2.5rem]">
+                                                        {course.short_description || course.description}
+                                                    </p>
+
+                                                    {/* Información adicional */}
+                                                    <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Precio</span>
+                                                            <span className="text-lg font-bold text-primary-orange mt-1">S/ {course.price}</span>
+                                                        </div>
+                                                        {course.category && (
+                                                            <div className="text-right">
+                                                                <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block">Categoría</span>
+                                                                <span className="text-sm font-semibold text-gray-900 mt-1">{course.category}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Botones principales siempre visibles */}
+                                                    <div className="flex gap-2">
+                                                        <Link href={`/admin/courses/${course.id}/edit`} className="flex-1">
+                                                            <Button variant="primary" size="sm" className="w-full">
+                                                                <Edit className="w-4 h-4 mr-1" />
+                                                                Editar
+                                                            </Button>
+                                                        </Link>
+                                                        <Link href={`/academy/course/${course.slug}`} className="flex-1">
+                                                            <Button variant="secondary" size="sm" className="w-full">
+                                                                <Eye className="w-4 h-4 mr-1" />
+                                                                Ver
+                                                            </Button>
+                                                        </Link>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         ))}
-                                    </ul>
+                                    </div>
                                 </div>
                             )}
                         </>
                     )}
                 </div>
             </main>
+
+            {/* Modal de confirmación para eliminar curso */}
+            <Modal
+                isOpen={showDeleteModal}
+                onClose={handleDeleteCancel}
+                title="Eliminar Curso"
+                message="¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer."
+                icon={<AlertTriangle className="w-6 h-6" />}
+                variant="danger"
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                onConfirm={handleDeleteConfirm}
+                isLoading={deletingId !== null}
+            />
         </div>
     );
 }

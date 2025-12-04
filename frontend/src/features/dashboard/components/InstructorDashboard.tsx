@@ -353,7 +353,9 @@ export function InstructorDashboard() {
                                                                 ? 'text-yellow-400'
                                                                 : course.status === 'needs_revision'
                                                                     ? 'text-red-400'
-                                                                    : 'text-amber-400'
+                                                                    : course.status === 'archived'
+                                                                        ? 'text-gray-400'
+                                                                        : 'text-amber-400'
                                                             }`}>
                                                             {course.status === 'published' ? (
                                                                 <>
@@ -370,6 +372,11 @@ export function InstructorDashboard() {
                                                                     <FileText className="w-3 h-3" />
                                                                     <span>Requiere Cambios</span>
                                                                 </>
+                                                            ) : course.status === 'archived' ? (
+                                                                <>
+                                                                    <FileText className="w-3 h-3" />
+                                                                    <span>Archivado</span>
+                                                                </>
                                                             ) : (
                                                                 <>
                                                                     <FileText className="w-3 h-3" />
@@ -380,12 +387,21 @@ export function InstructorDashboard() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <Link href={`/instructor/courses/${course.id}`}>
-                                                <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
-                                                    <span>Ver</span>
-                                                    <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
-                                                </Button>
-                                            </Link>
+                                            {course.status === 'published' && course.slug ? (
+                                                <Link href={`/academy/course/${course.slug}`}>
+                                                    <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
+                                                        <span>Ver</span>
+                                                        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                                                    </Button>
+                                                </Link>
+                                            ) : (
+                                                <Link href={`/instructor/courses/${course.id}/edit`}>
+                                                    <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
+                                                        <span>Editar</span>
+                                                        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                                                    </Button>
+                                                </Link>
+                                            )}
                                         </div>
                                     ))}
                                 </div>
@@ -483,12 +499,19 @@ export function InstructorDashboard() {
                                                 <span className="text-secondary-light-gray">•</span>
                                                 <span className={`font-medium flex items-center space-x-1 ${course.status === 'published'
                                                     ? 'text-green-400'
-                                                    : 'text-amber-400'
+                                                    : course.status === 'archived'
+                                                        ? 'text-gray-400'
+                                                        : 'text-amber-400'
                                                     }`}>
                                                     {course.status === 'published' ? (
                                                         <>
                                                             <CheckCircle2 className="w-3 h-3" />
                                                             <span>Publicado</span>
+                                                        </>
+                                                    ) : course.status === 'archived' ? (
+                                                        <>
+                                                            <FileText className="w-3 h-3" />
+                                                            <span>Archivado</span>
                                                         </>
                                                     ) : (
                                                         <>
@@ -498,20 +521,33 @@ export function InstructorDashboard() {
                                                     )}
                                                 </span>
                                             </div>
+                                                </div>
+                                            </div>
+                                            {course.status === 'archived' ? (
+                                                <Button variant="secondary" size="sm" disabled className="flex items-center space-x-2 opacity-50 cursor-not-allowed">
+                                                    <span>Archivado</span>
+                                                </Button>
+                                            ) : course.status === 'published' && course.slug ? (
+                                                <Link href={`/academy/course/${course.slug}`} target="_blank" rel="noopener noreferrer">
+                                                    <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
+                                                        <span>Ver</span>
+                                                        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                                                    </Button>
+                                                </Link>
+                                            ) : (
+                                                <Link href={`/instructor/courses/${course.id}/edit`}>
+                                                    <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
+                                                        <span>Editar</span>
+                                                        <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
+                                                    </Button>
+                                                </Link>
+                                            )}
                                         </div>
-                                    </div>
-                                    <Link href={`/instructor/courses/${course.id}`}>
-                                        <Button variant="primary" size="sm" className="flex items-center space-x-2 group/btn">
-                                            <span>Ver</span>
-                                            <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform duration-200" />
-                                        </Button>
-                                    </Link>
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
                         </div>
-                    </div>
-                </div>
-            )}
+                    )}
 
             {/* Estado vacío mejorado si no hay cursos */}
             {instructorStats.courses.total === 0 && (

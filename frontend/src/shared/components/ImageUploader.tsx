@@ -14,6 +14,7 @@ interface ImageUploaderProps {
     className?: string;
     error?: string;
     disabled?: boolean;
+    variant?: 'light' | 'dark'; // Nueva prop para tema
 }
 
 export function ImageUploader({
@@ -25,7 +26,9 @@ export function ImageUploader({
     className = '',
     error,
     disabled = false,
+    variant = 'dark', // Por defecto dark para mantener compatibilidad
 }: ImageUploaderProps) {
+    const useLightTheme = variant === 'light';
 
     const [preview, setPreview] = useState<string | null>(value || null);
     const [isUrlMode, setIsUrlMode] = useState(false);
@@ -56,7 +59,7 @@ export function ImageUploader({
 
     const handleFileSelect = useCallback(async (file: File) => {
         if (disabled) return;
-        
+
         // Crear preview inmediato desde el archivo local
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -111,7 +114,7 @@ export function ImageUploader({
 
     const handleUrlSubmit = () => {
         if (disabled) return;
-        
+
         if (urlInput.trim()) {
             // Validar URL básica
             try {
@@ -130,7 +133,7 @@ export function ImageUploader({
 
     const handleRemove = () => {
         if (disabled) return;
-        
+
         setPreview(null);
         setUrlInput('');
         onChange('');
@@ -151,13 +154,13 @@ export function ImageUploader({
 
     return (
         <div className={`space-y-3 ${className}`}>
-            <label className="text-sm font-medium text-primary-white mb-2 flex items-center space-x-2">
+            <label className={`text-sm font-medium ${useLightTheme ? 'text-gray-900' : 'text-primary-white'} mb-2 flex items-center space-x-2`}>
                 <ImageIcon className="w-4 h-4 text-primary-orange" />
                 <span>{label}</span>
             </label>
 
             {error && (
-                <div className="flex items-center space-x-2 text-sm text-red-400">
+                <div className={`flex items-center space-x-2 text-sm ${useLightTheme ? 'text-red-600' : 'text-red-400'}`}>
                     <AlertCircle className="w-4 h-4" />
                     <span>{error}</span>
                 </div>
@@ -168,11 +171,17 @@ export function ImageUploader({
                     className={`
                         relative border-2 border-dashed rounded-lg p-8
                         transition-all duration-300
-                        ${disabled 
-                            ? 'opacity-50 cursor-not-allowed border-primary-orange/20 bg-primary-black/20'
+                        ${disabled
+                            ? useLightTheme
+                                ? 'opacity-50 cursor-not-allowed border-gray-300 bg-gray-50'
+                                : 'opacity-50 cursor-not-allowed border-primary-orange/20 bg-primary-black/20'
                             : dragActive
-                            ? 'border-primary-orange bg-primary-orange/10'
-                            : 'border-primary-orange/30 bg-primary-black/40 hover:border-primary-orange/50'
+                                ? useLightTheme
+                                    ? 'border-primary-orange bg-orange-50'
+                                    : 'border-primary-orange bg-primary-orange/10'
+                                : useLightTheme
+                                    ? 'border-gray-300 bg-gray-50 hover:border-primary-orange hover:bg-gray-100'
+                                    : 'border-primary-orange/30 bg-primary-black/40 hover:border-primary-orange/50'
                         }
                     `}
                     onDrop={disabled ? undefined : handleDrop}
@@ -194,10 +203,10 @@ export function ImageUploader({
                                 <Upload className="w-8 h-8 text-white" />
                             </div>
                         </div>
-                        <p className="text-primary-white font-medium mb-2">
+                        <p className={`${useLightTheme ? 'text-gray-900' : 'text-primary-white'} font-medium mb-2`}>
                             Arrastra una imagen aquí o haz clic para seleccionar
                         </p>
-                        <p className="text-secondary-light-gray text-sm mb-4">
+                        <p className={`${useLightTheme ? 'text-gray-600' : 'text-secondary-light-gray'} text-sm mb-4`}>
                             Formatos: JPEG, PNG, WebP (máx. 5MB)
                         </p>
                         <div className="flex items-center justify-center space-x-3">
@@ -225,11 +234,11 @@ export function ImageUploader({
                     </div>
 
                     {uploading && (
-                        <div className="absolute inset-0 bg-primary-black/80 rounded-lg flex items-center justify-center">
+                        <div className={`absolute inset-0 ${useLightTheme ? 'bg-white/90' : 'bg-primary-black/80'} rounded-lg flex items-center justify-center`}>
                             <div className="text-center">
                                 <div className="w-12 h-12 border-4 border-primary-orange border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
-                                <p className="text-primary-white text-sm">Subiendo y optimizando...</p>
-                                <p className="text-secondary-light-gray text-xs mt-1">{progress}%</p>
+                                <p className={`${useLightTheme ? 'text-gray-900' : 'text-primary-white'} text-sm`}>Subiendo y optimizando...</p>
+                                <p className={`${useLightTheme ? 'text-gray-600' : 'text-secondary-light-gray'} text-xs mt-1`}>{progress}%</p>
                             </div>
                         </div>
                     )}
@@ -246,7 +255,10 @@ export function ImageUploader({
                             onChange={(e) => setUrlInput(e.target.value)}
                             placeholder="https://ejemplo.com/imagen.jpg"
                             disabled={disabled}
-                            className={`flex-1 px-4 py-3 bg-primary-black/40 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-primary-white placeholder-secondary-light-gray ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`flex-1 px-4 py-3 ${useLightTheme
+                                ? 'bg-white border border-gray-300 text-gray-900 placeholder-gray-500'
+                                : 'bg-primary-black/40 border border-primary-orange/20 text-primary-white placeholder-secondary-light-gray'
+                                } rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !disabled) {
                                     handleUrlSubmit();
@@ -276,7 +288,7 @@ export function ImageUploader({
                         </Button>
                     </div>
                     {!disabled && (
-                        <p className="text-xs text-secondary-light-gray">
+                        <p className={`text-xs ${useLightTheme ? 'text-gray-600' : 'text-secondary-light-gray'}`}>
                             O puedes{' '}
                             <button
                                 type="button"
@@ -292,7 +304,7 @@ export function ImageUploader({
 
             {preview && (
                 <div className="relative">
-                    <div className="relative rounded-lg overflow-hidden border border-primary-orange/20 bg-primary-black/40">
+                    <div className={`relative rounded-lg overflow-hidden border ${useLightTheme ? 'border-gray-300 bg-white' : 'border-primary-orange/20 bg-primary-black/40'}`}>
                         <img
                             src={preview}
                             alt="Preview"
@@ -313,7 +325,7 @@ export function ImageUploader({
                         )}
                     </div>
                     <div className="mt-2 flex items-center justify-between">
-                        <p className="text-xs text-secondary-light-gray">
+                        <p className={`text-xs ${useLightTheme ? 'text-gray-600' : 'text-secondary-light-gray'}`}>
                             {recommendedSize && `Recomendado: ${recommendedSize}`}
                         </p>
                         <div className="flex items-center space-x-2">

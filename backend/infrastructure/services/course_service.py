@@ -111,7 +111,20 @@ class CourseService:
             if tags and not isinstance(tags, list):
                 return False, None, "Tags debe ser una lista"
             
-            # 10. Crear curso
+            # 10. Determinar provider automáticamente si no se proporciona
+            # Si el usuario es instructor, el provider debe ser 'instructor'
+            # Si es admin, puede ser 'fagsol' o el que se especifique
+            provider = kwargs.get('provider')
+            if not provider:
+                # Determinar provider basado en el rol del usuario
+                from apps.users.permissions import get_user_role, ROLE_INSTRUCTOR
+                user_role = get_user_role(user)
+                if user_role == ROLE_INSTRUCTOR:
+                    provider = 'instructor'
+                else:
+                    provider = 'fagsol'
+            
+            # 11. Crear curso
             course = Course.objects.create(
                 id=course_id,
                 title=title,
@@ -126,7 +139,7 @@ class CourseService:
                 banner_url=banner_url if banner_url else None,
                 category=category,
                 level=level,
-                provider=kwargs.get('provider', 'fagsol'),
+                provider=provider,
                 discount_price=kwargs.get('discount_price'),
                 hours=kwargs.get('hours', 0),
                 rating=kwargs.get('rating', Decimal('0.00')),
@@ -354,31 +367,42 @@ class CourseService:
         Elimina (archiva) un curso (soft delete)
         
         Args:
-            user: Usuario que elimina el curso (debe ser admin)
+            user: Usuario que elimina el curso (admin o instructor con permisos)
             course_id: ID del curso
         
         Returns:
             Tuple[success, error_message]
         """
         try:
-            # 1. Validar permisos (usando Django permissions)
-            from apps.users.permissions import has_perm
-            if not has_perm(user, 'courses.delete_course'):
-                return False, "No tienes permiso para eliminar cursos"
-            
-            # 2. Obtener curso
+            # 1. Obtener curso
             try:
                 course = Course.objects.get(id=course_id)
             except Course.DoesNotExist:
                 return False, "Curso no encontrado"
             
-            # 3. Soft delete (cambiar status a archived y desactivar)
-            course.status = 'archived'
-            course.is_active = False
-            course.save()
+            # 2. Validar permisos usando la policy can_delete_course
+            from apps.users.permissions import can_delete_course
+            can_delete, message = can_delete_course(user, course)
             
-            logger.info(f"Curso archivado: {course.id} por usuario {user.id}")
-            return True, ""
+            if not can_delete:
+                return False, message
+            
+            # 3. Si hay mensaje de advertencia (para admins con estudiantes), incluirlo en el log
+            if message and "Advertencia" in message:
+                logger.warning(f"Eliminación de curso con estudiantes: {course.id} por usuario {user.id}. {message}")
+            
+            # 4. Soft delete (cambiar status a archived y desactivar)
+            # Usar update() para asegurar que se guarde correctamente
+            Course.objects.filter(id=course_id).update(
+                status='archived',
+                is_active=False
+            )
+            
+            # Refrescar el objeto desde la BD para confirmar
+            course.refresh_from_db()
+            
+            logger.info(f"Curso archivado: {course.id} por usuario {user.id}. Status: {course.status}, is_active: {course.is_active}")
+            return True, message if message else ""
             
         except Exception as e:
             logger.error(f"Error al eliminar curso: {str(e)}")

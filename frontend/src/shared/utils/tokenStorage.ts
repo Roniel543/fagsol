@@ -92,6 +92,9 @@ export function setTokens(accessToken: string, refreshToken: string): void {
             sessionStorage.setItem(TOKEN_KEYS.TOKEN_EXPIRY, fallbackExpiry.toString());
             console.warn('No se pudo decodificar el token, usando expiración por defecto de 60 minutos');
         }
+        
+        // Notificar a otras pestañas que hay un nuevo token (sin compartir el token)
+        // Esto se hace desde useAuth después de setUser para evitar conflictos
     } catch (error) {
         console.error('Error setting tokens:', error);
     }
@@ -162,6 +165,13 @@ export function clearTokens(): void {
         localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN);
         localStorage.removeItem(TOKEN_KEYS.REFRESH_TOKEN);
         localStorage.removeItem(TOKEN_KEYS.USER_DATA);
+        
+        // Notificar a otras pestañas que se cerró sesión
+        if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel('auth-sync');
+            channel.postMessage({ type: 'LOGOUT' });
+            channel.close();
+        }
     } catch (error) {
         console.error('Error clearing tokens:', error);
     }

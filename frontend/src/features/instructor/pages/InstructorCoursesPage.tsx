@@ -1,15 +1,21 @@
 'use client';
 
-import { Button, LoadingSpinner, ProtectedRoute } from '@/shared/components';
 import { InstructorHeader } from '@/features/instructor/components/InstructorHeader';
+import { Button, LoadingSpinner, Modal, ProtectedRoute, useToast } from '@/shared/components';
 import { useInstructorCourses } from '@/shared/hooks/useCourses';
-import { BookOpen, CheckCircle2, Clock, Edit, Eye, FileText, Plus, Search, Star, Trash2, Users } from 'lucide-react';
+import { deleteCourse } from '@/shared/services/courses';
+import { AlertTriangle, BookOpen, CheckCircle2, Clock, Edit, Eye, FileText, Plus, Search, Star, Trash2, Users } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { mutate as swrMutate } from 'swr';
 
 function InstructorCoursesPageContent() {
     const [statusFilter, setStatusFilter] = useState<'all' | 'published' | 'draft' | 'pending_review' | 'needs_revision' | 'archived'>('all');
     const [searchQuery, setSearchQuery] = useState('');
+    const { showToast } = useToast();
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [courseToDelete, setCourseToDelete] = useState<{ id: string; title: string; status: string; enrollments: number } | null>(null);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
 
     // Obtener cursos del instructor
     const { courses, isLoading, isError, error, mutate } = useInstructorCourses({
@@ -30,6 +36,78 @@ function InstructorCoursesPageContent() {
             return courseStatus === statusFilter;
         });
     }, [courses, statusFilter]);
+
+    // Determinar si un curso puede ser eliminado por el instructor
+    const canDeleteCourse = (course: any): { canDelete: boolean; reason?: string } => {
+        const courseStatus = course.status;
+        const enrollments = course.enrollments || 0;
+
+        // Solo puede eliminar cursos en draft o needs_revision
+        if (courseStatus !== 'draft' && courseStatus !== 'needs_revision') {
+            return {
+                canDelete: false,
+                reason: courseStatus === 'published' 
+                    ? 'No puedes eliminar cursos publicados. Contacta a un administrador.'
+                    : 'Solo puedes eliminar cursos en estado "Borrador" o "Requiere Cambios".'
+            };
+        }
+
+        // No puede eliminar si hay estudiantes inscritos
+        if (enrollments > 0) {
+            return {
+                canDelete: false,
+                reason: `No puedes eliminar este curso porque tiene ${enrollments} estudiante(s) inscrito(s). Contacta a un administrador.`
+            };
+        }
+
+        return { canDelete: true };
+    };
+
+    const handleDeleteClick = (course: any) => {
+        const { canDelete, reason } = canDeleteCourse(course);
+        
+        if (!canDelete) {
+            showToast(reason || 'No puedes eliminar este curso', 'error');
+            return;
+        }
+
+        setCourseToDelete({
+            id: course.id,
+            title: course.title,
+            status: course.status,
+            enrollments: course.enrollments || 0
+        });
+        setShowDeleteModal(true);
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (!courseToDelete) return;
+
+        setDeletingId(courseToDelete.id);
+        setShowDeleteModal(false);
+
+        try {
+            const result = await deleteCourse(courseToDelete.id);
+            if (result.success) {
+                showToast('✅ Curso eliminado exitosamente', 'success');
+                mutate();
+                // Invalidar caché del dashboard para que se actualice inmediatamente
+                swrMutate('dashboard-stats');
+            } else {
+                showToast(`❌ ${result.message || 'Error al eliminar el curso'}`, 'error');
+            }
+        } catch (err: any) {
+            showToast(`❌ ${err.message || 'Error al eliminar el curso'}`, 'error');
+        } finally {
+            setDeletingId(null);
+            setCourseToDelete(null);
+        }
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeleteModal(false);
+        setCourseToDelete(null);
+    };
 
     return (
         <div className="min-h-screen bg-primary-black text-primary-white relative overflow-hidden">
@@ -271,18 +349,25 @@ function InstructorCoursesPageContent() {
                                                         <Edit className="w-4 h-4" />
                                                     </Button>
                                                 </Link>
-                                                <Button
-                                                    variant="danger"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        if (confirm('¿Estás seguro de que deseas eliminar este curso?')) {
-                                                            // TODO: Implementar eliminación
-                                                        }
-                                                    }}
-                                                    className="hover:scale-110 transition-transform duration-300"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </Button>
+                                                {(() => {
+                                                    const { canDelete, reason } = canDeleteCourse(course);
+                                                    return (
+                                                        <Button
+                                                            variant="danger"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteClick(course)}
+                                                            disabled={deletingId === course.id || !canDelete}
+                                                            title={!canDelete ? reason : 'Eliminar curso'}
+                                                            className="hover:scale-110 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        >
+                                                            {deletingId === course.id ? (
+                                                                <LoadingSpinner size="sm" />
+                                                            ) : (
+                                                                <Trash2 className="w-4 h-4" />
+                                                            )}
+                                                        </Button>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     </div>
@@ -291,6 +376,27 @@ function InstructorCoursesPageContent() {
                         })}
                     </div>
                 )}
+
+                {/* Modal de confirmación para eliminar curso */}
+                <Modal
+                    isOpen={showDeleteModal}
+                    onClose={handleDeleteCancel}
+                    title="Eliminar Curso"
+                    message={
+                        courseToDelete ? (
+                            <div className="space-y-2">
+                                <p>¿Estás seguro de que deseas eliminar el curso <strong>"{courseToDelete.title}"</strong>?</p>
+                                <p className="text-sm text-gray-600">Esta acción no se puede deshacer. El curso será archivado.</p>
+                            </div>
+                        ) : '¿Estás seguro de que deseas eliminar este curso?'
+                    }
+                    icon={<AlertTriangle className="w-6 h-6" />}
+                    variant="danger"
+                    confirmText="Eliminar"
+                    cancelText="Cancelar"
+                    onConfirm={handleDeleteConfirm}
+                    isLoading={deletingId !== null}
+                />
             </main>
         </div>
     );

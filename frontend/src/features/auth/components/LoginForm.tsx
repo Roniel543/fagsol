@@ -37,6 +37,8 @@ export function LoginForm() {
             const response = await login(formData);
 
             if (response.success) {
+                // Redirigir inmediatamente después de login exitoso
+                // El estado ya está actualizado en useAuth
                 router.push('/dashboard');
             } else {
                 setError(response.message || 'Error en el login');

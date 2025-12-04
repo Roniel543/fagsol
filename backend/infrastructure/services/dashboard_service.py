@@ -45,9 +45,11 @@ class DashboardService:
                 return False, None, "No tienes permiso para ver estadísticas de administrador"
             
             # Estadísticas generales
-            total_courses = Course.objects.count()
+            # Total: solo cursos activos, excluyendo archivados (consistente con admin)
+            total_courses = Course.objects.filter(is_active=True).exclude(status='archived').count()
             published_courses = Course.objects.filter(status='published', is_active=True).count()
-            draft_courses = Course.objects.filter(status='draft').count()
+            # Borradores: solo activos, excluyendo archivados
+            draft_courses = Course.objects.filter(status='draft', is_active=True).exclude(status='archived').count()
             archived_courses = Course.objects.filter(status='archived').count()
             
             # Estadísticas de usuarios
@@ -81,7 +83,11 @@ class DashboardService:
             total_certificates = Certificate.objects.count()
             
             # Cursos más populares (por enrollments)
-            popular_courses = Course.objects.annotate(
+            # Solo mostrar cursos publicados y activos (los borradores no deberían aparecer en "más populares")
+            popular_courses = Course.objects.filter(
+                status='published',
+                is_active=True
+            ).annotate(
                 enrollment_count=Count('enrollments')
             ).order_by('-enrollment_count')[:5]
             
@@ -168,9 +174,14 @@ class DashboardService:
                 return False, None, "No tienes permiso para ver estadísticas de instructor"
             
             # Cursos del instructor
-            instructor_courses = Course.objects.filter(created_by=user)
+            # Cursos del instructor: solo activos, excluyendo archivados
+            instructor_courses = Course.objects.filter(
+                created_by=user,
+                is_active=True
+            ).exclude(status='archived')
+            
             total_courses = instructor_courses.count()
-            published_courses = instructor_courses.filter(status='published', is_active=True).count()
+            published_courses = instructor_courses.filter(status='published').count()
             draft_courses = instructor_courses.filter(status='draft').count()
             
             # Enrollments en cursos del instructor
@@ -182,7 +193,7 @@ class DashboardService:
             # Estudiantes únicos en cursos del instructor
             unique_students = instructor_enrollments.values('user').distinct().count()
             
-            # Cursos más populares del instructor
+            # Cursos más populares del instructor (ya excluye archivados en instructor_courses)
             popular_courses = instructor_courses.annotate(
                 enrollment_count=Count('enrollments')
             ).order_by('-enrollment_count')[:5]
@@ -191,6 +202,7 @@ class DashboardService:
                 {
                     'id': course.id,
                     'title': course.title,
+                    'slug': course.slug,
                     'enrollments': course.enrollment_count,
                     'status': course.status,
                 }

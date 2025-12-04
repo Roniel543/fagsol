@@ -12,6 +12,7 @@ import { type CourseWithReview } from '@/shared/services/courses';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { mutate as swrMutate } from 'swr';
 
 function CoursesPendingAdminPageContent() {
     const router = useRouter();
@@ -39,6 +40,8 @@ function CoursesPendingAdminPageContent() {
                 setShowApproveModal(null);
                 setApprovingNotes('');
                 mutate();
+                // Invalidar caché del dashboard para que se actualice inmediatamente
+                swrMutate('dashboard-stats');
             } else {
                 showToast(result.message || 'Error al aprobar curso', 'error');
             }
@@ -64,6 +67,8 @@ function CoursesPendingAdminPageContent() {
                 setShowRejectModal(null);
                 setRejectionReason('');
                 mutate();
+                // Invalidar caché del dashboard para que se actualice inmediatamente
+                swrMutate('dashboard-stats');
             } else {
                 showToast(result.message || 'Error al rechazar curso', 'error');
             }

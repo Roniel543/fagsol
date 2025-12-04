@@ -34,7 +34,7 @@ export function Button({
     loading = false,
     className = '',
 }: ButtonProps) {
-    const baseClasses = 'font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    const baseClasses = 'font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1';
 
     const variantClasses = {
         primary: 'bg-primary-orange hover:bg-primary-orange/90 text-primary-black focus:ring-primary-orange',

@@ -4,8 +4,8 @@ import { Button, LoadingSpinner } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast';
 import { useAdminContactMessages, useUpdateContactMessage } from '@/shared/hooks/useAdminContactMessages';
 import { ContactMessage } from '@/shared/services/adminContactMessages';
+import { Archive, CheckCircle2, Clock, Eye, Filter, Mail, MessageSquare, Search } from 'lucide-react';
 import { useState } from 'react';
-import { Mail, Search, Filter, CheckCircle2, Eye, MessageSquare, Archive, Clock } from 'lucide-react';
 
 export function ContactMessagesAdminPage() {
     const [filters, setFilters] = useState<{ status?: 'new' | 'read' | 'replied' | 'archived'; search?: string }>({});
@@ -103,9 +103,9 @@ export function ContactMessagesAdminPage() {
                         </label>
                         <select
                             value={filters.status || ''}
-                            onChange={(e) => setFilters({ 
-                                ...filters, 
-                                status: (e.target.value as 'new' | 'read' | 'replied' | 'archived') || undefined 
+                            onChange={(e) => setFilters({
+                                ...filters,
+                                status: (e.target.value as 'new' | 'read' | 'replied' | 'archived') || undefined
                             })}
                             className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-900 focus:ring-2 focus:ring-primary-orange focus:border-primary-orange"
                         >
@@ -145,11 +145,10 @@ export function ContactMessagesAdminPage() {
                         {messages.map((message) => (
                             <div
                                 key={message.id}
-                                className={`bg-white rounded-xl shadow-md border-2 transition-all cursor-pointer ${
-                                    selectedMessage?.id === message.id
-                                        ? 'border-primary-orange shadow-xl ring-2 ring-primary-orange/30 bg-gradient-to-br from-white to-orange-50/30'
-                                        : 'border-gray-200 hover:border-primary-orange/60 hover:shadow-xl hover:bg-gray-50/50'
-                                }`}
+                                className={`bg-white rounded-xl shadow-md border-2 transition-all cursor-pointer ${selectedMessage?.id === message.id
+                                    ? 'border-primary-orange shadow-xl ring-2 ring-primary-orange/30 bg-gradient-to-br from-white to-orange-50/30'
+                                    : 'border-gray-200 hover:border-primary-orange/60 hover:shadow-xl hover:bg-gray-50/50'
+                                    }`}
                                 onClick={() => {
                                     setSelectedMessage(message);
                                     setAdminNotes(message.admin_notes || '');
@@ -235,13 +234,14 @@ export function ContactMessagesAdminPage() {
                                     <label className="block text-sm font-bold text-gray-900 mb-3">Cambiar Estado</label>
                                     <div className="grid grid-cols-2 gap-2">
                                         <Button
+                                            className="bg-red-500"
                                             variant={selectedMessage.status === 'read' ? 'primary' : 'secondary'}
                                             size="sm"
                                             onClick={() => handleStatusChange(selectedMessage.id, 'read')}
                                             disabled={isUpdating || selectedMessage.status === 'read'}
                                         >
                                             <Eye className="w-4 h-4 mr-1" />
-                                            Leído
+                                            Leídso
                                         </Button>
                                         <Button
                                             variant={selectedMessage.status === 'replied' ? 'primary' : 'secondary'}

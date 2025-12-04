@@ -49,7 +49,24 @@ export default function CourseDetailPage() {
     const isCourseCreator = useMemo(() => {
         if (!detail || !user) return false;
         // Verificar si el backend indica que es el creador
-        return detail.is_creator === true;
+        const backendIsCreator = (detail as any).is_creator === true;
+        
+        // Debug: Log para verificar qué está llegando
+        if (user.role === 'instructor') {
+            console.log('🔍 Debug isCourseCreator:', {
+                backendIsCreator,
+                detailIsCreator: (detail as any).is_creator,
+                userId: user.id,
+                instructorId: detail.instructor?.id,
+                courseId: detail.id,
+            });
+        }
+        
+        // Fallback: verificar si el curso tiene información del instructor y coincide con el usuario
+        const isCreatorByInstructor = detail.instructor?.id && user.id && 
+            (detail.instructor.id === `i-${user.id}` || detail.instructor.id === String(user.id));
+        
+        return backendIsCreator || isCreatorByInstructor;
     }, [detail, user]);
 
     // Loading state
@@ -185,7 +202,10 @@ export default function CourseDetailPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2">
                             <span className="text-xs text-primary-orange font-semibold">
-                                {detail.category || 'General'} • {detail.provider === 'fagsol' ? 'Fagsol' : 'Instructor'}
+                                {detail.category || 'General'} • {detail.provider === 'fagsol' 
+                                    ? 'Fagsol' 
+                                    : (detail.instructor?.name ? `Creado por ${detail.instructor.name}` : 'Instructor')
+                                }
                             </span>
                             <h1 className="mt-1 text-2xl sm:text-3xl md:text-4xl font-bold">{detail.title}</h1>
                             <SafeHTML html={detail.description} className="mt-2 text-gray-300" tag="div" />

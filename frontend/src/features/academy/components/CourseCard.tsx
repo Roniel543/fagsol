@@ -25,13 +25,24 @@ export function CourseCard({ course }: Props) {
                         <div className="text-xs text-primary-orange font-semibold">{course.category}</div>
                         <span
                             className={
-                                'text-[10px] px-2 py-0.5 rounded-full border ' +
+                                'text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap ' +
                                 (course.provider === 'fagsol'
                                     ? 'border-primary-orange text-primary-orange'
-                                    : 'border-zinc-600 text-gray-300')
+                                    : 'border-blue-500/50 text-blue-400 bg-blue-500/10')
+                            }
+                            title={course.provider !== 'fagsol' && course.instructor?.name 
+                                ? `Creado por ${course.instructor.name}` 
+                                : undefined
                             }
                         >
-                            {course.provider === 'fagsol' ? 'Fagsol' : 'Instructor'}
+                            {course.provider === 'fagsol' 
+                                ? 'Fagsol' 
+                                : (course.instructor?.name 
+                                    ? course.instructor.name.length > 15 
+                                        ? `${course.instructor.name.substring(0, 15)}...` 
+                                        : course.instructor.name
+                                    : 'Instructor')
+                            }
                         </span>
                     </div>
                     <h3 className="mt-1 font-semibold text-primary-white leading-snug line-clamp-2">{course.title}</h3>
