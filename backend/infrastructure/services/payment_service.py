@@ -34,7 +34,7 @@ def get_user_friendly_error_message(status_detail: str) -> str:
         'cc_rejected_bad_filled_date': 'La fecha de vencimiento es incorrecta.',
         'cc_rejected_bad_filled_other': 'Algunos datos de la tarjeta son incorrectos.',
         'cc_rejected_bad_filled_security_code': 'El código de seguridad (CVV) es incorrecto.',
-        'cc_rejected_high_risk': 'El pago fue rechazado por medidas de seguridad.',
+        'cc_rejected_high_risk': 'El pago fue rechazado por medidas de seguridad de Mercado Pago. Esto puede ocurrir en pagos nuevos o con montos muy bajos. Por favor, intenta con otra tarjeta o contacta a Mercado Pago.',
         'cc_rejected_max_attempts': 'Has excedido el número máximo de intentos. Intenta más tarde.',
         'cc_rejected_card_error': 'Error al procesar tu tarjeta. Intenta nuevamente.',
         'cc_rejected_duplicated_payment': 'Ya existe un pago con estos datos.',
@@ -341,14 +341,28 @@ class PaymentService:
             #
             # NO incluir: expiration_month, expiration_year, card_expiration_month, card_expiration_year
             # NO incluir: card_number, security_code (están en el token)
+            # Formatear monto para Mercado Pago (debe ser float con 2 decimales)
+            # Mercado Pago requiere que el monto tenga exactamente 2 decimales
+            transaction_amount = float(Decimal(str(payment_intent.total)).quantize(Decimal('0.01')))
+            
+            # Validar monto mínimo de Mercado Pago (en Perú es aproximadamente 1 PEN)
+            if transaction_amount < 1.0:
+                payment_intent.status = 'failed'
+                payment_intent.save()
+                return False, None, f"El monto mínimo para pagos en Mercado Pago es 1.00 PEN. Monto actual: {transaction_amount:.2f} PEN"
+            
+            logger.info(f"Transaction amount formateado: {transaction_amount} (original: {payment_intent.total})")
+            
             payment_data = {
-                "transaction_amount": float(payment_intent.total),  # Usar total de DB, no del frontend
+                "transaction_amount": transaction_amount,  # Usar total de DB, formateado correctamente
                 "token": payment_token,  # Token obtenido de CardPayment Brick
                 "description": f"Pago de cursos: {', '.join(payment_intent.course_ids)}",
                 "installments": installments,  # Usar installments recibido del frontend
                 "payment_method_id": payment_method_id,  # REQUERIDO cuando se usa token
                 "payer": {
                     "email": user.email,
+                    "first_name": user.first_name or user.username.split('@')[0] if '@' in user.username else user.username,
+                    "last_name": user.last_name or "",
                     "identification": {
                         "type": "DNI",
                         "number": "12345678"  # TODO: Obtener del perfil del usuario
@@ -358,7 +372,8 @@ class PaymentService:
                     "payment_intent_id": payment_intent_id,
                     "user_id": user.id,
                     "course_ids": payment_intent.course_ids
-                }
+                },
+                "statement_descriptor": "FAGSOL ACADEMY"  # Aparece en el extracto de la tarjeta
             }
             
             logger.info(f"Payment method ID usado: {payment_method_id}")
@@ -621,19 +636,27 @@ class PaymentService:
             if not webhook_id:
                 return False, "ID de webhook no encontrado"
             
-            # Verificar si ya fue procesado
+            # Verificar si ya fue procesado o crear/obtener registro
             existing_webhook = PaymentWebhook.objects.filter(mercado_pago_id=webhook_id).first()
-            if existing_webhook and existing_webhook.processed:
-                logger.info(f"Webhook ya procesado: {webhook_id}")
-                return True, ""
-            
-            # Crear registro de webhook
-            webhook = PaymentWebhook.objects.create(
-                mercado_pago_id=webhook_id,
-                event_type=webhook_data.get("type", "unknown"),
-                payment_id=webhook_data.get("data", {}).get("id"),
-                data=webhook_data
-            )
+            if existing_webhook:
+                if existing_webhook.processed:
+                    logger.info(f"Webhook ya procesado: {webhook_id}")
+                    return True, ""
+                # Si existe pero no está procesado, usar el existente
+                webhook = existing_webhook
+                # Actualizar datos del webhook
+                webhook.event_type = webhook_data.get("type", "unknown")
+                webhook.payment_id = webhook_data.get("data", {}).get("id")
+                webhook.data = webhook_data
+                webhook.save()
+            else:
+                # Crear nuevo registro de webhook
+                webhook = PaymentWebhook.objects.create(
+                    mercado_pago_id=webhook_id,
+                    event_type=webhook_data.get("type", "unknown"),
+                    payment_id=webhook_data.get("data", {}).get("id"),
+                    data=webhook_data
+                )
             
             # Procesar según tipo de evento
             event_type = webhook_data.get("type")
@@ -671,9 +694,14 @@ class PaymentService:
                     logger.info(f"Webhook procesado: {webhook_id}")
                     return True, ""
                 else:
+                    # Si el pago no existe, registrar el error pero retornar éxito
+                    # para evitar que Mercado Pago siga reintentando (especialmente en pruebas)
                     webhook.error_message = f"Pago no encontrado: {payment_id}"
+                    webhook.processed = True  # Marcar como procesado para evitar reintentos
+                    webhook.processed_at = timezone.now()
                     webhook.save()
-                    return False, f"Pago no encontrado: {payment_id}"
+                    logger.warning(f"Webhook recibido para pago inexistente: {payment_id} (puede ser una prueba)")
+                    return True, ""  # Retornar éxito para que Mercado Pago no reintente
             else:
                 webhook.processed = True
                 webhook.processed_at = timezone.now()

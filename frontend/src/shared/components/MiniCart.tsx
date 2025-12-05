@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { ShoppingCart, X, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useCart } from '@/shared/contexts/CartContext';
 import { CoursePlaceholder } from './CoursePlaceholder';
+import { MultiCurrencyPrice } from './MultiCurrencyPrice';
 
 export function MiniCart() {
     const { cartItemsWithDetails, removeFromCart, total, itemCount } = useCart();
@@ -13,6 +14,17 @@ export function MiniCart() {
     const [isHovered, setIsHovered] = useState(false);
     const [forceUpdate, setForceUpdate] = useState(0);
     const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Calcular total en USD para mostrar con MultiCurrencyPrice
+    const totalUsd = useMemo(() => {
+        return cartItemsWithDetails.reduce((sum, item) => {
+            const priceUsd = item.course.price_usd || item.course.price / 3.75;
+            const discountPriceUsd = item.course.discountPrice 
+                ? (item.course.price_usd || item.course.discountPrice / 3.75)
+                : priceUsd;
+            return sum + discountPriceUsd * item.qty;
+        }, 0);
+    }, [cartItemsWithDetails]);
 
     // Listener adicional para asegurar sincronización (por si acaso)
     useEffect(() => {
@@ -124,9 +136,14 @@ export function MiniCart() {
                                                     {item.course.title}
                                                 </Link>
                                                 <div className="mt-1 flex items-center justify-between">
-                                                    <span className="text-sm font-bold text-primary-orange">
-                                                        S/ {item.course.discountPrice || item.course.price}
-                                                    </span>
+                                                    <div>
+                                                        <MultiCurrencyPrice
+                                                            priceUsd={item.course.price_usd || (item.course.discountPrice || item.course.price) / 3.75}
+                                                            pricePen={item.course.discountPrice || item.course.price}
+                                                            size="sm"
+                                                            showUsd={false}
+                                                        />
+                                                    </div>
                                                     <button
                                                         onClick={() => removeFromCart(item.id)}
                                                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-600/20 rounded transition-all"
@@ -148,7 +165,14 @@ export function MiniCart() {
                         <div className="px-4 py-3 border-t border-zinc-800 bg-zinc-900/60">
                             <div className="flex items-center justify-between mb-3">
                                 <span className="text-sm text-gray-400">Total:</span>
-                                <span className="text-xl font-bold text-primary-orange">S/ {total.toFixed(2)}</span>
+                                <div className="text-right">
+                                    <MultiCurrencyPrice
+                                        priceUsd={totalUsd}
+                                        pricePen={total}
+                                        size="lg"
+                                        showUsd={true}
+                                    />
+                                </div>
                             </div>
                             <Link
                                 href="/academy/cart"

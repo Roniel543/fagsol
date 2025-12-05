@@ -161,11 +161,13 @@ export async function processPayment(
             message: response.message,
             errors: response.errors,
         };
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error processing payment:', error);
+        // Preservar el mensaje del backend si está disponible
+        const errorMessage = error?.message || error?.response?.message || 'Error al procesar el pago. Por favor, intenta nuevamente.';
         return {
             success: false,
-            message: 'Error al procesar el pago. Por favor, intenta nuevamente.'
+            message: errorMessage
         };
     }
 }

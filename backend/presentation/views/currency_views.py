@@ -50,7 +50,7 @@ logger = logging.getLogger('apps')
 )
 @api_view(['GET'])
 @permission_classes([AllowAny])
-@ratelimit(key='ip', rate='100/h', method='GET', block=True)
+@ratelimit(key='ip', rate='1000/h', method='GET', block=True)  # Aumentado a 1000/h para manejar múltiples componentes
 def detect_country(request):
     """
     Detecta el país del usuario desde su IP

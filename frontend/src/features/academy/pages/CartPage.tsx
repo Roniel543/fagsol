@@ -1,15 +1,39 @@
 'use client';
 
-import { Footer, useToast, CoursePlaceholder } from '@/shared/components';
+import { Footer, useToast, CoursePlaceholder, MultiCurrencyPrice } from '@/shared/components';
 import { AcademyHeader } from '../components/AcademyHeader';
 import { useCart } from '@/shared/contexts/CartContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Trash2, ShoppingCart, ArrowLeft, ArrowRight } from 'lucide-react';
+import { useMemo } from 'react';
 
 export default function CartPage() {
     const { cartItemsWithDetails, removeFromCart, clearCart, total, itemCount } = useCart();
     const { showToast } = useToast();
+
+    // Calcular total en USD para mostrar con MultiCurrencyPrice
+    const totalUsd = useMemo(() => {
+        return cartItemsWithDetails.reduce((sum, item) => {
+            const priceUsd = item.course.price_usd || item.course.price / 3.75;
+            const discountPriceUsd = item.course.discountPrice 
+                ? (item.course.price_usd || item.course.discountPrice / 3.75)
+                : priceUsd;
+            return sum + discountPriceUsd * item.qty;
+        }, 0);
+    }, [cartItemsWithDetails]);
+
+    // Calcular descuento total en USD
+    const discountTotalUsd = useMemo(() => {
+        return cartItemsWithDetails.reduce((sum, item) => {
+            if (item.course.discountPrice) {
+                const priceUsd = item.course.price_usd || item.course.price / 3.75;
+                const discountPriceUsd = item.course.price_usd || item.course.discountPrice / 3.75;
+                return sum + (priceUsd - discountPriceUsd) * item.qty;
+            }
+            return sum;
+        }, 0);
+    }, [cartItemsWithDetails]);
 
     const handleRemove = (courseId: string, courseTitle: string) => {
         removeFromCart(courseId);
@@ -123,12 +147,20 @@ export default function CartPage() {
 
                                                 {/* Precio */}
                                                 <div className="text-right">
-                                                    <div className="text-xl font-bold text-primary-orange">
-                                                        S/ {item.course.discountPrice || item.course.price}
-                                                    </div>
+                                                    <MultiCurrencyPrice
+                                                        priceUsd={item.course.price_usd || (item.course.discountPrice || item.course.price) / 3.75}
+                                                        pricePen={item.course.discountPrice || item.course.price}
+                                                        size="lg"
+                                                        showUsd={true}
+                                                    />
                                                     {item.course.discountPrice && (
-                                                        <div className="text-sm text-gray-500 line-through">
-                                                            S/ {item.course.price}
+                                                        <div className="text-sm text-gray-500 line-through mt-1">
+                                                            <MultiCurrencyPrice
+                                                                priceUsd={item.course.price_usd || item.course.price / 3.75}
+                                                                pricePen={item.course.price}
+                                                                size="sm"
+                                                                showUsd={false}
+                                                            />
                                                         </div>
                                                     )}
                                                 </div>
@@ -166,25 +198,46 @@ export default function CartPage() {
                                 <h3 className="text-lg font-semibold mb-4">Resumen del pedido</h3>
 
                                 <div className="space-y-3 mb-6">
-                                    <div className="flex justify-between text-gray-400">
+                                    <div className="flex justify-between items-center text-gray-400">
                                         <span>Subtotal ({itemCount} {itemCount === 1 ? 'curso' : 'cursos'})</span>
-                                        <span>S/ {total.toFixed(2)}</span>
+                                        <div className="text-right">
+                                            <MultiCurrencyPrice
+                                                priceUsd={totalUsd}
+                                                pricePen={total}
+                                                size="sm"
+                                                showUsd={false}
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between text-gray-400">
-                                        <span>Descuento</span>
-                                        <span className="text-green-500">
-                                            - S/ {cartItemsWithDetails.reduce((sum, item) => {
-                                                if (item.course.discountPrice) {
-                                                    return sum + (item.course.price - item.course.discountPrice);
-                                                }
-                                                return sum;
-                                            }, 0).toFixed(2)}
-                                        </span>
-                                    </div>
+                                    {discountTotalUsd > 0 && (
+                                        <div className="flex justify-between items-center text-gray-400">
+                                            <span>Descuento</span>
+                                            <span className="text-green-500">
+                                                - <MultiCurrencyPrice
+                                                    priceUsd={discountTotalUsd}
+                                                    pricePen={cartItemsWithDetails.reduce((sum, item) => {
+                                                        if (item.course.discountPrice) {
+                                                            return sum + (item.course.price - item.course.discountPrice) * item.qty;
+                                                        }
+                                                        return sum;
+                                                    }, 0)}
+                                                    size="sm"
+                                                    showUsd={false}
+                                                />
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="border-t border-zinc-800 pt-3">
-                                        <div className="flex justify-between text-xl font-bold">
-                                            <span>Total</span>
-                                            <span className="text-primary-orange">S/ {total.toFixed(2)}</span>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-xl font-bold">Total</span>
+                                            <div className="text-right">
+                                                <MultiCurrencyPrice
+                                                    priceUsd={totalUsd}
+                                                    pricePen={total}
+                                                    size="lg"
+                                                    showUsd={true}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

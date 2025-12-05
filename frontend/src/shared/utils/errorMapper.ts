@@ -30,7 +30,7 @@ const mercadoPagoErrorMap: Record<string, string> = {
     'cc_rejected_bad_filled_date': 'La fecha de vencimiento es incorrecta.',
     'cc_rejected_bad_filled_other': 'Algunos datos de la tarjeta son incorrectos.',
     'cc_rejected_bad_filled_security_code': 'El código de seguridad (CVV) es incorrecto.',
-    'cc_rejected_high_risk': 'El pago fue rechazado por medidas de seguridad.',
+    'cc_rejected_high_risk': 'El pago fue rechazado por medidas de seguridad de Mercado Pago. Esto puede ocurrir en pagos nuevos o con montos muy bajos. Por favor, intenta con otra tarjeta o contacta a Mercado Pago.',
     'cc_rejected_max_attempts': 'Has excedido el número máximo de intentos. Intenta más tarde.',
     'cc_rejected_card_error': 'Error al procesar tu tarjeta. Intenta nuevamente.',
     'cc_rejected_duplicated_payment': 'Ya existe un pago con estos datos.',
@@ -92,7 +92,17 @@ export function extractErrorMessage(error: unknown): string {
 export function mapErrorToUserMessage(error: unknown, context?: string): ErrorMapping {
     const errorMessage = extractErrorMessage(error);
     
-    // Verificar si es un error de Mercado Pago
+    // Si el mensaje ya es amigable (viene del backend traducido), usarlo directamente
+    // Verificar si el mensaje coincide con alguno de nuestros mensajes traducidos
+    const translatedMessages = Object.values(mercadoPagoErrorMap);
+    if (translatedMessages.some(msg => errorMessage === msg || errorMessage.includes(msg))) {
+        return {
+            userMessage: errorMessage,
+            logMessage: errorMessage,
+        };
+    }
+    
+    // Verificar si es un error de Mercado Pago por código
     for (const [code, message] of Object.entries(mercadoPagoErrorMap)) {
         if (errorMessage.toLowerCase().includes(code) || errorMessage.toLowerCase().includes(code.replace(/_/g, ' '))) {
             return {

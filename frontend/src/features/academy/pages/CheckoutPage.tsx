@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer, Input, ProtectedRoute, useToast } from '@/shared/components';
+import { Footer, Input, ProtectedRoute, useToast, MultiCurrencyPrice } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
 import { createPaymentIntent, PaymentIntent, processPayment } from '@/shared/services/payments';
 import { formatErrorForLogging, mapErrorToUserMessage } from '@/shared/utils/errorMapper';
@@ -8,7 +8,7 @@ import { AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { AcademyHeader } from '../../academy/components/AcademyHeader';
 
 // Generar UUID simple para idempotency
@@ -37,6 +37,9 @@ function CheckoutPageContent() {
 	const { cartItems, cartItemsWithDetails, itemCount, clearCart } = useCart();
 	const router = useRouter();
 	const { showToast } = useToast();
+
+	// Constante para tasa de conversión USD → PEN
+	const DEFAULT_USD_TO_PEN_RATE = 3.75;
 
 	// Estados del payment intent (del backend)
 	const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null);
@@ -433,6 +436,8 @@ function CheckoutPageContent() {
 										<div className="mt-4 space-y-3 max-h-[50vh] overflow-y-auto pr-1 scrollbar-hide">
 											{paymentIntent.items.map((item) => {
 												const cartItem = cartItemsWithDetails.find(ci => ci.course.id === item.course_id);
+												// Convertir precio PEN a USD (el item.price viene en PEN del backend)
+												const priceUsd = cartItem?.course.price_usd || item.price / DEFAULT_USD_TO_PEN_RATE;
 												return (
 													<div key={item.course_id} className="flex items-center gap-3">
 														<div className="relative w-14 h-14 rounded-md overflow-hidden bg-secondary-medium-gray flex-shrink-0">
@@ -448,7 +453,14 @@ function CheckoutPageContent() {
 																{cartItem?.course.hours || 0}h • {cartItem?.course.lessons || 0} lecciones
 															</div>
 														</div>
-														<div className="text-sm font-semibold text-primary-orange">S/ {item.price.toFixed(2)}</div>
+														<div className="text-right">
+															<MultiCurrencyPrice
+																priceUsd={priceUsd}
+																pricePen={item.price}
+																size="sm"
+																showUsd={false}
+														 />
+														</div>
 													</div>
 												);
 											})}
@@ -457,12 +469,29 @@ function CheckoutPageContent() {
 										<div className="mt-4 space-y-2 text-sm">
 											<div className="flex items-center justify-between text-secondary-light-gray">
 												<span>Subtotal ({itemCount} {itemCount === 1 ? 'curso' : 'cursos'})</span>
-												<span>S/ {paymentIntent.total.toFixed(2)}</span>
+												<div className="text-right">
+													<MultiCurrencyPrice
+														priceUsd={paymentIntent.total / DEFAULT_USD_TO_PEN_RATE}
+														pricePen={paymentIntent.total}
+														size="sm"
+														showUsd={false}
+													/>
+												</div>
 											</div>
-											<div className="border-t border-secondary-medium-gray pt-3 flex items-center justify-between text-lg font-bold">
-												<span className="text-primary-white">Total</span>
-												<span className="text-primary-orange">S/ {paymentIntent.total.toFixed(2)}</span>
+											<div className="border-t border-secondary-medium-gray pt-3 flex items-center justify-between">
+												<span className="text-lg font-bold text-primary-white">Total</span>
+												<div className="text-right">
+													<MultiCurrencyPrice
+														priceUsd={paymentIntent.total / DEFAULT_USD_TO_PEN_RATE}
+														pricePen={paymentIntent.total}
+														size="lg"
+														showUsd={true}
+													/>
+												</div>
 											</div>
+											<p className="mt-2 text-xs text-secondary-light-gray/70">
+												* El pago se procesará en PEN según la tasa de cambio actual
+											</p>
 										</div>
 									</>
 								) : (
