@@ -1,7 +1,7 @@
 'use client';
 
+import { CoursePlaceholder, MultiCurrencyPrice } from '@/shared/components';
 import { Course } from '@/shared/types';
-import { CoursePlaceholder } from '@/shared/components';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -30,16 +30,16 @@ export function CourseCard({ course }: Props) {
                                     ? 'border-primary-orange text-primary-orange'
                                     : 'border-blue-500/50 text-blue-400 bg-blue-500/10')
                             }
-                            title={course.provider !== 'fagsol' && course.instructor?.name 
-                                ? `Creado por ${course.instructor.name}` 
+                            title={course.provider !== 'fagsol' && course.instructor?.name
+                                ? `Creado por ${course.instructor.name}`
                                 : undefined
                             }
                         >
-                            {course.provider === 'fagsol' 
-                                ? 'Fagsol' 
-                                : (course.instructor?.name 
-                                    ? course.instructor.name.length > 15 
-                                        ? `${course.instructor.name.substring(0, 15)}...` 
+                            {course.provider === 'fagsol'
+                                ? 'Fagsol'
+                                : (course.instructor?.name
+                                    ? course.instructor.name.length > 15
+                                        ? `${course.instructor.name.substring(0, 15)}...`
                                         : course.instructor.name
                                     : 'Instructor')
                             }
@@ -61,11 +61,28 @@ export function CourseCard({ course }: Props) {
                         <div className="text-right">
                             {course.discountPrice ? (
                                 <>
-                                    <div className="text-primary-orange font-bold">S/ {course.discountPrice}</div>
-                                    <div className="text-gray-400 line-through text-xs">S/ {course.price}</div>
+                                    <MultiCurrencyPrice
+                                        priceUsd={course.price_usd || course.price / 3.75}
+                                        pricePen={course.discountPrice}
+                                        size="sm"
+                                        showUsd={false}
+                                    />
+                                    <div className="text-gray-400 line-through text-xs">
+                                        <MultiCurrencyPrice
+                                            priceUsd={course.price_usd || course.price / 3.75}
+                                            pricePen={course.price}
+                                            size="sm"
+                                            showUsd={false}
+                                        />
+                                    </div>
                                 </>
                             ) : (
-                                <div className="text-primary-orange font-bold">S/ {course.price}</div>
+                                <MultiCurrencyPrice
+                                    priceUsd={course.price_usd || course.price / 3.75}
+                                    pricePen={course.price}
+                                    size="sm"
+                                    showUsd={false}
+                                />
                             )}
                         </div>
                     </div>

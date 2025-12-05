@@ -64,6 +64,7 @@ export interface Course {
     rating: number;
     ratingsCount: number;
     price: number;
+    price_usd?: number; // Precio base en USD (Fase 1 Multi-Moneda)
     discountPrice?: number;
     thumbnailUrl: string;
     provider: string;

@@ -80,6 +80,7 @@ urlpatterns = [
     path('api/v1/certificates/', include('presentation.api.v1.certificates.urls')),
     path('api/v1/progress/', include('presentation.api.v1.progress.urls')),
     path('api/v1/contact/', include('presentation.api.v1.contact.urls')),
+    path('api/v1/currency/', include('presentation.api.v1.currency.urls')),
     
     # Public Stats (endpoint público sin autenticación)
     path('api/v1/stats/public/', get_public_stats, name='public_stats'),

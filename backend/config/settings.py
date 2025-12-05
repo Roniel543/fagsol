@@ -330,6 +330,21 @@ MERCADOPAGO_WEBHOOK_SECRET = config('MERCADOPAGO_WEBHOOK_SECRET', default='')
 MERCADOPAGO_PUBLIC_KEY = config('NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY', default='')
 
 # ==================================
+# CURRENCY & GEOIP CONFIGURATION
+# ==================================
+
+# Exchange Rate API (para conversión de monedas)
+EXCHANGE_RATE_API_KEY = config('EXCHANGE_RATE_API_KEY', default='')
+EXCHANGE_RATE_API_URL = config('EXCHANGE_RATE_API_URL', default='https://api.exchangerate-api.com/v4/latest/USD')
+
+# GeoIP Service (para detección de país por IP)
+GEOIP_SERVICE_URL = config('GEOIP_SERVICE_URL', default='https://ipapi.co')
+GEOIP_SERVICE_API_KEY = config('GEOIP_SERVICE_API_KEY', default='')  # Opcional para servicios premium
+
+# Tasa de cambio USD -> PEN por defecto (fallback si API falla)
+DEFAULT_USD_TO_PEN_RATE = config('DEFAULT_USD_TO_PEN_RATE', default='3.75', cast=float)
+
+# ==================================
 # AWS S3 CONFIGURATION (Para certificados y archivos)
 # ==================================
 

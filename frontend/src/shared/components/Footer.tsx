@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { CheckCircle2, Facebook, Instagram, Linkedin, Mail, MapPin, Phone, Send, Youtube } from 'lucide-react';
 import Image from 'next/image';
-import { Mail, Phone, MapPin, Facebook, Instagram, Linkedin, Youtube, Send, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
 
 export function Footer() {
     const [email, setEmail] = useState('');
@@ -11,19 +11,19 @@ export function Footer() {
 
     const handleNewsletterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             return;
         }
 
         setIsLoading(true);
-        
+
         // Simular suscripción
         setTimeout(() => {
             setIsLoading(false);
             setIsSubscribed(true);
             setEmail('');
-            
+
             setTimeout(() => setIsSubscribed(false), 5000);
         }, 1000);
     };
@@ -34,23 +34,21 @@ export function Footer() {
         company: {
             title: 'Empresa',
             links: [
-                { name: 'Sobre Nosotros', href: '#inicio' },
-                { name: 'Nuestros Procesos', href: '#procesos' },
-                { name: 'Equipos', href: '#marketplace' },
-                { name: 'Blog', href: '/blog' },
-                { name: 'Carreras', href: '/carreras' }
+                { name: 'Sobre Nosotros', href: '/empresa/sobre-nosotros' },
+                { name: 'Nuestros Procesos', href: '/empresa/nuestros-procesos' },
+                { name: 'Equipos', href: '/empresa/equipos' },
+                { name: 'Blog', href: '/empresa/blog' },
             ]
         },
         education: {
             title: 'Educación',
             links: [
                 { name: 'Fagsol Academy', href: '/academy' },
-                { name: 'Cursos Disponibles', href: '/academy/cursos' },
+                { name: 'Cursos Disponibles', href: '/academy' },
                 { name: 'Conviértete en Instructor', href: '/auth/become-instructor' },
-                { name: 'Certificaciones', href: '/academy/certificaciones' },
-                { name: 'Preguntas Frecuentes', href: '/faq' }
             ]
         },
+        /*
         services: {
             title: 'Servicios',
             links: [
@@ -61,13 +59,14 @@ export function Footer() {
                 { name: 'Venta de Equipos', href: '#marketplace' }
             ]
         },
+        */
         legal: {
             title: 'Legal',
             links: [
                 { name: 'Política de Privacidad', href: '/privacidad' },
                 { name: 'Términos y Condiciones', href: '/terminos' },
                 { name: 'Política de Cookies', href: '/cookies' },
-                { name: 'Política de Reembolso', href: '/reembolso' }
+                /*{ name: 'Política de Reembolso', href: '/reembolso' }*/
             ]
         }
     };
@@ -81,8 +80,8 @@ export function Footer() {
 
     const contactInfo = [
         { icon: Phone, text: '+51 1 234 5678' },
-        { icon: Mail, text: 'dev.fagsol.sac@gmail.com' },
-        { icon: MapPin, text: 'Av. Polinesia 1234, Arequipa, Perú' }
+        { icon: Mail, text: 'dev.fagsol.peru@gmail.com' },
+        { icon: MapPin, text: 'Socabaya, Arequipa, Perú' }
     ];
 
     return (
@@ -164,10 +163,10 @@ export function Footer() {
                                     className="h-16 w-auto mb-4"
                                 />
                                 <p className="text-gray-400 text-sm leading-relaxed mb-6">
-                                    Líderes en servicios metalúrgicos y educación especializada. 
+                                    Líderes en servicios metalúrgicos y educación especializada.
                                     Transformando la industria minera con tecnología y conocimiento.
                                 </p>
-                                
+
                                 {/* Información de contacto */}
                                 <div className="space-y-3">
                                     {contactInfo.map((info, index) => {
@@ -221,7 +220,8 @@ export function Footer() {
                             </ul>
                         </div>
 
-                        {/* Links - Servicios */}
+                        {/* 
+                        Links - Servicios
                         <div>
                             <h4 className="text-white font-bold text-sm uppercase tracking-wider mb-4">
                                 {footerSections.services.title}
@@ -239,6 +239,7 @@ export function Footer() {
                                 ))}
                             </ul>
                         </div>
+                        */}
 
                         {/* Links - Legal */}
                         <div>

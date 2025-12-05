@@ -1,6 +1,6 @@
 'use client';
 
-import { Footer, SafeHTML, useToast } from '@/shared/components';
+import { Footer, MultiCurrencyPrice, SafeHTML, useToast } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
 import { useAuth } from '@/shared/hooks/useAuth';
 import { useCourseBySlug, useCourses } from '@/shared/hooks/useCourses';
@@ -50,7 +50,7 @@ export default function CourseDetailPage() {
         if (!detail || !user) return false;
         // Verificar si el backend indica que es el creador
         const backendIsCreator = (detail as any).is_creator === true;
-        
+
         // Debug: Log para verificar qué está llegando
         if (user.role === 'instructor') {
             console.log('🔍 Debug isCourseCreator:', {
@@ -61,11 +61,11 @@ export default function CourseDetailPage() {
                 courseId: detail.id,
             });
         }
-        
+
         // Fallback: verificar si el curso tiene información del instructor y coincide con el usuario
-        const isCreatorByInstructor = detail.instructor?.id && user.id && 
+        const isCreatorByInstructor = detail.instructor?.id && user.id &&
             (detail.instructor.id === `i-${user.id}` || detail.instructor.id === String(user.id));
-        
+
         return backendIsCreator || isCreatorByInstructor;
     }, [detail, user]);
 
@@ -117,7 +117,7 @@ export default function CourseDetailPage() {
             );
         }
         return notFound();
-    } 
+    }
 
     const handleAddToCart = () => {
         // Validar si ya está en el carrito
@@ -138,10 +138,33 @@ export default function CourseDetailPage() {
     const priceBlock = (
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-5 sticky top-6">
             <div className="flex items-end justify-between">
-                <div className="text-2xl font-bold text-primary-orange">{detail.discountPrice ? `S/ ${detail.discountPrice}` : `S/ ${detail.price}`}</div>
-                {detail.discountPrice && (
-                    <div className="text-sm text-gray-400 line-through">S/ {detail.price}</div>
-                )}
+                <div>
+                    {detail.discountPrice ? (
+                        <>
+                            <MultiCurrencyPrice
+                                priceUsd={detail.price_usd || detail.price / 3.75}
+                                pricePen={detail.discountPrice}
+                                size="xl"
+                                showUsd={true}
+                            />
+                            <div className="text-sm text-gray-400 line-through mt-1">
+                                <MultiCurrencyPrice
+                                    priceUsd={detail.price_usd || detail.price / 3.75}
+                                    pricePen={detail.price}
+                                    size="sm"
+                                    showUsd={false}
+                                />
+                            </div>
+                        </>
+                    ) : (
+                        <MultiCurrencyPrice
+                            priceUsd={detail.price_usd || detail.price / 3.75}
+                            pricePen={detail.price}
+                            size="xl"
+                            showUsd={true}
+                        />
+                    )}
+                </div>
             </div>
 
             {/* Botones según el tipo de usuario */}
@@ -202,8 +225,8 @@ export default function CourseDetailPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-2">
                             <span className="text-xs text-primary-orange font-semibold">
-                                {detail.category || 'General'} • {detail.provider === 'fagsol' 
-                                    ? 'Fagsol' 
+                                {detail.category || 'General'} • {detail.provider === 'fagsol'
+                                    ? 'Fagsol'
                                     : (detail.instructor?.name ? `Creado por ${detail.instructor.name}` : 'Instructor')
                                 }
                             </span>

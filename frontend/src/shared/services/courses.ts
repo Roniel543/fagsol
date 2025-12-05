@@ -16,6 +16,7 @@ export interface BackendCourse {
     short_description?: string;
     description?: string;
     price: number;
+    price_usd?: number; // Precio base en USD (Fase 1 Multi-Moneda)
     currency: string;
     thumbnail_url?: string;
     status: string;
@@ -147,6 +148,7 @@ export function adaptBackendCourseToFrontend(backendCourse: BackendCourse): Cour
         rating: extendedCourse.rating || 0,
         ratingsCount: extendedCourse.ratings_count || 0,
         price: backendCourse.price,
+        price_usd: extendedCourse.price_usd || undefined,
         discountPrice: extendedCourse.discount_price || undefined,
         thumbnailUrl: backendCourse.thumbnail_url || '',
         provider: extendedCourse.provider || 'fagsol',

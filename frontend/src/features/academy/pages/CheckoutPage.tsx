@@ -3,7 +3,7 @@
 import { Footer, Input, ProtectedRoute, useToast } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
 import { createPaymentIntent, PaymentIntent, processPayment } from '@/shared/services/payments';
-import { mapErrorToUserMessage, formatErrorForLogging } from '@/shared/utils/errorMapper';
+import { formatErrorForLogging, mapErrorToUserMessage } from '@/shared/utils/errorMapper';
 import { AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -22,15 +22,15 @@ function generateIdempotencyKey(): string {
 
 // Tipos para Mercado Pago Bricks
 interface MercadoPagoBricks {
-    bricks: {
-        create: (brickType: string, containerId: string, settings: any) => any;
-    };
+	bricks: {
+		create: (brickType: string, containerId: string, settings: any) => any;
+	};
 }
 
 declare global {
-    interface Window {
-        MercadoPago: any;
-    }
+	interface Window {
+		MercadoPago: any;
+	}
 }
 
 function CheckoutPageContent() {
@@ -108,7 +108,8 @@ function CheckoutPageContent() {
 
 		try {
 			const mp = new window.MercadoPago(mercadoPagoPublicKey, {
-				locale: 'es-PE'
+				locale: 'es-PE',
+				// Configuración adicional para mejor compatibilidad con formato de fecha
 			});
 
 			// Limpiar contenedor antes de crear el brick
@@ -130,9 +131,28 @@ function CheckoutPageContent() {
 					},
 					onError: (error: any) => {
 						console.error('CardPayment Brick error:', formatErrorForLogging(error, 'CardPayment'));
+						// Log detallado para debugging del formato de fecha
+						if (error?.field === 'cardExpirationDate' || error?.message?.toLowerCase().includes('expiration') || error?.message?.toLowerCase().includes('vencimiento')) {
+							console.warn('Error en campo de vencimiento:', {
+								error,
+								field: error?.field,
+								message: error?.message,
+								code: error?.code,
+							});
+						}
 						const errorMapping = mapErrorToUserMessage(error, 'payment');
 						setError(errorMapping.userMessage);
 						showToast(errorMapping.userMessage, 'error');
+					},
+					onFieldChange: (field: any) => {
+						// Callback para detectar cambios en los campos y ayudar con debugging
+						if (field.field === 'cardExpirationDate') {
+							console.log('Campo de vencimiento cambiado:', {
+								value: field.value,
+								error: field.error,
+								field: field.field,
+							});
+						}
 					},
 					onSubmit: async (formData: any) => {
 						// Prevenir múltiples submits
@@ -204,18 +224,43 @@ function CheckoutPageContent() {
 							fontType: 'custom',
 						},
 					},
+					// Configuración de campos para mejorar validación
+					fields: {
+						cardholderName: {
+							placeholder: 'Nombre del titular',
+						},
+						cardholderIdentificationType: {
+							placeholder: 'Tipo de documento',
+						},
+						cardholderIdentificationNumber: {
+							placeholder: 'Número de documento',
+						},
+					cardExpirationDate: {
+						placeholder: 'MM/AA',
+						// El formato debe ser MM/YY donde MM es mes (01-12) y YY es año (2 dígitos)
+						// IMPORTANTE: La fecha debe estar al menos un año en el futuro
+						// Ejemplo válido (si estamos en enero 2025): 11/26 (noviembre 2026)
+						// Ejemplo inválido: 11/25 (muy cercano, será rechazado)
+					},
+						cardNumber: {
+							placeholder: 'Número de tarjeta',
+						},
+						securityCode: {
+							placeholder: 'CVV',
+						},
+					},
 				},
 			});
 
 			return () => {
 				// Cleanup: el brick se destruye automáticamente cuando se desmonta el componente
 			};
-				} catch (err: any) {
-					console.error('Error initializing CardPayment Brick:', formatErrorForLogging(err, 'BrickInit'));
-					const errorMapping = mapErrorToUserMessage(err, 'payment');
-					setError(errorMapping.userMessage);
-					showToast(errorMapping.userMessage, 'error');
-				}
+		} catch (err: any) {
+			console.error('Error initializing CardPayment Brick:', formatErrorForLogging(err, 'BrickInit'));
+			const errorMapping = mapErrorToUserMessage(err, 'payment');
+			setError(errorMapping.userMessage);
+			showToast(errorMapping.userMessage, 'error');
+		}
 	}, [isBrickReady, paymentIntent, mercadoPagoPublicKey, form.email, processingPayment, clearCart, router, showToast]);
 
 	// Crear payment intent al cargar (paralelo con la carga del SDK)
@@ -262,7 +307,7 @@ function CheckoutPageContent() {
 				<main className="flex min-h-screen flex-col bg-primary-black text-primary-white">
 					<div className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-10">
 						<div className="rounded-xl border border-status-error/50 bg-status-error/10 p-6 text-status-error">
-							⚠️ Clave pública de Mercado Pago no configurada. Configura NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
+							Clave pública de Mercado Pago no configurada. Configura NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY
 						</div>
 					</div>
 				</main>

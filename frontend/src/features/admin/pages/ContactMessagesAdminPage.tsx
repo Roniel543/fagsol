@@ -241,7 +241,7 @@ export function ContactMessagesAdminPage() {
                                             disabled={isUpdating || selectedMessage.status === 'read'}
                                         >
                                             <Eye className="w-4 h-4 mr-1" />
-                                            Leídso
+                                            Leído
                                         </Button>
                                         <Button
                                             variant={selectedMessage.status === 'replied' ? 'primary' : 'secondary'}

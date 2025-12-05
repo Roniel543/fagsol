@@ -352,20 +352,20 @@ function InstructorCoursesPageContent() {
                                                 {(() => {
                                                     const { canDelete, reason } = canDeleteCourse(course);
                                                     return (
-                                                        <Button
-                                                            variant="danger"
-                                                            size="sm"
+                                                <Button
+                                                    variant="danger"
+                                                    size="sm"
                                                             onClick={() => handleDeleteClick(course)}
                                                             disabled={deletingId === course.id || !canDelete}
                                                             title={!canDelete ? reason : 'Eliminar curso'}
                                                             className="hover:scale-110 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        >
+                                                >
                                                             {deletingId === course.id ? (
                                                                 <LoadingSpinner size="sm" />
                                                             ) : (
-                                                                <Trash2 className="w-4 h-4" />
+                                                    <Trash2 className="w-4 h-4" />
                                                             )}
-                                                        </Button>
+                                                </Button>
                                                     );
                                                 })()}
                                             </div>

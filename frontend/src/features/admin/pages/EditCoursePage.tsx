@@ -80,10 +80,10 @@ function EditCoursePageContent() {
         <div className={`min-h-screen ${isInstructor ? 'bg-primary-black text-primary-white' : 'bg-white text-gray-900'} relative overflow-hidden`}>
             {/* Elementos decorativos de fondo (solo para instructor) */}
             {isInstructor && (
-                <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                    <div className="absolute top-20 right-10 w-72 h-72 bg-primary-orange/5 rounded-full blur-3xl"></div>
-                    <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl"></div>
-                </div>
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-20 right-10 w-72 h-72 bg-primary-orange/5 rounded-full blur-3xl"></div>
+                <div className="absolute bottom-20 left-10 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl"></div>
+            </div>
             )}
 
             {/* Header */}

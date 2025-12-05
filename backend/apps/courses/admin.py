@@ -8,7 +8,7 @@ from .models import Course, Module, Lesson
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'slug', 'price', 'currency', 'status', 'is_active', 'created_at']
+    list_display = ['id', 'title', 'slug', 'price_usd', 'price', 'currency', 'status', 'is_active', 'created_at']
     list_filter = ['status', 'is_active', 'created_at']
     search_fields = ['id', 'title', 'slug', 'description']
     readonly_fields = ['id', 'created_at', 'updated_at']
@@ -27,7 +27,7 @@ class CourseAdmin(admin.ModelAdmin):
             'fields': ('id', 'title', 'slug', 'description', 'short_description')
         }),
         ('Precio y Monetización', {
-            'fields': ('price', 'currency')
+            'fields': ('price_usd', 'price', 'currency', 'discount_price')
         }),
         ('Estado y Visibilidad', {
             'fields': ('status', 'is_active', 'order')

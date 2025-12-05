@@ -250,9 +250,9 @@ function CoursesAdminPageContent() {
                                                 {/* Thumbnail */}
                                                 <div className="relative h-48 bg-gray-100 overflow-hidden">
                                                     {course.thumbnail_url ? (
-                                                        <img
-                                                            src={course.thumbnail_url}
-                                                            alt={course.title}
+                                                                <img
+                                                                    src={course.thumbnail_url}
+                                                                    alt={course.title}
                                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                         />
                                                     ) : (
@@ -337,11 +337,11 @@ function CoursesAdminPageContent() {
                                                 {/* Contenido del Card */}
                                                 <div className="p-5">
                                                     <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-orange transition-colors">
-                                                        {course.title}
-                                                    </h3>
+                                                                        {course.title}
+                                                                    </h3>
                                                     <p className="text-sm text-gray-700 line-clamp-2 mb-4 min-h-[2.5rem]">
-                                                        {course.short_description || course.description}
-                                                    </p>
+                                                                    {course.short_description || course.description}
+                                                                </p>
 
                                                     {/* Información adicional */}
                                                     <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
@@ -349,31 +349,31 @@ function CoursesAdminPageContent() {
                                                             <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Precio</span>
                                                             <span className="text-lg font-bold text-primary-orange mt-1">S/ {course.price}</span>
                                                         </div>
-                                                        {course.category && (
+                                                                    {course.category && (
                                                             <div className="text-right">
                                                                 <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block">Categoría</span>
                                                                 <span className="text-sm font-semibold text-gray-900 mt-1">{course.category}</span>
                                                             </div>
                                                         )}
-                                                    </div>
+                                                        </div>
 
                                                     {/* Botones principales siempre visibles */}
                                                     <div className="flex gap-2">
                                                         <Link href={`/admin/courses/${course.id}/edit`} className="flex-1">
                                                             <Button variant="primary" size="sm" className="w-full">
-                                                                <Edit className="w-4 h-4 mr-1" />
-                                                                Editar
-                                                            </Button>
-                                                        </Link>
+                                                                        <Edit className="w-4 h-4 mr-1" />
+                                                                        Editar
+                                                                    </Button>
+                                                                </Link>
                                                         <Link href={`/academy/course/${course.slug}`} className="flex-1">
                                                             <Button variant="secondary" size="sm" className="w-full">
                                                                 <Eye className="w-4 h-4 mr-1" />
                                                                 Ver
-                                                            </Button>
-                                                        </Link>
+                                                                    </Button>
+                                                                </Link>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </div>
                                         ))}
                                     </div>
                                 </div>

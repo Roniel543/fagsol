@@ -185,6 +185,7 @@ def list_courses(request):
                 'slug': course.slug,
                 'short_description': course.short_description or course.description[:200] + '...' if len(course.description) > 200 else course.description,
                 'price': float(course.price),
+                'price_usd': float(course.price_usd) if course.price_usd else None,
                 'discount_price': float(course.discount_price) if course.discount_price else None,
                 'currency': course.currency,
                 'thumbnail_url': course.thumbnail_url,
@@ -762,7 +763,7 @@ def list_instructor_courses(request):
             # Para 'all' y otros estados, excluir cursos archivados
             queryset = Course.objects.filter(
                 created_by=request.user,
-                is_active=True
+            is_active=True
             ).exclude(status='archived')
         
         # Filtrar por estado (si no es 'all' ni 'archived')
@@ -807,6 +808,7 @@ def list_instructor_courses(request):
                 'description': course.description,
                 'short_description': course.short_description or (course.description[:200] + '...' if len(course.description) > 200 else course.description),
                 'price': float(course.price),
+                'price_usd': float(course.price_usd) if course.price_usd else None,
                 'discount_price': float(course.discount_price) if course.discount_price else None,
                 'currency': course.currency,
                 'thumbnail_url': course.thumbnail_url,
@@ -960,6 +962,7 @@ def create_course(request):
                 'description': course.description,
                 'short_description': course.short_description,
                 'price': float(course.price),
+                'price_usd': float(course.price_usd) if course.price_usd else None,
                 'currency': course.currency,
                 'status': course.status,
                 'category': course.category,
@@ -1108,6 +1111,7 @@ def update_course(request, course_id):
                 'description': course.description,
                 'short_description': course.short_description,
                 'price': float(course.price),
+                'price_usd': float(course.price_usd) if course.price_usd else None,
                 'discount_price': float(course.discount_price) if course.discount_price else None,
                 'currency': course.currency,
                 'status': course.status,

@@ -59,20 +59,32 @@ await processPayment(
 
 ### Tarjetas Aprobadas
 
-**IMPORTANTE**: Para que las tarjetas de prueba funcionen correctamente, el **nombre del titular** debe ser exactamente **"APRO"** (en mayúsculas).
+**IMPORTANTE**: Para que las tarjetas de prueba funcionen correctamente:
+1. El **nombre del titular** debe ser exactamente **"APRO"** (en mayúsculas).
+2. La **fecha de vencimiento** debe estar **al menos un año en el futuro** desde la fecha actual.
+
+**⚠️ Nota sobre fechas de vencimiento:**
+El CardPayment Brick de Mercado Pago valida que la fecha de expiración esté al menos un año en el futuro. Por ejemplo:
+- Si estamos en enero 2025, usa fechas como "11/26" o "12/26" (noviembre/diciembre 2026)
+- NO uses fechas cercanas como "11/25" si estamos en 2025, ya que serán rechazadas con "Formato inválido"
 
 | Tarjeta | Número | CVV | Vencimiento | Nombre del Titular |
 |---------|-------|-----|-------------|-------------------|
-| Visa | 5031 7557 3453 0604 | 123 | 11/25 | **APRO** |
-| Mastercard | 5031 4332 1540 6351 | 123 | 11/25 | **APRO** |
-| Amex | 3753 651535 56885 | 1234 | 11/25 | **APRO** |
+| Visa | 5031 7557 3453 0604 | 123 | 11/26 | **APRO** |
+| Mastercard | 5031 4332 1540 6351 | 123 | 11/26 | **APRO** |
+| Amex | 3753 651535 56885 | 1234 | 11/26 | **APRO** |
+
+**💡 Tip**: Si necesitas usar otras fechas, asegúrate de que estén al menos un año en el futuro. Por ejemplo:
+- Enero 2025 → Usa "01/26" o fechas posteriores
+- Febrero 2025 → Usa "02/26" o fechas posteriores
+- Y así sucesivamente...
 
 ### Tarjetas Rechazadas (para probar flujo de rechazo)
 
 | Tarjeta | Número | CVV | Vencimiento | Nombre del Titular | Motivo |
 |---------|-------|-----|-------------|-------------------|--------|
-| Visa | 5031 7557 3453 0604 | 123 | 11/25 | **OTHE** | Rechazada genérica |
-| Mastercard | 5031 4332 1540 6351 | 123 | 11/25 | **OTHE** | Rechazada genérica |
+| Visa | 5031 7557 3453 0604 | 123 | 11/26 | **OTHE** | Rechazada genérica |
+| Mastercard | 5031 4332 1540 6351 | 123 | 11/26 | **OTHE** | Rechazada genérica |
 
 **Nota**: Si usas una tarjeta con nombre diferente a "APRO" o "OTHE", Mercado Pago puede rechazarla con el código `cc_rejected_other_reason`. Asegúrate de usar exactamente "APRO" para pagos aprobados.
 

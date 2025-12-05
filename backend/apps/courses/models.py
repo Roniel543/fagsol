@@ -53,12 +53,21 @@ class Course(models.Model):
     short_description = models.TextField(max_length=500, blank=True, verbose_name="Descripción corta")
     
     # Precio y monetización
+    price_usd = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        null=True,
+        blank=True,
+        verbose_name="Precio en USD",
+        help_text="Precio base en dólares estadounidenses (USD)"
+    )
     price = models.DecimalField(
         max_digits=10, 
         decimal_places=2, 
         validators=[MinValueValidator(Decimal('0.00'))],
         verbose_name="Precio",
-        help_text="Precio en PEN (Soles)"
+        help_text="Precio en PEN (Soles) - calculado desde price_usd"
     )
     currency = models.CharField(max_length=3, default='PEN', verbose_name="Moneda")
     

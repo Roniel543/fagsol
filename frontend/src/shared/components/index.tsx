@@ -8,6 +8,7 @@ export { default as Footer } from './Footer';
 export { default as Header } from './Header';
 export { ImageUploader } from './ImageUploader';
 export { MiniCart } from './MiniCart';
+export { MultiCurrencyPrice } from './MultiCurrencyPrice';
 export { ProtectedRoute } from './ProtectedRoute';
 export { SafeHTML } from './SafeHTML';
 export { HeroSkeleton, ProcessSkeleton, SkeletonImage } from './SkeletonComponents';
