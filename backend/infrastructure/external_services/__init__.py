@@ -341,6 +341,194 @@ Equipo FagSol
             # Intentar enviar versión de texto plano como fallback
             return self.send_email(user_email, subject, body_text, is_html=False)
 
+    def send_password_reset_email(
+        self,
+        user_email: str,
+        user_name: str,
+        reset_url: str
+    ) -> bool:
+        """
+        Envía email de restablecimiento de contraseña
+        """
+        try:
+            from django.conf import settings
+            
+            subject = "Restablecer tu contraseña - FagSol Escuela Virtual"
+            
+            # Cuerpo del email en texto plano
+            body_text = f"""
+Hola {user_name},
+
+Has solicitado restablecer tu contraseña en FagSol Escuela Virtual.
+
+Para restablecer tu contraseña, haz clic en el siguiente enlace:
+{reset_url}
+
+Este enlace expirará en 1 hora por seguridad.
+
+Si no solicitaste este cambio, ignora este email. Tu contraseña permanecerá sin cambios.
+
+Saludos,
+Equipo FagSol Escuela Virtual
+            """
+            
+            # Cuerpo del email en HTML
+            body_html = f"""
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {{
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }}
+        .container {{
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            color: #fff;
+            padding: 30px 20px;
+            text-align: center;
+        }}
+        .header h1 {{
+            margin: 0;
+            font-size: 24px;
+            font-weight: bold;
+        }}
+        .content {{
+            padding: 30px;
+        }}
+        .content p {{
+            margin: 15px 0;
+            color: #555;
+        }}
+        .button-container {{
+            text-align: center;
+            margin: 30px 0;
+        }}
+        .button {{
+            display: inline-block;
+            background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%);
+            color: #ffffff;
+            padding: 14px 35px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 16px;
+            box-shadow: 0 4px 6px rgba(255, 107, 53, 0.3);
+            transition: transform 0.2s;
+        }}
+        .button:hover {{
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(255, 107, 53, 0.4);
+        }}
+        .warning-box {{
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+        .warning-box p {{
+            margin: 5px 0;
+            color: #856404;
+            font-size: 14px;
+        }}
+        .info-box {{
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }}
+        .info-box p {{
+            margin: 5px 0;
+            color: #0c5460;
+            font-size: 14px;
+        }}
+        .footer {{
+            background-color: #f9f9f9;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            border-top: 1px solid #eee;
+        }}
+        .footer p {{
+            margin: 5px 0;
+        }}
+        .link-fallback {{
+            word-break: break-all;
+            color: #666;
+            font-size: 12px;
+            margin-top: 10px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1Restablecer Contraseña</h1>
+        </div>
+        <div class="content">
+            <p>Hola <strong>{user_name}</strong>,</p>
+            
+            <p>Has solicitado restablecer tu contraseña en <strong>FagSol Escuela Virtual</strong>.</p>
+            
+            <div class="button-container">
+                <a href="{reset_url}" class="button">
+                    Restablecer Contraseña
+                </a>
+            </div>
+            
+            <div class="info-box">
+                <p><strong>Importante:</strong> Este enlace expirará en <strong>1 hora</strong> por seguridad.</p>
+            </div>
+            
+            <div class="warning-box">
+                <p><strong>Seguridad:</strong> Si no solicitaste este cambio, ignora este email. Tu contraseña permanecerá sin cambios.</p>
+            </div>
+            
+            <p class="link-fallback">
+                Si el botón no funciona, copia y pega este enlace en tu navegador:<br>
+                <a href="{reset_url}" style="color: #FF6B35;">{reset_url}</a>
+            </p>
+        </div>
+        <div class="footer">
+            <p>Este es un email automático, por favor no respondas a este mensaje.</p>
+            <p>© {timezone.now().year} FagSol Escuela Virtual. Todos los derechos reservados.</p>
+            <p style="margin-top: 10px;">
+                <a href="{getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')}" style="color: #FF6B35; text-decoration: none;">
+                    FagSol Escuela Virtual
+                </a>
+            </p>
+        </div>
+    </div>
+</body>
+</html>
+            """
+            
+            # Enviar email con HTML
+            return self.send_email(user_email, subject, body_html, is_html=True)
+            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger('apps')
+            logger.error(f"Error al enviar email de reset de contraseña: {str(e)}")
+            # Intentar enviar versión de texto plano como fallback
+            return self.send_email(user_email, subject, body_text, is_html=False)
+
 
 class DjangoNotificationService(NotificationService):
     """

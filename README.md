@@ -29,7 +29,9 @@
 ### **Para Estudiantes:**
 - ✅ Registro e inicio de sesión seguro
 - ✅ Explorar catálogo de cursos
-- ✅ Inscribirse en cursos
+- ✅ Ver precios en moneda local (detección automática por país)
+- ✅ Comprar cursos con tarjetas reales (Mercado Pago)
+- ✅ Inscribirse automáticamente después del pago
 - ✅ Acceder a contenido educativo
 - ✅ Seguir progreso de aprendizaje
 - ✅ Obtener certificados al completar cursos
@@ -45,9 +47,25 @@
 ### **Para Administradores:**
 - ✅ Panel de control completo
 - ✅ Gestionar solicitudes de instructores
-- ✅ Aprobar/rechazar cursos
+- ✅ Crear y editar cursos
 - ✅ Gestionar usuarios y permisos
 - ✅ Estadísticas del sistema
+- ✅ Ver historial de pagos
+
+### **Sistema de Pagos:**
+- ✅ Integración con Mercado Pago (CardPayment Brick)
+- ✅ Pagos con tarjetas reales (Visa, Mastercard, Amex)
+- ✅ Tokenización client-side (PCI DSS compliant)
+- ✅ Webhooks automáticos para confirmación de pagos
+- ✅ Enrollments automáticos después del pago
+- ✅ Emails de confirmación de pago
+
+### **Sistema Multi-Moneda:**
+- ✅ Detección automática de país por IP
+- ✅ Precios en moneda local (COP, MXN, BRL, CLP, ARS, etc.)
+- ✅ Conversión automática desde USD
+- ✅ Precios fijos en PEN (base del negocio)
+- ✅ Modelo híbrido: PEN como base + USD fijo para internacional
 
 ---
 
@@ -73,6 +91,13 @@
 - **Base de Datos:** PostgreSQL
 - **Caché:** Redis
 - **Tareas Asíncronas:** Celery
+
+### **Pagos y Moneda:**
+- **Procesador de Pagos:** Mercado Pago
+- **Tokenización:** CardPayment Brick (client-side)
+- **Monedas Soportadas:** PEN, USD, COP, MXN, BRL, CLP, ARS, BOB
+- **Detección de País:** ipapi.co
+- **Tasas de Cambio:** ExchangeRate API
 
 ---
 
@@ -197,13 +222,16 @@ fagsol/
 ## 📚 **DOCUMENTACIÓN**
 
 ### **Documentos Principales:**
-- **[CONTEXTO_PROYECTO.md](./CONTEXTO_PROYECTO.md)** - Contexto completo del proyecto
-- **[DOCKER_SETUP.md](./DOCKER_SETUP.md)** - Guía completa de Docker
+- **[QUICK_START.md](./QUICK_START.md)** - Inicio rápido
 - **[CHANGELOG.md](./CHANGELOG.md)** - Registro de cambios
+- **[CHECKLIST_PRODUCCION.md](./CHECKLIST_PRODUCCION.md)** - Checklist para producción
+- **[docs/README.md](./docs/README.md)** - Índice completo de documentación
 
-### **Documentos de Funcionalidades:**
-- **[Futura Fases/Instructors/PLAN_FLUJO_INSTRUCTORES.md](./Futura%20Fases/Instructors/PLAN_FLUJO_INSTRUCTORES.md)** - Flujo de instructores
-- **[Futura Fases/Instructors/GUIA_USO_SISTEMA_INSTRUCTORES.md](./Futura%20Fases/Instructors/GUIA_USO_SISTEMA_INSTRUCTORES.md)** - Guía de uso
+### **Documentación Organizada:**
+- **[docs/setup/](./docs/)** - Guías de configuración
+- **[docs/guides/](./docs/guides/)** - Guías de uso
+- **[docs/payments/](./docs/payments/)** - Documentación de pagos
+- **[docs/production/](./docs/production/)** - Producción y despliegue
 
 ### **API Documentation:**
 - **Swagger UI:** http://localhost:8000/swagger/
@@ -233,9 +261,21 @@ fagsol/
 
 ### **Cursos:**
 - `GET /api/v1/courses/` - Listar cursos
-- `POST /api/v1/courses/create/` - Crear curso (instructor/admin)
+- `GET /api/v1/courses/slug/{slug}/` - Obtener curso por slug
+- `POST /api/v1/courses/` - Crear curso (instructor/admin)
 - `GET /api/v1/courses/{id}/` - Detalle de curso
 - `PUT /api/v1/courses/{id}/update/` - Actualizar curso
+
+### **Pagos:**
+- `POST /api/v1/payments/intent/` - Crear payment intent
+- `POST /api/v1/payments/process/` - Procesar pago
+- `GET /api/v1/payments/intent/{id}/` - Obtener payment intent
+- `GET /api/v1/payments/history/` - Historial de pagos
+- `POST /api/v1/payments/webhook/` - Webhook de Mercado Pago
+
+### **Moneda:**
+- `GET /api/v1/currency/detect/` - Detectar país y moneda
+- `GET /api/v1/currency/convert/` - Convertir precio USD a moneda local
 
 **Ver Swagger para documentación completa:** http://localhost:8000/swagger/
 
@@ -345,18 +385,28 @@ docker-compose -f docker-compose.prod.yml up -d
 ## 📊 **ESTADO DEL PROYECTO**
 
 ### **✅ Completado:**
-- Sistema de autenticación completo
-- Sistema de roles y permisos
-- Flujo de solicitud de instructor
-- Panel admin para gestionar solicitudes
-- Dashboard para todos los roles
-- Rutas específicas para instructores
-- UI mejorada
+- ✅ Sistema de autenticación completo (JWT)
+- ✅ Sistema de roles y permisos
+- ✅ Flujo de solicitud de instructor
+- ✅ Panel admin completo
+- ✅ Dashboard para todos los roles
+- ✅ CRUD completo de cursos
+- ✅ Sistema de pagos con Mercado Pago
+- ✅ Pagos con tarjetas reales funcionando
+- ✅ Webhooks de Mercado Pago
+- ✅ Sistema multi-moneda (detección automática)
+- ✅ Precios internacionales (Opción C: Híbrido)
+- ✅ Enrollments automáticos después del pago
+- ✅ Emails de confirmación de pago
+- ✅ Historial de pagos
+- ✅ UI moderna y responsive
 
-### **⏳ En Desarrollo:**
-- Sistema completo de cursos
-- Sistema de aprobación de cursos
-- Notificaciones por email
+### **🚀 Listo para Producción:**
+- ✅ Pagos funcionando con tarjetas reales
+- ✅ Webhooks configurados y funcionando
+- ✅ Sistema multi-moneda probado
+- ✅ Seguridad implementada (PCI DSS compliant)
+- ⚠️ Pendiente: Configurar credenciales de producción
 
 ---
 
@@ -370,25 +420,3 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ---
 
-## 📝 **LICENCIA**
-
-Este proyecto es propiedad de FagSol S.A.C.
-
----
-
-## 📞 **CONTACTO**
-
-- **Email:** soporte@fagsol.com
-- **Website:** https://fagsol.com
-
----
-
-## 🙏 **AGRADECIMIENTOS**
-
-- Django Community
-- Next.js Team
-- Todos los contribuidores
-
----
-
-**Última actualización:** 2025-01-12

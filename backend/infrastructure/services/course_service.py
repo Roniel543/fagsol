@@ -6,10 +6,11 @@ Maneja la lógica de negocio para CRUD de cursos
 import logging
 import re
 from typing import Dict, Optional, Tuple
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.utils.text import slugify
 from django.utils import timezone
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from apps.courses.models import Course, Module, Lesson
 from apps.users.permissions import can_edit_course, is_admin
 
@@ -22,7 +23,53 @@ class CourseService:
     """
     
     def __init__(self):
-        pass
+        # Obtener tasa de cambio USD -> PEN desde settings
+        self.default_usd_to_pen_rate = Decimal(str(getattr(settings, 'DEFAULT_USD_TO_PEN_RATE', '3.75')))
+    
+    def _calculate_price_usd_from_pen(self, price_pen: Decimal) -> Decimal:
+        """
+        Calcula price_usd desde price (PEN) usando la tasa REAL de la API
+        
+        Intenta obtener la tasa real de la API. Si falla, usa la tasa por defecto.
+        El price_usd calculado se guarda y NO se recalcula automáticamente (fijo).
+        
+        Args:
+            price_pen: Precio en PEN
+            
+        Returns:
+            Precio en USD redondeado a 2 decimales
+        """
+        if price_pen <= 0:
+            return Decimal('0.00')
+        
+        # Intentar obtener tasa real de la API
+        try:
+            from infrastructure.services.currency_service import CurrencyService
+            currency_service = CurrencyService()
+            
+            # Obtener tasa USD -> PEN (necesitamos la inversa: PEN -> USD)
+            # La API devuelve tasa USD -> PEN, necesitamos 1 / tasa para convertir PEN -> USD
+            usd_to_pen_rate = currency_service.get_exchange_rate('USD', 'PEN')
+            
+            # Convertir PEN a USD: dividir por la tasa
+            price_usd = price_pen / usd_to_pen_rate
+            logger.info(
+                f"Calculado price_usd usando tasa REAL de API: "
+                f"{price_pen} PEN -> {price_usd} USD (tasa: {usd_to_pen_rate})"
+            )
+            
+        except Exception as e:
+            # Si falla la API, usar tasa por defecto como fallback
+            logger.warning(
+                f"Error al obtener tasa real de API, usando tasa por defecto: {str(e)}"
+            )
+            price_usd = price_pen / self.default_usd_to_pen_rate
+            logger.info(
+                f"Calculado price_usd usando tasa por defecto: "
+                f"{price_pen} PEN -> {price_usd} USD (tasa: {self.default_usd_to_pen_rate})"
+            )
+        
+        return price_usd.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
     
     def create_course(
         self,
@@ -124,7 +171,22 @@ class CourseService:
                 else:
                     provider = 'fagsol'
             
-            # 11. Crear curso
+            # 11. Calcular price_usd si no se proporciona (Opción C: Híbrido Mejorado)
+            # Si el admin ingresa precio en PEN, calcular price_usd automáticamente UNA VEZ
+            # El price_usd calculado se guarda y NO se recalcula (fijo)
+            price_usd = kwargs.get('price_usd')
+            currency = kwargs.get('currency', 'PEN')
+            
+            if price_usd is None and currency == 'PEN' and price > 0:
+                # Calcular price_usd desde price (PEN) usando tasa real de la API
+                # Este cálculo se hace UNA VEZ y el valor queda FIJO
+                price_usd = self._calculate_price_usd_from_pen(price)
+                # El log ya está en _calculate_price_usd_from_pen
+            elif price_usd is None:
+                # Si no hay precio o no es PEN, price_usd queda None
+                price_usd = None
+            
+            # 12. Crear curso
             course = Course.objects.create(
                 id=course_id,
                 title=title,
@@ -132,7 +194,8 @@ class CourseService:
                 description=description.strip(),
                 short_description=kwargs.get('short_description', description[:500].strip()),
                 price=price,
-                currency=kwargs.get('currency', 'PEN'),
+                price_usd=price_usd,
+                currency=currency,
                 status=status,
                 is_active=kwargs.get('is_active', True),
                 thumbnail_url=thumbnail_url if thumbnail_url else None,
@@ -243,7 +306,26 @@ class CourseService:
                 price = kwargs['price']
                 if price < 0:
                     return False, None, "El precio no puede ser negativo"
+                
+                price_changed = course.price != price
+                
                 course.price = price
+                
+                # Si se actualiza el precio en PEN y no se proporciona price_usd,
+                # recalcular price_usd automáticamente usando tasa real de la API
+                # Esto asegura que price_usd se actualice solo cuando cambia el precio
+                if price_changed and 'price_usd' not in kwargs and course.currency == 'PEN' and price > 0:
+                    course.price_usd = self._calculate_price_usd_from_pen(price)
+                    # El log ya está en _calculate_price_usd_from_pen
+                # Si el precio no cambió, mantener price_usd existente (fijo)
+            
+            # Si se proporciona price_usd explícitamente, usarlo (permite override manual)
+            if 'price_usd' in kwargs:
+                price_usd = kwargs['price_usd']
+                if price_usd is not None and price_usd < 0:
+                    return False, None, "El precio en USD no puede ser negativo"
+                course.price_usd = price_usd
+                logger.info(f"price_usd actualizado manualmente: {price_usd} USD")
             
             if 'status' in kwargs:
                 status = kwargs['status']

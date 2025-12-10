@@ -142,14 +142,14 @@ export default function CourseDetailPage() {
                     {detail.discountPrice ? (
                         <>
                             <MultiCurrencyPrice
-                                priceUsd={detail.price_usd || detail.price / 3.75}
+                                priceUsd={detail.price_usd || (detail.price / 3.75)}
                                 pricePen={detail.discountPrice}
                                 size="xl"
                                 showUsd={true}
                             />
                             <div className="text-sm text-gray-400 line-through mt-1">
                                 <MultiCurrencyPrice
-                                    priceUsd={detail.price_usd || detail.price / 3.75}
+                                    priceUsd={detail.price_usd || (detail.price / 3.75)}
                                     pricePen={detail.price}
                                     size="sm"
                                     showUsd={false}
@@ -158,7 +158,7 @@ export default function CourseDetailPage() {
                         </>
                     ) : (
                         <MultiCurrencyPrice
-                            priceUsd={detail.price_usd || detail.price / 3.75}
+                            priceUsd={detail.price_usd || (detail.price / 3.75)}
                             pricePen={detail.price}
                             size="xl"
                             showUsd={true}

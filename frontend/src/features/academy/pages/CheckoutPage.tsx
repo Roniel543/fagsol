@@ -1,6 +1,6 @@
 "use client";
 
-import { Footer, Input, ProtectedRoute, useToast, MultiCurrencyPrice } from '@/shared/components';
+import { Footer, Input, MultiCurrencyPrice, ProtectedRoute, useToast } from '@/shared/components';
 import { useCart } from '@/shared/contexts/CartContext';
 import { createPaymentIntent, PaymentIntent, processPayment } from '@/shared/services/payments';
 import { formatErrorForLogging, mapErrorToUserMessage } from '@/shared/utils/errorMapper';
@@ -8,7 +8,7 @@ import { AlertCircle, ArrowLeft, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AcademyHeader } from '../../academy/components/AcademyHeader';
 
 // Generar UUID simple para idempotency
@@ -238,13 +238,13 @@ function CheckoutPageContent() {
 						cardholderIdentificationNumber: {
 							placeholder: 'Número de documento',
 						},
-					cardExpirationDate: {
-						placeholder: 'MM/AA',
-						// El formato debe ser MM/YY donde MM es mes (01-12) y YY es año (2 dígitos)
-						// IMPORTANTE: La fecha debe estar al menos un año en el futuro
-						// Ejemplo válido (si estamos en enero 2025): 11/26 (noviembre 2026)
-						// Ejemplo inválido: 11/25 (muy cercano, será rechazado)
-					},
+						cardExpirationDate: {
+							placeholder: 'MM/AA',
+							// El formato debe ser MM/YY donde MM es mes (01-12) y YY es año (2 dígitos)
+							// IMPORTANTE: La fecha debe estar al menos un año en el futuro
+							// Ejemplo válido (si estamos en enero 2025): 11/26 (noviembre 2026)
+							// Ejemplo inválido: 11/25 (muy cercano, será rechazado)
+						},
 						cardNumber: {
 							placeholder: 'Número de tarjeta',
 						},
@@ -459,7 +459,7 @@ function CheckoutPageContent() {
 																pricePen={item.price}
 																size="sm"
 																showUsd={false}
-														 />
+															/>
 														</div>
 													</div>
 												);

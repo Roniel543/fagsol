@@ -4,6 +4,61 @@ Todos los cambios notables del proyecto serán documentados en este archivo.
 
 ---
 
+### - Sistema de Pagos Reales y Multi-Moneda
+
+### ✨ Agregado
+
+#### **Sistema de Pagos con Mercado Pago:**
+- ✅ Integración completa con Mercado Pago CardPayment Brick
+- ✅ Pagos con tarjetas reales funcionando
+- ✅ Tokenización client-side (PCI DSS compliant)
+- ✅ Webhooks automáticos para confirmación de pagos
+- ✅ Enrollments automáticos después del pago exitoso
+- ✅ Emails de confirmación de pago (HTML responsive)
+- ✅ Historial de pagos para usuarios
+- ✅ Validación server-side de precios
+- ✅ Idempotency keys para evitar cobros duplicados
+
+#### **Sistema Multi-Moneda (Opción C - Híbrido Mejorado):**
+- ✅ Detección automática de país por IP (ipapi.co)
+- ✅ Precios en moneda local (COP, MXN, BRL, CLP, ARS, BOB, etc.)
+- ✅ Conversión automática desde USD fijo
+- ✅ Modelo de negocio: PEN como base + USD fijo para internacional
+- ✅ Componente `MultiCurrencyPrice` para mostrar precios
+- ✅ API de conversión de monedas (ExchangeRate API)
+- ✅ Fallback a tasa por defecto si API falla
+- ✅ Cálculo automático de `price_usd` al crear/actualizar cursos
+
+#### **Configuración y Webhooks:**
+- ✅ Guía completa de configuración de ngrok
+- ✅ Configuración de webhooks de Mercado Pago
+- ✅ Validación de firma de webhooks (HMAC SHA256)
+- ✅ Procesamiento automático de notificaciones
+
+### 🔧 Corregido
+
+#### **Sistema de Precios:**
+- ✅ Precios fijos en PEN (no varían con tasa de cambio)
+- ✅ `price_usd` calculado una vez y guardado (fijo)
+- ✅ Precios internacionales consistentes basados en USD fijo
+- ✅ Usuarios en Perú ven precio directo en PEN
+
+#### **Procesamiento de Pagos:**
+- ✅ Todos los pagos se procesan en PEN (Mercado Pago)
+- ✅ Validación de montos desde base de datos
+- ✅ Manejo robusto de errores
+- ✅ Logging detallado para debugging
+
+### 🔒 Seguridad
+
+- ✅ Tokenización client-side (no se almacenan datos de tarjeta)
+- ✅ Validación server-side de precios
+- ✅ Verificación de firma de webhooks
+- ✅ Idempotency para evitar cobros duplicados
+- ✅ Protección IDOR en historial de pagos
+
+---
+
 ## [2025-01-12] - Flujo de Instructores y Mejoras de Dashboard
 
 ### ✨ Agregado
@@ -82,8 +137,4 @@ Todos los cambios notables del proyecto serán documentados en este archivo.
 
 ---
 
-## Formato
-
-El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),
-y este proyecto adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 

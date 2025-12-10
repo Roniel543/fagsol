@@ -108,6 +108,16 @@ export function LoginForm() {
                             </div>
                         </div>
 
+                        {/* Link de olvidé contraseña */}
+                        <div className="text-right">
+                            <Link
+                                href="/auth/forgot-password"
+                                className="text-sm text-primary-orange hover:text-amber-500 transition-colors duration-200"
+                            >
+                                ¿Olvidaste tu contraseña?
+                            </Link>
+                        </div>
+
                         {/* Botón de submit */}
                         <Button
                             type="submit"

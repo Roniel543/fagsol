@@ -344,6 +344,14 @@ GEOIP_SERVICE_API_KEY = config('GEOIP_SERVICE_API_KEY', default='')  # Opcional 
 # Tasa de cambio USD -> PEN por defecto (fallback si API falla)
 DEFAULT_USD_TO_PEN_RATE = config('DEFAULT_USD_TO_PEN_RATE', default='3.75', cast=float)
 
+# PASSWORD RESET CONFIGURATION
+
+# Tiempo de expiración del token de reset (en horas)
+PASSWORD_RESET_TOKEN_EXPIRY_HOURS = config('PASSWORD_RESET_TOKEN_EXPIRY_HOURS', default=1, cast=int)
+
+# Rate limiting: máximo número de solicitudes de reset por hora por email
+PASSWORD_RESET_RATE_LIMIT = config('PASSWORD_RESET_RATE_LIMIT', default=3, cast=int)
+
 # ==================================
 # AWS S3 CONFIGURATION (Para certificados y archivos)
 # ==================================

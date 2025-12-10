@@ -310,7 +310,7 @@ export const authAPI = {
         cv_file?: File;
     }): Promise<ApiResponse> => {
         const formData = new FormData();
-        
+
         if (data.professional_title) formData.append('professional_title', data.professional_title);
         if (data.experience_years !== undefined) formData.append('experience_years', data.experience_years.toString());
         if (data.specialization) formData.append('specialization', data.specialization);
@@ -338,5 +338,42 @@ export const authAPI = {
         }
 
         return await response.json();
+    },
+
+    // Password Reset Functions
+    forgotPassword: async (email: string): Promise<ApiResponse> => {
+        return apiRequest<ApiResponse>('/auth/forgot-password/', {
+            method: 'POST',
+            body: JSON.stringify({ email }),
+        });
+    },
+
+    resetPassword: async (
+        uid: string,
+        token: string,
+        newPassword: string,
+        confirmPassword: string
+    ): Promise<ApiResponse> => {
+        return apiRequest<ApiResponse>('/auth/reset-password/', {
+            method: 'POST',
+            body: JSON.stringify({
+                uid,
+                token,
+                new_password: newPassword,
+                confirm_password: confirmPassword,
+            }),
+        });
+    },
+
+    validateResetToken: async (uid: string, token: string): Promise<ApiResponse & { valid?: boolean }> => {
+        // El backend retorna { success: true, valid: true } directamente
+        // apiRequest retorna el JSON tal cual del backend (no lo envuelve en 'data')
+        const response = await apiRequest(`/auth/reset-password/validate/${uid}/${token}/`);
+        // El backend retorna { success: true, valid: true } directamente
+        // Necesitamos extraer 'valid' del objeto raíz porque apiRequest retorna el JSON tal cual
+        return {
+            ...response,
+            valid: (response as any).valid ?? false,
+        } as ApiResponse & { valid: boolean };
     },
 };

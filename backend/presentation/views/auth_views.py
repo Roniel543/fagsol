@@ -9,6 +9,8 @@ from rest_framework.response import Response
 from django.http import JsonResponse
 from infrastructure.services.auth_service import AuthService
 from infrastructure.services.instructor_application_service import InstructorApplicationService
+from infrastructure.services.password_reset_service import PasswordResetService
+from infrastructure.external_services import DjangoEmailService
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -563,4 +565,271 @@ def get_my_instructor_application(request):
             'success': False,
             'message': 'Error al obtener la solicitud',
             'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Solicita restablecimiento de contraseña. Se enviará un email con un link de reset.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['email'],
+        properties={
+            'email': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_EMAIL,
+                description='Email del usuario que solicita reset de contraseña'
+            ),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description='Solicitud procesada (siempre retorna éxito por seguridad)',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'message': 'Si el email existe, se enviará un link de restablecimiento'
+                }
+            }
+        ),
+        400: openapi.Response(description='Email inválido'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    tags=['Autenticación']
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def forgot_password(request):
+    """
+    Solicita restablecimiento de contraseña
+    POST /api/v1/auth/forgot-password/
+    
+    Por seguridad, siempre retorna éxito (no revela si el email existe o no)
+    """
+    import logging
+    logger = logging.getLogger('apps')
+    
+    try:
+        # 1. Obtener email del request
+        email = request.data.get('email')
+        
+        # 2. Validar email
+        if not email or not isinstance(email, str):
+            return Response({
+                'success': False,
+                'message': 'Email es requerido'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 3. Obtener URL del frontend
+        from django.conf import settings
+        frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+        
+        # 4. Usar servicio de password reset
+        password_reset_service = PasswordResetService()
+        success, message, data = password_reset_service.request_password_reset(
+            email=email,
+            frontend_url=frontend_url
+        )
+        
+        # 5. Si hay datos (usuario existe y rate limit OK), enviar email
+        if success and data and data.get('user'):
+            try:
+                user = data['user']
+                user_name = user.get_full_name() or user.first_name or user.email.split('@')[0]
+                reset_url = data['reset_url']
+                
+                # Enviar email
+                email_service = DjangoEmailService()
+                email_sent = email_service.send_password_reset_email(
+                    user_email=user.email,
+                    user_name=user_name,
+                    reset_url=reset_url
+                )
+                
+                if email_sent:
+                    logger.info(f'Email de reset password enviado a: {user.email}')
+                else:
+                    logger.warning(f'Error al enviar email de reset password a: {user.email}')
+                
+            except Exception as email_error:
+                logger.error(f'Error al enviar email de reset password: {str(email_error)}', exc_info=True)
+        
+        # 6. Siempre retornar éxito (por seguridad, no revelar si email existe)
+        return Response({
+            'success': True,
+            'message': message
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(f'Error en forgot_password: {str(e)}', exc_info=True)
+        # Por seguridad, retornar éxito incluso si hay error
+        return Response({
+            'success': True,
+            'message': 'Si el email existe, se enviará un link de restablecimiento'
+        }, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Restablece la contraseña usando un token válido',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=['uid', 'token', 'new_password', 'confirm_password'],
+        properties={
+            'uid': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='User ID codificado en base64 (del link de reset)'
+            ),
+            'token': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description='Token de reset (del link de reset)'
+            ),
+            'new_password': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_PASSWORD,
+                description='Nueva contraseña (mínimo 8 caracteres)'
+            ),
+            'confirm_password': openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format=openapi.FORMAT_PASSWORD,
+                description='Confirmación de nueva contraseña'
+            ),
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description='Contraseña restablecida exitosamente',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'message': 'Contraseña restablecida exitosamente'
+                }
+            }
+        ),
+        400: openapi.Response(description='Token inválido, expirado o contraseña inválida'),
+        500: openapi.Response(description='Error interno del servidor')
+    },
+    tags=['Autenticación']
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def reset_password(request):
+    """
+    Restablece la contraseña usando token válido
+    POST /api/v1/auth/reset-password/
+    """
+    import logging
+    logger = logging.getLogger('apps')
+    
+    try:
+        # 1. Obtener datos del request
+        uid = request.data.get('uid')
+        token = request.data.get('token')
+        new_password = request.data.get('new_password')
+        confirm_password = request.data.get('confirm_password')
+        
+        # 2. Validar datos requeridos
+        if not all([uid, token, new_password]):
+            return Response({
+                'success': False,
+                'message': 'uid, token y new_password son requeridos'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 3. Validar que las contraseñas coincidan
+        if new_password != confirm_password:
+            return Response({
+                'success': False,
+                'message': 'Las contraseñas no coinciden'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 4. Validar longitud mínima
+        if len(new_password) < 8:
+            return Response({
+                'success': False,
+                'message': 'La contraseña debe tener al menos 8 caracteres'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 5. Usar servicio de password reset
+        password_reset_service = PasswordResetService()
+        success, message, user = password_reset_service.reset_password(
+            uid=uid,
+            token=token,
+            new_password=new_password
+        )
+        
+        # 6. Retornar respuesta
+        if success:
+            logger.info(f'Contraseña restablecida exitosamente para usuario: {user.email if user else "unknown"}')
+            return Response({
+                'success': True,
+                'message': message
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'message': message
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        logger.error(f'Error en reset_password: {str(e)}', exc_info=True)
+        return Response({
+            'success': False,
+            'message': 'Error al restablecer la contraseña'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@swagger_auto_schema(
+    method='get',
+    operation_description='Valida si un token de reset es válido (útil para verificar antes de mostrar formulario)',
+    responses={
+        200: openapi.Response(
+            description='Token válido o inválido',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'valid': True,
+                    'message': 'Token válido'
+                }
+            }
+        ),
+        400: openapi.Response(description='Token inválido o expirado')
+    },
+    tags=['Autenticación']
+)
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def validate_reset_token(request, uid, token):
+    """
+    Valida si un token de reset es válido
+    GET /api/v1/auth/reset-password/validate/<uid>/<token>/
+    
+    Útil para verificar el token antes de mostrar el formulario de reset
+    """
+    import logging
+    logger = logging.getLogger('apps')
+    
+    try:
+        # Validar token
+        password_reset_service = PasswordResetService()
+        is_valid, user, error_message = password_reset_service.validate_token(uid, token)
+        
+        if is_valid and user:
+            return Response({
+                'success': True,
+                'valid': True,
+                'message': 'Token válido'
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                'success': False,
+                'valid': False,
+                'message': error_message or 'Token inválido o expirado'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+    except Exception as e:
+        logger.error(f'Error en validate_reset_token: {str(e)}', exc_info=True)
+        return Response({
+            'success': False,
+            'valid': False,
+            'message': 'Error al validar token'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

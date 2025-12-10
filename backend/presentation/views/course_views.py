@@ -322,6 +322,7 @@ def get_course_by_slug(request, slug):
             'description': course.description,
             'short_description': course.short_description,
             'price': float(course.price),
+            'price_usd': float(course.price_usd) if course.price_usd else None,
             'discount_price': float(course.discount_price) if course.discount_price else None,
             'currency': course.currency,
             'thumbnail_url': course.thumbnail_url,
@@ -470,6 +471,7 @@ def get_course(request, course_id):
             'description': course.description,
             'short_description': course.short_description,
             'price': float(course.price),
+            'price_usd': float(course.price_usd) if course.price_usd else None,
             'discount_price': float(course.discount_price) if course.discount_price else None,
             'currency': course.currency,
             'thumbnail_url': course.thumbnail_url,
@@ -1047,6 +1049,15 @@ def update_course(request, course_id):
                 return Response({
                     'success': False,
                     'message': 'Precio inválido'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        if 'price_usd' in request.data:
+            try:
+                price_usd = request.data['price_usd']
+                kwargs['price_usd'] = Decimal(str(price_usd)) if price_usd is not None else None
+            except (ValueError, TypeError):
+                return Response({
+                    'success': False,
+                    'message': 'Precio en USD inválido'
                 }, status=status.HTTP_400_BAD_REQUEST)
         if 'currency' in request.data:
             kwargs['currency'] = request.data['currency']

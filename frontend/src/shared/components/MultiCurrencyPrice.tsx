@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useCountryDetection } from '@/shared/hooks/useCountryDetection';
-import { convertCurrency, formatPrice, CurrencyConversion } from '@/shared/services/currency';
+import { convertCurrency, CurrencyConversion, formatPrice } from '@/shared/services/currency';
+import { useEffect, useState } from 'react';
 
 interface MultiCurrencyPriceProps {
     /** Precio en USD (base) */
@@ -19,7 +19,16 @@ interface MultiCurrencyPriceProps {
 
 /**
  * Componente que muestra precio en USD y moneda local del usuario
- * El usuario NO ve que se procesa en PEN (transparente)
+ * 
+ * Opción C (Híbrido Mejorado): PEN como base + USD fijo
+ * - Admin ingresa precio en PEN
+ * - Sistema calcula price_usd una vez (fijo)
+ * - Usuarios ven precios convertidos desde price_usd guardado
+ * - Pagos siempre en PEN
+ * 
+ * Comportamiento:
+ * - Usuario en Perú: Muestra pricePen directamente (sin conversión)
+ * - Usuario en otro país: Convierte desde priceUsd a moneda local
  */
 export function MultiCurrencyPrice({
     priceUsd,
@@ -38,6 +47,14 @@ export function MultiCurrencyPrice({
             return;
         }
 
+        // Opción C: Si el usuario está en Perú y tenemos pricePen,
+        // mostrar directamente el precio en PEN que ingresó el admin (sin conversión)
+        // Esto asegura que el precio mostrado sea exactamente el que ingresó el admin
+        if (country.currency === 'PEN' && pricePen !== undefined) {
+            setLocalPrice(null);
+            return;
+        }
+
         const loadConversion = async () => {
             try {
                 setConverting(true);
@@ -52,7 +69,7 @@ export function MultiCurrencyPrice({
         };
 
         loadConversion();
-    }, [country, priceUsd]);
+    }, [country, priceUsd, pricePen]);
 
     // Tamaños de texto
     const sizeClasses = {
@@ -84,6 +101,24 @@ export function MultiCurrencyPrice({
         );
     }
 
+    // Opción C: Si el usuario está en Perú y tenemos pricePen,
+    // mostrar directamente el precio en PEN que ingresó el admin (sin conversión)
+    // Esto asegura que el precio mostrado sea exactamente el que ingresó el admin
+    if (country && country.currency === 'PEN' && pricePen !== undefined) {
+        return (
+            <div className={className}>
+                <div className={`${sizeClasses[size]} font-bold text-primary-orange`}>
+                    {formatPrice(pricePen, 'PEN')}
+                </div>
+                {showUsd && (
+                    <div className={`${sizeClassesSecondary[size]} text-gray-400 mt-1`}>
+                        ≈ {formatPrice(priceUsd, 'USD')} USD
+                    </div>
+                )}
+            </div>
+        );
+    }
+
     // Si no hay país detectado o es USD, mostrar solo USD
     if (!country || country.currency === 'USD') {
         return (
@@ -97,16 +132,19 @@ export function MultiCurrencyPrice({
 
     // Si hay conversión, mostrar moneda local + USD
     if (localPrice) {
+        // Mostrar código de moneda para monedas que usan el mismo símbolo ($)
+        const needsCode = ['USD', 'COP', 'CLP', 'ARS', 'MXN', 'UYU', 'DOP', 'CUP'].includes(localPrice.to_currency);
+
         return (
             <div className={className}>
                 {/* Precio principal en moneda local */}
                 <div className={`${sizeClasses[size]} font-bold text-primary-orange`}>
-                    {formatPrice(localPrice.amount_converted, localPrice.to_currency)}
+                    {formatPrice(localPrice.amount_converted, localPrice.to_currency, true, needsCode)}
                 </div>
                 {/* Precio en USD (base) */}
                 {showUsd && (
                     <div className={`${sizeClassesSecondary[size]} text-gray-400 mt-1`}>
-                        ≈ {formatPrice(priceUsd, 'USD')} USD
+                        ≈ {formatPrice(priceUsd, 'USD', true, true)} USD
                     </div>
                 )}
             </div>

@@ -27,7 +27,7 @@ export interface CurrencyConversion {
  */
 export async function detectCountry(): Promise<CountryInfo | null> {
     try {
-        const response = await apiRequest<{ success: boolean; data: CountryInfo }>('/currency/detect/');
+        const response = await apiRequest<CountryInfo>('/currency/detect/');
         if (response.success && response.data) {
             return response.data;
         }
@@ -56,7 +56,7 @@ export async function convertCurrency(
             amount: amountUsd.toString(),
             to_currency: toCurrency,
         });
-        const response = await apiRequest<{ success: boolean; data: CurrencyConversion }>(
+        const response = await apiRequest<CurrencyConversion>(
             `/currency/convert/?${queryParams.toString()}`
         );
         if (response.success && response.data) {
@@ -71,8 +71,17 @@ export async function convertCurrency(
 
 /**
  * Formatea un precio según la moneda
+ * @param amount - Monto a formatear
+ * @param currency - Código de moneda (USD, PEN, COP, etc.)
+ * @param showSymbol - Mostrar símbolo de moneda
+ * @param showCode - Mostrar código de moneda (útil cuando el símbolo es ambiguo, ej: $ para USD, COP, MXN, etc.)
  */
-export function formatPrice(amount: number, currency: string, showSymbol: boolean = true): string {
+export function formatPrice(
+    amount: number,
+    currency: string,
+    showSymbol: boolean = true,
+    showCode: boolean = false
+): string {
     const symbols: Record<string, string> = {
         USD: '$',
         PEN: 'S/',
@@ -94,13 +103,27 @@ export function formatPrice(amount: number, currency: string, showSymbol: boolea
         CUP: '$',
     };
 
+    // Monedas que usan el mismo símbolo $ y necesitan código para diferenciarse
+    const ambiguousSymbols = ['USD', 'COP', 'CLP', 'ARS', 'MXN', 'UYU', 'DOP', 'CUP'];
+    const needsCode = ambiguousSymbols.includes(currency) || showCode;
+
     const symbol = symbols[currency] || '$';
     const formatted = amount.toLocaleString('es-ES', {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     });
 
-    return showSymbol ? `${symbol} ${formatted}` : formatted;
+    if (!showSymbol) {
+        return formatted;
+    }
+
+    // Si necesita código, mostrar: $ 292,053.64 COP
+    if (needsCode) {
+        return `${symbol} ${formatted} ${currency}`;
+    }
+
+    // Si no necesita código, mostrar: S/ 260.00
+    return `${symbol} ${formatted}`;
 }
 
 /**
