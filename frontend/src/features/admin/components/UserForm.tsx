@@ -301,7 +301,7 @@ export function UserForm({ userId, onSuccess, onCancel }: UserFormProps) {
                 )}
             </div>
 
-            <div className="flex justify-end space-x-4 pt-4 border-t">
+            <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
                 {onCancel && (
                     <Button type="button" variant="secondary" onClick={onCancel}>
                         Cancelar

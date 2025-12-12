@@ -35,7 +35,7 @@ function CreateModulePageContent() {
                         <h1 className="text-3xl font-bold text-gray-900">
                             Crear Nuevo Módulo
                         </h1>
-                        <p className="text-gray-600 mt-1">Completa el formulario para crear un nuevo módulo</p>
+                        <p className="text-gray-700 font-medium mt-1">Completa el formulario para crear un nuevo módulo</p>
                     </div>
                     <Link href={`/admin/courses/${courseId}/modules`}>
                         <Button variant="secondary" size="sm">

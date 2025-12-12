@@ -252,7 +252,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
         return (
             <div className="flex items-center justify-center py-12">
                 <LoadingSpinner size="lg" />
-                <p className="ml-4 text-secondary-light-gray font-medium">Cargando lección...</p>
+                <p className="ml-4 text-gray-700 font-medium">Cargando lección...</p>
             </div>
         );
     }
@@ -260,7 +260,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-                <div className="bg-red-900/30 border border-red-500/30 text-red-300 px-4 py-3 rounded-lg">
+                <div className="bg-red-50 border border-red-300 text-red-800 font-semibold px-4 py-3 rounded-lg">
                     {error}
                 </div>
             )}
@@ -275,12 +275,12 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                         onChange={handleChange}
                         required
                         error={errors.title}
-                        variant="dark"
+                        variant="light"
                     />
                 </div>
 
                 <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-primary-white mb-1">
+                    <label className="block text-sm font-medium text-gray-900 mb-1">
                         Descripción
                     </label>
                     <textarea
@@ -288,7 +288,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                         value={formData.description}
                         onChange={handleChange}
                         rows={3}
-                        className="w-full px-4 py-3 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-primary-white bg-primary-black/40 placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-gray-900 bg-white placeholder-gray-400 transition-all duration-300"
                     />
                 </div>
 
@@ -305,7 +305,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                         { value: 'text', label: 'Texto' },
                     ]}
                     error={errors.lesson_type}
-                    variant="dark"
+                    variant="light"
                 />
 
                 <Input
@@ -316,7 +316,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                     onChange={handleChange}
                     required
                     error={errors.order}
-                    variant="dark"
+                    variant="light"
                 />
 
                 {/* Campos según el tipo de lección */}
@@ -331,9 +331,9 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                                 onChange={handleChange}
                                 placeholder="https://vimeo.com/..."
                                 error={errors.content_url}
-                                variant="dark"
+                                variant="light"
                             />
-                            <p className="text-xs text-secondary-light-gray mt-1">
+                            <p className="text-xs text-gray-600 mt-1">
                                 Ingresa la URL completa del video de Vimeo
                             </p>
                         </div>
@@ -344,14 +344,14 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             value={(formData.duration_minutes || 0).toString()}
                             onChange={handleChange}
                             error={errors.duration_minutes}
-                            variant="dark"
+                            variant="light"
                         />
                     </>
                 )}
 
                 {formData.lesson_type === 'text' && (
                     <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-primary-white mb-1">
+                        <label className="block text-sm font-medium text-gray-900 mb-1">
                             Contenido de Texto
                         </label>
                         <textarea
@@ -359,7 +359,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             value={formData.content_text}
                             onChange={handleChange}
                             rows={8}
-                            className="w-full px-4 py-3 border border-primary-orange/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-primary-white bg-primary-black/40 placeholder-secondary-light-gray backdrop-blur-sm transition-all duration-300"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-orange focus:border-primary-orange text-gray-900 bg-white placeholder-gray-400 transition-all duration-300"
                             placeholder="Escribe el contenido de la lección aquí..."
                         />
                     </div>
@@ -375,7 +375,7 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             onChange={handleChange}
                             placeholder="https://..."
                             error={errors.content_url}
-                            variant="dark"
+                            variant="light"
                         />
                     </div>
                 )}
@@ -387,16 +387,16 @@ export function LessonForm({ moduleId, lessonId, onSuccess, onCancel }: LessonFo
                             name="is_active"
                             checked={formData.is_active}
                             onChange={handleChange}
-                            className="w-4 h-4 text-primary-orange bg-primary-black/40 border-primary-orange/30 rounded focus:ring-primary-orange focus:ring-2"
+                            className="w-4 h-4 text-primary-orange border-gray-300 rounded focus:ring-primary-orange focus:ring-2"
                         />
-                        <label className="text-sm font-medium text-primary-white">
+                        <label className="text-sm font-medium text-gray-900">
                             Lección activa
                         </label>
                     </div>
                 )}
             </div>
 
-            <div className="flex justify-end space-x-4 pt-4 border-t border-primary-orange/20">
+            <div className="flex justify-end space-x-4 pt-4 border-t border-gray-200">
                 {onCancel && (
                     <Button type="button" variant="secondary" onClick={onCancel}>
                         Cancelar

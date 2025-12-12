@@ -412,7 +412,7 @@ export function Modal({
                         )}
                         <div className="flex-1">
                             <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
-                            <p className="text-gray-600 leading-relaxed">{message}</p>
+                            <div className="text-gray-600 leading-relaxed">{message}</div>
                         </div>
                     </div>
 

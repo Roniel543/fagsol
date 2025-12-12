@@ -37,7 +37,7 @@ function CreateLessonPageContent() {
                         <h1 className="text-3xl font-bold text-gray-900">
                             Crear Nueva Lección
                         </h1>
-                        <p className="text-gray-600 mt-1">Completa el formulario para crear una nueva lección</p>
+                        <p className="text-gray-700 font-medium mt-1">Completa el formulario para crear una nueva lección</p>
                     </div>
                     <Link href={`/admin/courses/${courseId}/modules/${moduleId}/lessons`}>
                         <Button variant="secondary" size="sm">

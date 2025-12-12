@@ -38,7 +38,7 @@ function EditLessonPageContent() {
                         <h1 className="text-3xl font-bold text-gray-900">
                             Editar Lección
                         </h1>
-                        <p className="text-gray-600 mt-1">Modifica la información de la lección</p>
+                        <p className="text-gray-700 font-medium mt-1">Modifica la información de la lección</p>
                     </div>
                     <Link href={`/admin/courses/${courseId}/modules/${moduleId}/lessons`}>
                         <Button variant="secondary" size="sm">

@@ -61,13 +61,15 @@ export function LoginForm() {
                     {/* Logo y Header */}
                     <div className="text-center mb-10 animate-slide-down">
                         <div className="flex justify-center mb-6">
-                            <Image
-                                src="/assets/logo_school.png"
-                                alt="FagSol Logo"
-                                width={120}
-                                height={120}
-                                className="object-contain"
-                            />
+                            <a href="/" className="group">
+                                <Image
+                                    src="/assets/logo_school.png"
+                                    alt="FagSol Logo"
+                                    width={200}
+                                    height={200}
+                                    className="object-contain"
+                                />
+                            </a>
                         </div>
                         <h2 className="text-4xl sm:text-5xl font-bold mb-3">
                             <span className="text-primary-white">Iniciar </span>

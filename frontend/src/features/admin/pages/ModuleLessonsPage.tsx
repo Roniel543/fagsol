@@ -1,11 +1,11 @@
 'use client';
 
-import { Button, Card, LoadingSpinner } from '@/shared/components';
+import { Button, Card, LoadingSpinner, Modal } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast';
 import { useAdminLessons, useDeleteLesson } from '@/shared/hooks/useAdminLessons';
 import { useAdminModules } from '@/shared/hooks/useAdminModules';
 import { useCourse } from '@/shared/hooks/useCourses';
-import { BookOpen, Edit, FileText, HelpCircle, Plus, Trash2, Video } from 'lucide-react';
+import { AlertTriangle, BookOpen, Edit, FileText, HelpCircle, Plus, Trash2, Video } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -23,17 +23,23 @@ function ModuleLessonsPageContent() {
     const { showToast } = useToast();
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [lessonToDelete, setLessonToDelete] = useState<string | null>(null);
 
-    const handleDelete = async (lessonId: string) => {
-        if (!confirm('¿Estás seguro de que deseas eliminar esta lección? Esta acción no se puede deshacer.')) {
-            return;
-        }
+    const handleDeleteClick = (lessonId: string) => {
+        setLessonToDelete(lessonId);
+        setShowDeleteModal(true);
+    };
 
-        setDeletingId(lessonId);
+    const handleDeleteConfirm = async () => {
+        if (!lessonToDelete) return;
+
+        setDeletingId(lessonToDelete);
         setError(null);
+        setShowDeleteModal(false);
 
         try {
-            await deleteLesson(lessonId);
+            await deleteLesson(lessonToDelete);
             showToast('Lección eliminada exitosamente', 'success');
             mutate();
         } catch (err: any) {
@@ -41,7 +47,13 @@ function ModuleLessonsPageContent() {
             showToast(err.message || 'Error al eliminar la lección', 'error');
         } finally {
             setDeletingId(null);
+            setLessonToDelete(null);
         }
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeleteModal(false);
+        setLessonToDelete(null);
     };
 
     const getLessonTypeIcon = (type: string) => {
@@ -204,7 +216,7 @@ function ModuleLessonsPageContent() {
                                             <Button
                                                 variant="danger"
                                                 size="sm"
-                                                onClick={() => handleDelete(lesson.id)}
+                                                onClick={() => handleDeleteClick(lesson.id)}
                                                 disabled={deletingId === lesson.id || isDeleting}
                                             >
                                                 {deletingId === lesson.id ? (
@@ -224,6 +236,27 @@ function ModuleLessonsPageContent() {
                     )}
                 </>
             )}
+
+            {/* Modal de confirmación para eliminar lección */}
+            <Modal
+                isOpen={showDeleteModal}
+                onClose={handleDeleteCancel}
+                title="Eliminar Lección"
+                message={
+                    lessonToDelete ? (
+                        <div className="space-y-2">
+                            <p>¿Estás seguro de que deseas eliminar esta lección?</p>
+                            <p className="text-sm text-gray-600">Esta acción no se puede deshacer.</p>
+                        </div>
+                    ) : '¿Estás seguro de que deseas eliminar esta lección?'
+                }
+                icon={<AlertTriangle className="w-6 h-6" />}
+                variant="danger"
+                confirmText="Eliminar"
+                cancelText="Cancelar"
+                onConfirm={handleDeleteConfirm}
+                isLoading={deletingId !== null}
+            />
         </div>
     );
 }

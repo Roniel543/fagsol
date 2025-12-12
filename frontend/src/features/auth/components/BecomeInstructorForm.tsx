@@ -3,11 +3,11 @@
 import { AuthBackground, Button } from '@/shared/components';
 import { authAPI } from '@/shared/services/api';
 import { ApiResponse } from '@/shared/types';
-import { FileText, GraduationCap, Briefcase, Globe, Heart, Upload, X, CheckCircle2, AlertCircle, Info, Sparkles, ArrowRight, Users, DollarSign, Award, Clock, Shield, Zap } from 'lucide-react';
+import { AlertCircle, ArrowRight, Award, Briefcase, CheckCircle2, Clock, DollarSign, FileText, Globe, GraduationCap, Heart, Shield, Sparkles, Upload, Users, X, Zap } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 interface InstructorApplicationForm {
     professional_title: string;
@@ -51,7 +51,7 @@ export function BecomeInstructorForm() {
 
     const validateField = (name: string, value: string) => {
         const errors: Record<string, string> = {};
-        
+
         if (name === 'motivation') {
             if (!value.trim()) {
                 errors.motivation = 'La motivación es requerida';
@@ -59,11 +59,11 @@ export function BecomeInstructorForm() {
                 errors.motivation = 'La motivación debe tener al menos 50 caracteres';
             }
         }
-        
+
         if (name === 'portfolio_url' && value && !value.match(/^https?:\/\/.+/)) {
             errors.portfolio_url = 'Debe ser una URL válida (http:// o https://)';
         }
-        
+
         if (name === 'experience_years' && value && (isNaN(Number(value)) || Number(value) < 0)) {
             errors.experience_years = 'Debe ser un número válido mayor o igual a 0';
         }
@@ -86,11 +86,11 @@ export function BecomeInstructorForm() {
             ...formData,
             [name]: value
         });
-        
+
         if (touched[name]) {
             validateField(name, value);
         }
-        
+
         if (error) setError('');
     };
 
@@ -324,8 +324,8 @@ export function BecomeInstructorForm() {
                                             <Image
                                                 src="/assets/logo_school.png"
                                                 alt="FagSol Logo"
-                                                width={100}
-                                                height={100}
+                                                width={200}
+                                                height={200}
                                                 className="object-contain"
                                             />
                                         </div>
