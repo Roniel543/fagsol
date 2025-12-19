@@ -34,7 +34,13 @@ export function LoginForm() {
         setError('');
 
         try {
-            const response = await login(formData);
+            // IMPORTANTE: Limpiar espacios en blanco antes de enviar
+            const cleanedCredentials = {
+                email: formData.email.trim(),
+                password: formData.password.trim()
+            };
+
+            const response = await login(cleanedCredentials);
 
             if (response.success) {
                 // Redirigir inmediatamente después de login exitoso

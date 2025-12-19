@@ -100,11 +100,28 @@ export function ResetPasswordForm({ uid, token }: ResetPasswordFormProps) {
         }
 
         try {
+            // IMPORTANTE: Limpiar espacios en blanco antes de enviar
+            const cleanedNewPassword = formData.newPassword.trim();
+            const cleanedConfirmPassword = formData.confirmPassword.trim();
+
+            // Validar nuevamente después de trim
+            if (cleanedNewPassword.length < 8) {
+                setError('La contraseña debe tener al menos 8 caracteres');
+                setLoading(false);
+                return;
+            }
+
+            if (cleanedNewPassword !== cleanedConfirmPassword) {
+                setError('Las contraseñas no coinciden');
+                setLoading(false);
+                return;
+            }
+
             const response = await authAPI.resetPassword(
                 uid,
                 token,
-                formData.newPassword,
-                formData.confirmPassword
+                cleanedNewPassword,
+                cleanedConfirmPassword
             );
 
             if (response.success) {
@@ -198,8 +215,8 @@ export function ResetPasswordForm({ uid, token }: ResetPasswordFormProps) {
                                 <Image
                                     src="/assets/logo_school.png"
                                     alt="FagSol Logo"
-                                    width={120}
-                                    height={120}
+                                    width={200}
+                                    height={200}
                                     className="object-contain"
                                 />
                             </div>
@@ -215,6 +232,8 @@ export function ResetPasswordForm({ uid, token }: ResetPasswordFormProps) {
                             </h2>
                             <p className="text-base text-gray-400 mt-2 mb-6">
                                 Tu contraseña ha sido restablecida exitosamente.
+                                <br />
+                                <span className="text-green-400 font-semibold">Ya puedes iniciar sesión con tu nueva contraseña.</span>
                                 <br />
                                 Serás redirigido al login en unos segundos...
                             </p>

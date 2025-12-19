@@ -15,7 +15,7 @@ from apps.users.permissions import (
 )
 from infrastructure.services.course_service import CourseService
 from infrastructure.services.course_approval_service import CourseApprovalService
-from decimal import Decimal
+from decimal import Decimal, ConversionSyntax
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -922,10 +922,30 @@ def create_course(request):
         if 'banner_url' in request.data:
             kwargs['banner_url'] = request.data['banner_url']
         if 'discount_price' in request.data:
-            try:
-                kwargs['discount_price'] = Decimal(str(request.data['discount_price']))
-            except (ValueError, TypeError):
-                pass
+            discount_price_value = request.data['discount_price']
+            # Manejar valores vacíos, None, o cadenas vacías
+            if discount_price_value is None or discount_price_value == '' or (isinstance(discount_price_value, str) and discount_price_value.strip() == ''):
+                kwargs['discount_price'] = None
+            else:
+                try:
+                    # Convertir a string primero para manejar números
+                    discount_price_str = str(discount_price_value).strip()
+                    if discount_price_str == '':
+                        kwargs['discount_price'] = None
+                    else:
+                        discount_decimal = Decimal(discount_price_str)
+                        # Validar que no sea negativo
+                        if discount_decimal < 0:
+                            return Response({
+                                'success': False,
+                                'message': 'El precio con descuento no puede ser negativo'
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                        kwargs['discount_price'] = discount_decimal
+                except (ValueError, TypeError, ConversionSyntax):
+                    return Response({
+                        'success': False,
+                        'message': 'Precio con descuento inválido'
+                    }, status=status.HTTP_400_BAD_REQUEST)
         if 'hours' in request.data:
             try:
                 kwargs['hours'] = int(request.data['hours'])
@@ -1072,10 +1092,30 @@ def update_course(request, course_id):
         if 'banner_url' in request.data:
             kwargs['banner_url'] = request.data['banner_url']
         if 'discount_price' in request.data:
-            try:
-                kwargs['discount_price'] = Decimal(str(request.data['discount_price']))
-            except (ValueError, TypeError):
-                pass
+            discount_price_value = request.data['discount_price']
+            # Manejar valores vacíos, None, o cadenas vacías
+            if discount_price_value is None or discount_price_value == '' or (isinstance(discount_price_value, str) and discount_price_value.strip() == ''):
+                kwargs['discount_price'] = None
+            else:
+                try:
+                    # Convertir a string primero para manejar números
+                    discount_price_str = str(discount_price_value).strip()
+                    if discount_price_str == '':
+                        kwargs['discount_price'] = None
+                    else:
+                        discount_decimal = Decimal(discount_price_str)
+                        # Validar que no sea negativo
+                        if discount_decimal < 0:
+                            return Response({
+                                'success': False,
+                                'message': 'El precio con descuento no puede ser negativo'
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                        kwargs['discount_price'] = discount_decimal
+                except (ValueError, TypeError, ConversionSyntax):
+                    return Response({
+                        'success': False,
+                        'message': 'Precio con descuento inválido'
+                    }, status=status.HTTP_400_BAD_REQUEST)
         if 'hours' in request.data:
             try:
                 kwargs['hours'] = int(request.data['hours'])

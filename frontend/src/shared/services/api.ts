@@ -257,9 +257,16 @@ export const apiRequest = async <T = any>(
 // Funciones específicas para diferentes módulos
 export const authAPI = {
     login: async (email: string, password: string): Promise<AuthResponse> => {
+        // IMPORTANTE: Limpiar espacios en blanco antes de enviar
+        const cleanedEmail = email.trim();
+        const cleanedPassword = password.trim();
+
         const response = await apiRequest<AuthResponse>(API_CONFIG.ENDPOINTS.LOGIN, {
             method: 'POST',
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify({
+                email: cleanedEmail,
+                password: cleanedPassword
+            }),
         });
         return response as unknown as AuthResponse;
     },

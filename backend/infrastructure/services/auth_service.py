@@ -105,52 +105,89 @@ class AuthService:
             # Normalizar email (lowercase, strip)
             email = email.lower().strip() if email else ''
             
-            # Verificar bloqueo ANTES de intentar autenticar
-            lockout_info = self._check_axes_lockout(email)
-            if lockout_info and lockout_info.get('is_locked'):
-                minutes = lockout_info.get('minutes_remaining', 0)
-                hours = minutes // 60
-                mins = minutes % 60
-                
-                if hours > 0:
-                    time_str = f"{hours} hora{'s' if hours > 1 else ''} y {mins} minuto{'s' if mins != 1 else ''}"
-                else:
-                    time_str = f"{mins} minuto{'s' if mins != 1 else ''}"
-                
-                return {
-                    'success': False,
-                    'message': f'Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta nuevamente en {time_str}.',
-                    'is_locked': True,
-                    'lockout_info': {
-                        'minutes_remaining': minutes,
-                        'is_permanent': False
-                    }
-                }
+            # IMPORTANTE: Limpiar espacios de la contraseña
+            # Esto previene problemas cuando el usuario copia/pega contraseñas con espacios
+            password = password.strip() if password else ''
             
-            # IMPORTANTE: Buscar el usuario PRIMERO para evitar múltiples llamadas a authenticate()
-            # que incrementarían el contador de AXES dos veces
+            # IMPORTANTE: Buscar el usuario PRIMERO y verificar la contraseña ANTES de verificar bloqueo
+            # Si la contraseña es correcta, limpiar bloqueos automáticamente
+            # Esto previene bloqueos falsos cuando la contraseña es correcta
             user_obj = None
             username_to_try = email  # Por defecto, usar email
+            password_is_correct = False
             
             try:
                 user_obj = User.objects.get(email=email)
-                # Si el usuario existe, usar su username real (que debería ser igual al email)
-                # pero si por alguna razón es diferente, usar el username real
-                username_to_try = user_obj.username if user_obj.username else email
+                # Determinar qué usar para autenticar basado en USERNAME_FIELD del modelo
+                # Si USERNAME_FIELD = 'email', usar email
+                # Si USERNAME_FIELD = 'username', usar username real
+                username_field = getattr(User, 'USERNAME_FIELD', 'username')
+                
+                if username_field == 'email':
+                    # El modelo usa email como USERNAME_FIELD
+                    username_to_try = email
+                else:
+                    # El modelo usa username como USERNAME_FIELD (Django default)
+                    # Usar el username real del usuario
+                    username_to_try = user_obj.username if user_obj.username else email
+                    
+                    # Log para debugging (solo en desarrollo)
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    if user_obj.username != email:
+                        logger.debug(f'Usuario {email} tiene username diferente: {user_obj.username}. Usando username para autenticar.')
+                
+                # IMPORTANTE: Verificar la contraseña DIRECTAMENTE antes de verificar bloqueo
+                # Si la contraseña es correcta, limpiar bloqueos automáticamente
+                # Esto permite que usuarios con contraseña correcta puedan hacer login incluso si están bloqueados
+                import logging
+                logger = logging.getLogger(__name__)
+                from django.contrib.auth.hashers import check_password
+                
+                password_is_correct = check_password(password, user_obj.password)
+                
+                if password_is_correct:
+                    # La contraseña es correcta, limpiar bloqueos de AXES si existen
+                    # Esto permite que el usuario pueda autenticarse inmediatamente
+                    try:
+                        from axes.utils import reset as axes_reset
+                        from axes.models import AccessAttempt
+                        
+                        # Limpiar bloqueos por username y email
+                        axes_reset(username=username_to_try)
+                        if email != username_to_try:
+                            axes_reset(username=email)
+                        
+                        # También limpiar por IP si hay bloqueos relacionados
+                        attempts = AccessAttempt.objects.filter(
+                            username__in=[username_to_try, email]
+                        )
+                        ips_to_reset = set()
+                        for attempt in attempts:
+                            if attempt.ip_address:
+                                ips_to_reset.add(attempt.ip_address)
+                        
+                        for ip in ips_to_reset:
+                            try:
+                                axes_reset(ip=ip)
+                            except Exception:
+                                pass  # Ignorar errores al resetear IPs
+                                
+                        logger.info(f'Bloqueos de AXES limpiados para usuario con contraseña correcta: {email}')
+                    except ImportError:
+                        pass  # AXES no está disponible
+                    except Exception as axes_error:
+                        logger.warning(f'Error al limpiar bloqueos de AXES: {str(axes_error)}')
+                        
             except User.DoesNotExist:
                 # Usuario no existe, usar email de todas formas (para no revelar si existe)
                 user_obj = None
                 username_to_try = email
             
-            # Intentar autenticar SOLO UNA VEZ con el username correcto
-            user = authenticate(request=request, username=username_to_try, password=password)
-            
-            # Verificar bloqueo DESPUÉS del intento fallido
-            if not user:
-                # Obtener username solo si user_obj existe y no es None
-                username_for_lockout = user_obj.username if user_obj and user_obj.username else None
-                lockout_info = self._check_axes_lockout(email, username_for_lockout)
-                
+            # IMPORTANTE: Solo verificar bloqueo si la contraseña NO es correcta
+            # Si la contraseña es correcta, ya limpiamos los bloqueos arriba
+            if not password_is_correct:
+                lockout_info = self._check_axes_lockout(email)
                 if lockout_info and lockout_info.get('is_locked'):
                     minutes = lockout_info.get('minutes_remaining', 0)
                     hours = minutes // 60
@@ -170,30 +207,103 @@ class AuthService:
                             'is_permanent': False
                         }
                     }
-                elif lockout_info:
-                    # No está bloqueado, pero hay intentos fallidos - mostrar advertencia
-                    # IMPORTANTE: failures ya incluye el intento actual que acaba de fallar
-                    # Por lo tanto, el mensaje debe reflejar el estado actual correcto
-                    remaining = lockout_info.get('remaining_attempts', 0)
-                    failures = lockout_info.get('failures', 0)  # Este ya incluye el intento actual
-                    limit = lockout_info.get('limit', 5)
-                    
-                    # El mensaje es correcto: failures ya incluye el intento actual
-                    if remaining > 0:
-                        message = f'Credenciales incorrectas. Has fallado {failures} de {limit} intentos permitidos. Te quedan {remaining} intento{"s" if remaining > 1 else ""} antes del bloqueo temporal.'
+            
+            # Intentar autenticar SOLO UNA VEZ con el identificador correcto
+            # (email si USERNAME_FIELD='email', username si USERNAME_FIELD='username')
+            user = authenticate(request=request, username=username_to_try, password=password)
+            
+            # IMPORTANTE: Si authenticate() falla, verificar si la contraseña es correcta
+            # Si es correcta, usar el usuario directamente (bypass authenticate)
+            # Esto previene falsos negativos cuando AxesBackend bloquea incorrectamente
+            if not user and user_obj:
+                import logging
+                logger = logging.getLogger(__name__)
+                from django.contrib.auth.hashers import check_password
+                
+                # Verificar la contraseña directamente
+                password_is_correct = check_password(password, user_obj.password)
+                
+                if password_is_correct:
+                    logger.info(f'authenticate() falló pero contraseña es correcta para {email}. Usando usuario directamente.')
+                    # Si la contraseña es correcta, usar el usuario directamente
+                    # pero solo si está activo
+                    if user_obj.is_active:
+                        user = user_obj
+                        # Limpiar bloqueos de AXES ya que la contraseña es correcta
+                        try:
+                            from axes.utils import reset as axes_reset
+                            axes_reset(username=username_to_try)
+                            if email != username_to_try:
+                                axes_reset(username=email)
+                            logger.info(f'Bloqueos de AXES limpiados para {email} (contraseña correcta)')
+                        except Exception:
+                            pass  # Ignorar errores de AXES
                     else:
-                        message = f'Credenciales incorrectas. Has alcanzado el límite de {limit} intentos fallidos. Tu cuenta será bloqueada temporalmente en el próximo intento fallido.'
-                    
-                    return {
-                        'success': False,
-                        'message': message,
-                        'is_locked': False,
-                        'lockout_info': {
-                            'remaining_attempts': remaining,
-                            'failures': failures,
-                            'limit': limit
+                        logger.warning(f'Usuario {email} tiene contraseña correcta pero está inactivo')
+                        # No asignar usuario si está inactivo
+                        return {
+                            'success': False,
+                            'message': 'Tu cuenta está desactivada. Contacta al administrador.'
                         }
-                    }
+            
+            # Verificar bloqueo DESPUÉS del intento fallido
+            # IMPORTANTE: Solo mostrar error si realmente la contraseña es incorrecta
+            # Si la contraseña es correcta, el usuario ya debería estar asignado arriba
+            if not user:
+                # La contraseña es incorrecta o el usuario no existe
+                # Obtener username solo si user_obj existe y no es None
+                username_for_lockout = user_obj.username if user_obj and user_obj.username else None
+                lockout_info = self._check_axes_lockout(email, username_for_lockout)
+                
+                if lockout_info and lockout_info.get('is_locked'):
+                    # La contraseña es incorrecta, mostrar información de bloqueo
+                    # Obtener username solo si user_obj existe y no es None
+                    username_for_lockout = user_obj.username if user_obj and user_obj.username else None
+                    lockout_info = self._check_axes_lockout(email, username_for_lockout)
+                    
+                    if lockout_info and lockout_info.get('is_locked'):
+                        minutes = lockout_info.get('minutes_remaining', 0)
+                        hours = minutes // 60
+                        mins = minutes % 60
+                        
+                        if hours > 0:
+                            time_str = f"{hours} hora{'s' if hours > 1 else ''} y {mins} minuto{'s' if mins != 1 else ''}"
+                        else:
+                            time_str = f"{mins} minuto{'s' if mins != 1 else ''}"
+                        
+                        return {
+                            'success': False,
+                            'message': f'Cuenta bloqueada temporalmente por múltiples intentos fallidos. Intenta nuevamente en {time_str}.',
+                            'is_locked': True,
+                            'lockout_info': {
+                                'minutes_remaining': minutes,
+                                'is_permanent': False
+                            }
+                        }
+                    elif lockout_info:
+                        # No está bloqueado, pero hay intentos fallidos - mostrar advertencia
+                        # IMPORTANTE: failures ya incluye el intento actual que acaba de fallar
+                        # Por lo tanto, el mensaje debe reflejar el estado actual correcto
+                        remaining = lockout_info.get('remaining_attempts', 0)
+                        failures = lockout_info.get('failures', 0)  # Este ya incluye el intento actual
+                        limit = lockout_info.get('limit', 5)
+                        
+                        # El mensaje es correcto: failures ya incluye el intento actual
+                        if remaining > 0:
+                            message = f'Credenciales incorrectas. Has fallado {failures} de {limit} intentos permitidos. Te quedan {remaining} intento{"s" if remaining > 1 else ""} antes del bloqueo temporal.'
+                        else:
+                            message = f'Credenciales incorrectas. Has alcanzado el límite de {limit} intentos fallidos. Tu cuenta será bloqueada temporalmente en el próximo intento fallido.'
+                        
+                        return {
+                            'success': False,
+                            'message': message,
+                            'is_locked': False,
+                            'lockout_info': {
+                                'remaining_attempts': remaining,
+                                'failures': failures,
+                                'limit': limit
+                            }
+                        }
             
             if user and user.is_active:
                 # Generar tokens JWT

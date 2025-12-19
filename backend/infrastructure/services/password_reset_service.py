@@ -164,6 +164,10 @@ class PasswordResetService:
             (success, message, user)
         """
         try:
+            # IMPORTANTE: Limpiar espacios en blanco de la contraseña
+            # Esto previene problemas cuando el usuario copia/pega contraseñas con espacios
+            new_password = new_password.strip() if new_password else ''
+            
             # Validar contraseña
             if not new_password or len(new_password) < 8:
                 return False, 'La contraseña debe tener al menos 8 caracteres', None
@@ -173,9 +177,19 @@ class PasswordResetService:
             if not is_valid or not user:
                 return False, error_message or 'Token inválido o expirado', None
             
+            # IMPORTANTE: Asegurar que username coincida con email (para login consistente)
+            # Esto previene problemas cuando username != email
+            email_normalized = user.email.lower().strip()
+            if user.username != email_normalized:
+                logger.warning(f'Username no coincide con email para {user.email}. Actualizando username.')
+                user.username = email_normalized
+            
             # Actualizar contraseña
             user.set_password(new_password)
             user.save()
+            
+            # Log para debugging (sin exponer la contraseña)
+            logger.info(f'Contraseña restablecida para usuario: {user.email} (longitud: {len(new_password)} caracteres)')
             
             # Invalidar token usado (el token ya no será válido porque cambió la contraseña)
             # Django PasswordResetTokenGenerator invalida automáticamente cuando cambia user.password
@@ -184,6 +198,48 @@ class PasswordResetService:
             email_normalized = user.email.lower().strip()
             cache_key = self._get_rate_limit_key(email_normalized)
             cache.delete(cache_key)
+            
+            # Esto permite que el usuario pueda hacer login inmediatamente después del reset
+            try:
+                from axes.utils import reset as axes_reset
+                from axes.models import AccessAttempt
+                
+                # Resetear bloqueos por username (que debería ser igual al email)
+                username_for_axes = user.username or email_normalized
+                axes_reset(username=username_for_axes)
+                
+                # También resetear por email por si acaso
+                if email_normalized != username_for_axes:
+                    axes_reset(username=email_normalized)
+                
+                # Resetear bloqueos por IP asociados a este usuario
+                # Buscar todos los AccessAttempt relacionados con este usuario
+                attempts = AccessAttempt.objects.filter(
+                    username__in=[username_for_axes, email_normalized]
+                )
+                
+                # Obtener IPs únicas de los intentos fallidos
+                ips_to_reset = set()
+                for attempt in attempts:
+                    if attempt.ip_address:
+                        ips_to_reset.add(attempt.ip_address)
+                
+                # Resetear bloqueos por IP
+                for ip in ips_to_reset:
+                    try:
+                        axes_reset(ip=ip)
+                        logger.info(f'Bloqueo de AXES reseteado para IP: {ip} (usuario: {user.email})')
+                    except Exception as ip_error:
+                        logger.warning(f'No se pudo resetear bloqueo de IP {ip}: {str(ip_error)}')
+                
+                logger.info(f'Bloqueos de AXES limpiados para usuario: {user.email}')
+                
+            except ImportError:
+                # Si axes no está instalado, solo loguear advertencia
+                logger.warning('AXES no está disponible, no se pueden limpiar bloqueos')
+            except Exception as axes_error:
+                # Si hay error al limpiar AXES, loguear pero no fallar el reset
+                logger.error(f'Error al limpiar bloqueos de AXES para {user.email}: {str(axes_error)}', exc_info=True)
             
             logger.info(f'Contraseña restablecida exitosamente para usuario: {user.email}')
             

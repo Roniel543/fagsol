@@ -725,8 +725,8 @@ def reset_password(request):
         # 1. Obtener datos del request
         uid = request.data.get('uid')
         token = request.data.get('token')
-        new_password = request.data.get('new_password')
-        confirm_password = request.data.get('confirm_password')
+        new_password = request.data.get('new_password', '').strip()  # Limpiar espacios
+        confirm_password = request.data.get('confirm_password', '').strip()  # Limpiar espacios
         
         # 2. Validar datos requeridos
         if not all([uid, token, new_password]):
@@ -735,14 +735,14 @@ def reset_password(request):
                 'message': 'uid, token y new_password son requeridos'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 3. Validar que las contraseñas coincidan
+        # 3. Validar que las contraseñas coincidan (después de trim)
         if new_password != confirm_password:
             return Response({
                 'success': False,
                 'message': 'Las contraseñas no coinciden'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 4. Validar longitud mínima
+        # 4. Validar longitud mínima (después de trim)
         if len(new_password) < 8:
             return Response({
                 'success': False,

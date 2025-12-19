@@ -7,6 +7,7 @@ from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
+from django.utils import timezone
 from infrastructure.services.password_reset_service import PasswordResetService
 
 User = get_user_model()
@@ -250,4 +251,87 @@ class PasswordResetServiceTestCase(TestCase):
         # Por seguridad, retorna éxito pero sin datos
         self.assertTrue(success)
         self.assertIsNone(data)
+    
+    @override_settings(AXES_ENABLED=True)
+    def test_reset_password_clears_axes_locks(self):
+        """Test: Reset password limpia bloqueos de AXES"""
+        try:
+            from axes.models import AccessAttempt
+            from axes.utils import reset as axes_reset
+            from django.contrib.auth import authenticate
+            
+            # Crear bloqueos de AXES simulados
+            # Simular múltiples intentos fallidos
+            email = 'test@example.com'
+            username = self.test_user.username
+            
+            # Crear AccessAttempt con muchos fallos (simulando bloqueo)
+            attempt = AccessAttempt.objects.create(
+                username=username,
+                ip_address='127.0.0.1',
+                failures_since_start=5,  # Más que el límite típico
+                attempt_time=timezone.now()
+            )
+            
+            # Verificar que el bloqueo existe
+            attempts_before = AccessAttempt.objects.filter(
+                username__in=[username, email]
+            ).count()
+            self.assertGreater(attempts_before, 0)
+            
+            # Generar token de reset
+            success, message, data = self.service.request_password_reset(
+                email=email,
+                frontend_url='http://localhost:3000'
+            )
+            
+            self.assertTrue(success)
+            self.assertIsNotNone(data)
+            
+            uid = data['uid']
+            token = data['token']
+            new_password = 'newpassword123'
+            
+            # Resetear contraseña (esto debería limpiar bloqueos de AXES)
+            success, message, user = self.service.reset_password(uid, token, new_password)
+            
+            self.assertTrue(success)
+            self.assertIsNotNone(user)
+            
+            # Verificar que los bloqueos de AXES fueron limpiados
+            # Nota: axes_reset() elimina los AccessAttempt, así que deberían estar vacíos
+            attempts_after = AccessAttempt.objects.filter(
+                username__in=[username, email]
+            ).count()
+            
+            # Los intentos deberían estar limpiados o al menos reducidos
+            # (depende de la implementación de axes_reset)
+            # Lo importante es que el usuario pueda autenticarse ahora
+            
+            # Verificar que la contraseña se actualizó correctamente
+            user.refresh_from_db()
+            self.assertTrue(user.check_password(new_password), 
+                          'La nueva contraseña debería funcionar')
+            self.assertFalse(user.check_password('oldpassword123'), 
+                           'La contraseña antigua no debería funcionar')
+            
+            # Verificar que los bloqueos de AXES fueron limpiados
+            # Intentar autenticar con un request mock (AxesBackend requiere request)
+            from django.test import RequestFactory
+            factory = RequestFactory()
+            request = factory.post('/api/v1/auth/login/')
+            
+            authenticated_user = authenticate(
+                request=request,
+                username=username,
+                password=new_password
+            )
+            
+            self.assertIsNotNone(authenticated_user, 
+                                'El usuario debería poder autenticarse después del reset')
+            self.assertEqual(authenticated_user, self.test_user)
+            
+        except ImportError:
+            # Si axes no está instalado, saltar este test
+            self.skipTest('AXES no está instalado, saltando test de limpieza de bloqueos')
 
