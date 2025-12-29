@@ -86,7 +86,7 @@ onSubmit: async (formData: any) => {
     // Enviar inmediatamente (sin delays)
     const response = await processPayment(
         paymentIntent.id,
-        token,  // ✅ Usar token inmediatamente
+        token,  
         payment_method_id || 'visa',
         installments || 1,
         paymentIntent.total,

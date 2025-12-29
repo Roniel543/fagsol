@@ -86,6 +86,16 @@ if DB_HOST == 'db':
         # Si 'db' no se puede resolver, usar localhost
         DB_HOST = 'localhost'
 
+# Configuración de base de datos con SSL para Azure PostgreSQL
+DB_OPTIONS = {
+    'client_encoding': 'UTF8',
+    'connect_timeout': 10,
+}
+
+# Si estamos en Azure (detectado por el host), forzar SSL
+if 'database.azure.com' in DB_HOST:
+    DB_OPTIONS['sslmode'] = 'require'
+
 DATABASES = {
     'default': {
         'ENGINE': config('DB_ENGINE', default='django.db.backends.postgresql'),
@@ -94,10 +104,8 @@ DATABASES = {
         'PASSWORD': config('DB_PASSWORD', default='postgres'),
         'HOST': DB_HOST,
         'PORT': config('DB_PORT', default='5432'),
-        'OPTIONS': {
-            'client_encoding': 'UTF8',
-            'sslmode': 'require',  # Requerir SSL para conexiones a Azure PostgreSQL
-        },
+        'OPTIONS': DB_OPTIONS,
+        'CONN_MAX_AGE': 600,
     }
 }
 

@@ -141,7 +141,7 @@ export async function processPayment(
             {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json', // ✅ Asegurar Content-Type explícitamente
+                    'Content-Type': 'application/json',
                     'X-Idempotency-Key': finalIdempotencyKey,
                 },
                 body: JSON.stringify({
