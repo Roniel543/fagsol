@@ -9,7 +9,7 @@ interface PageHeroProps {
 
 export function PageHero({ title, subtitle, description, backgroundImage }: PageHeroProps) {
     return (
-        <section className="relative min-h-[60vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <section className="relative pt-20 flex items-center justify-center px-4 sm:px-6 lg:px-8 overflow-hidden">
             {/* Fondo con imagen opcional */}
             {backgroundImage && (
                 <div
@@ -20,7 +20,7 @@ export function PageHero({ title, subtitle, description, backgroundImage }: Page
 
             {/* Overlay con gradiente */}
             <div className={`absolute inset-0 ${backgroundImage ? 'bg-gradient-to-b from-black/90 via-black/80 to-black' : 'bg-gradient-to-b from-primary-black via-zinc-950 to-primary-black'}`} />
-            
+
             {/* Elementos decorativos */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-orange/5 rounded-full blur-3xl animate-pulse"></div>

@@ -1,6 +1,15 @@
 """
 Servicio de Cursos - FagSol Escuela Virtual
 Maneja la lógica de negocio para CRUD de cursos
+
+⚠️ DEPRECATED: Este servicio ha sido migrado a casos de uso.
+Usar application.use_cases.course en su lugar:
+- CreateCourseUseCase - Reemplaza CourseService.create_course()
+- UpdateCourseUseCase - Reemplaza CourseService.update_course()
+- DeleteCourseUseCase - Reemplaza CourseService.delete_course()
+
+Este archivo se mantiene temporalmente para compatibilidad.
+Se eliminará en una versión futura.
 """
 
 import logging

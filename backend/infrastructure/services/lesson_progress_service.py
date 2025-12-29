@@ -1,6 +1,16 @@
 """
 Servicio de Progreso de Lecciones - FagSol Escuela Virtual
 Maneja el progreso de usuarios en lecciones y actualiza el enrollment
+
+⚠️ DEPRECATED: Este servicio ha sido migrado a casos de uso.
+Usar application.use_cases.lesson en su lugar:
+- MarkLessonCompletedUseCase - Reemplaza LessonProgressService.mark_lesson_completed()
+- MarkLessonIncompleteUseCase - Reemplaza LessonProgressService.mark_lesson_incomplete()
+- GetLessonProgressUseCase - Reemplaza LessonProgressService.get_lesson_progress()
+- GetCourseProgressUseCase - Reemplaza LessonProgressService.get_course_progress()
+
+Este archivo se mantiene temporalmente para compatibilidad.
+Se eliminará en una versión futura.
 """
 
 import logging

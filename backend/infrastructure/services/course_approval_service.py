@@ -3,6 +3,14 @@ Servicio de Aprobación de Cursos - FagSol Escuela Virtual
 Sistema de aprobación de cursos
 
 Este servicio maneja la lógica de negocio para aprobar/rechazar cursos.
+
+⚠️ DEPRECATED (parcialmente): Las funciones de aprobación/rechazo han sido migradas a casos de uso.
+Usar application.use_cases.course en su lugar:
+- ApproveCourseUseCase - Reemplaza CourseApprovalService.approve_course()
+- RejectCourseUseCase - Reemplaza CourseApprovalService.reject_course()
+
+Las funciones de consulta (get_pending_courses, get_all_courses, request_review) aún se usan.
+Este archivo se mantiene temporalmente para compatibilidad.
 """
 
 import logging

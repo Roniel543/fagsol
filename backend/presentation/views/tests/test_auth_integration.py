@@ -23,7 +23,7 @@ class AuthIntegrationTestCase(TestCase):
     def setUp(self):
         """Configuración inicial"""
         self.client = APIClient()
-        self.base_url = '/api/v1'
+        self.base_url = '/api/v1/auth'
     
     def test_register_new_user(self):
         """Test: Registrar un nuevo usuario exitosamente"""
@@ -40,11 +40,18 @@ class AuthIntegrationTestCase(TestCase):
         # Verificar respuesta
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data['success'])
-        self.assertIn('tokens', response.data)
-        self.assertIn('access', response.data['tokens'])
-        self.assertIn('refresh', response.data['tokens'])
+        # Con cookies HTTP-Only, los tokens NO están en JSON, solo en cookies
+        self.assertNotIn('tokens', response.data)
+        self.assertIn('user', response.data)
         self.assertEqual(response.data['user']['email'], 'newuser@test.com')
         self.assertEqual(response.data['user']['role'], 'student')
+        
+        # Verificar que se establecieron cookies
+        from django.conf import settings
+        access_cookie_name = getattr(settings, 'COOKIE_ACCESS_TOKEN_NAME', 'access_token')
+        refresh_cookie_name = getattr(settings, 'COOKIE_REFRESH_TOKEN_NAME', 'refresh_token')
+        self.assertIn(access_cookie_name, response.cookies)
+        self.assertIn(refresh_cookie_name, response.cookies)
         
         # Verificar que el usuario se creó en la BD
         user = User.objects.get(email='newuser@test.com')
@@ -117,10 +124,17 @@ class AuthIntegrationTestCase(TestCase):
             # Verificar respuesta
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertTrue(response.data['success'])
-            self.assertIn('tokens', response.data)
-            self.assertIn('access', response.data['tokens'])
-            self.assertIn('refresh', response.data['tokens'])
+            # Con cookies HTTP-Only, los tokens NO están en JSON, solo en cookies
+            self.assertNotIn('tokens', response.data)
+            self.assertIn('user', response.data)
             self.assertEqual(response.data['user']['email'], 'login@test.com')
+            
+            # Verificar que se establecieron cookies
+            from django.conf import settings
+            access_cookie_name = getattr(settings, 'COOKIE_ACCESS_TOKEN_NAME', 'access_token')
+            refresh_cookie_name = getattr(settings, 'COOKIE_REFRESH_TOKEN_NAME', 'refresh_token')
+            self.assertIn(access_cookie_name, response.cookies)
+            self.assertIn(refresh_cookie_name, response.cookies)
     
     def test_login_invalid_credentials(self):
         """Test: Login falla con credenciales inválidas"""
@@ -145,7 +159,12 @@ class AuthIntegrationTestCase(TestCase):
             # Debe retornar error
             self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
             self.assertFalse(response.data['success'])
-            self.assertIn('inválidas', response.data['message'])
+            # El mensaje puede ser "inválidas" o "incorrectas" (mensaje más descriptivo con intentos)
+            self.assertTrue(
+                'inválidas' in response.data['message'] or 
+                'incorrectas' in response.data['message'] or
+                'Credenciales' in response.data['message']
+            )
     
     def test_login_nonexistent_user(self):
         """Test: Login falla con usuario inexistente"""
@@ -180,10 +199,15 @@ class AuthIntegrationTestCase(TestCase):
         refresh = JWTRefreshToken.for_user(user)
         refresh_token = str(refresh)
         
-        # Hacer logout
+        # Establecer cookie de refresh token
+        from django.conf import settings
+        refresh_cookie_name = getattr(settings, 'COOKIE_REFRESH_TOKEN_NAME', 'refresh_token')
+        self.client.cookies[refresh_cookie_name] = refresh_token
+        
+        # Hacer logout (puede obtener refresh token de cookie o body)
         response = self.client.post(
             f'{self.base_url}/logout/',
-            {'refresh': refresh_token},
+            {'refresh': refresh_token},  # También puede venir del body
             format='json'
         )
         
@@ -191,6 +215,17 @@ class AuthIntegrationTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertTrue(response.data['success'])
         self.assertIn('exitoso', response.data['message'])
+        
+        # Verificar que las cookies fueron limpiadas
+        access_cookie_name = getattr(settings, 'COOKIE_ACCESS_TOKEN_NAME', 'access_token')
+        cleared_access = response.cookies.get(access_cookie_name)
+        cleared_refresh = response.cookies.get(refresh_cookie_name)
+        # Las cookies limpiadas tienen max-age=0 o value vacío
+        if cleared_access:
+            self.assertTrue(
+                cleared_access.get('max-age') == '0' or 
+                cleared_access.value == ''
+            )
         
         # Verificar que el token está en blacklist (no se puede usar de nuevo)
         try:
@@ -264,4 +299,9 @@ class AuthIntegrationTestCase(TestCase):
             # Verificar que se creó el perfil
             profile = UserProfile.objects.get(user=user)
             self.assertEqual(profile.role, 'student')  # Rol por defecto
+            
+            # Verificar que se establecieron cookies
+            from django.conf import settings
+            access_cookie_name = getattr(settings, 'COOKIE_ACCESS_TOKEN_NAME', 'access_token')
+            self.assertIn(access_cookie_name, response.cookies)
 

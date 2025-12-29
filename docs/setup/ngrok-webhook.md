@@ -9,7 +9,7 @@
 ### **Windows:**
 
 1. Descargar ngrok desde: https://ngrok.com/download
-2. Extraer el archivo `ngrok.exe`
+2. Extraezzr el archivo `ngrok.exe`
 3. Agregar a PATH o usar desde la carpeta donde está
     
 ### **Verificar instalación:**

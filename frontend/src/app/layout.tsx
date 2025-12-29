@@ -1,3 +1,4 @@
+import { ErrorHandler } from '@/shared/components/ErrorHandler'
 import { ToastProvider } from '@/shared/components/Toast'
 import { CartProvider } from '@/shared/contexts/CartContext'
 import { AuthProvider } from '@/shared/hooks/useAuth'
@@ -28,15 +29,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="es">
-      <body className={`${sora.className} min-h-screen bg-cover bg-center bg-no-repeat`}>
+    <html lang="es" className="overflow-x-hidden">
+      <body className={`${sora.className} min-h-screen bg-cover bg-center bg-no-repeat overflow-x-hidden`}>
         {/* Pre-cargar SDK de Mercado Pago para optimizar checkout */}
         <Script
           src="https://sdk.mercadopago.com/js/v2"
           strategy="afterInteractive"
           crossOrigin="anonymous"
         />
-        <div className="min-h-screen bg-primary-black ">
+        <ErrorHandler />
+        <div className="min-h-screen bg-primary-black overflow-x-hidden">
           <AuthProvider>
             <CartProvider>
               <ToastProvider>

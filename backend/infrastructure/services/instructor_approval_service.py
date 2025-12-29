@@ -3,6 +3,14 @@ Servicio de Aprobación de Instructores - FagSol Escuela Virtual
 FASE 1: Sistema de aprobación de instructores
 
 Este servicio maneja la lógica de negocio para aprobar/rechazar instructores.
+
+⚠️ DEPRECATED (parcialmente): Las funciones de aprobación/rechazo han sido migradas a casos de uso.
+Usar application.use_cases.instructor en su lugar:
+- ApproveInstructorUseCase - Reemplaza InstructorApprovalService.approve_instructor()
+- RejectInstructorUseCase - Reemplaza InstructorApprovalService.reject_instructor()
+
+Las funciones de consulta (get_pending_instructors, get_all_instructors) aún se usan.
+Este archivo se mantiene temporalmente para compatibilidad.
 """
 
 import logging

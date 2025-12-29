@@ -14,7 +14,13 @@ from django.shortcuts import get_object_or_404
 from apps.courses.models import Lesson
 from apps.users.models import Enrollment
 from apps.users.permissions import can_update_lesson_progress
-from infrastructure.services.lesson_progress_service import LessonProgressService
+from infrastructure.services.lesson_progress_service import LessonProgressService  # Mantener para compatibilidad temporal
+from application.use_cases.lesson import (
+    MarkLessonCompletedUseCase,
+    MarkLessonIncompleteUseCase,
+    GetLessonProgressUseCase,
+    GetCourseProgressUseCase
+)
 
 logger = logging.getLogger('apps')
 
@@ -104,29 +110,30 @@ def mark_lesson_completed(request):
                 'message': 'No tienes permiso para actualizar este progreso'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Procesar con el servicio
-        progress_service = LessonProgressService()
-        success, lesson_progress, error_message = progress_service.mark_lesson_completed(
+        # Usar caso de uso para marcar lección como completada
+        mark_lesson_completed_use_case = MarkLessonCompletedUseCase()
+        result = mark_lesson_completed_use_case.execute(
             user=request.user,
             lesson_id=lesson_id,
             enrollment_id=enrollment_id
         )
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Obtener enrollment actualizado
+        enrollment = result.extra.get('enrollment')
         enrollment.refresh_from_db()
         
         return Response({
             'success': True,
             'data': {
-                'lesson_progress_id': lesson_progress.id,
-                'is_completed': lesson_progress.is_completed,
-                'completed_at': lesson_progress.completed_at.isoformat() if lesson_progress.completed_at else None,
+                'lesson_progress_id': result.data['lesson_progress_id'],
+                'is_completed': result.data['is_completed'],
+                'completed_at': result.data['completed_at'],
                 'enrollment_completion_percentage': float(enrollment.completion_percentage),
                 'enrollment_completed': enrollment.completed,
             }
@@ -210,28 +217,29 @@ def mark_lesson_incomplete(request):
                 'message': 'No tienes permiso para actualizar este progreso'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # Procesar con el servicio
-        progress_service = LessonProgressService()
-        success, lesson_progress, error_message = progress_service.mark_lesson_incomplete(
+        # Usar caso de uso para marcar lección como incompleta
+        mark_lesson_incomplete_use_case = MarkLessonIncompleteUseCase()
+        result = mark_lesson_incomplete_use_case.execute(
             user=request.user,
             lesson_id=lesson_id,
             enrollment_id=enrollment_id
         )
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # Obtener enrollment actualizado
+        enrollment = result.extra.get('enrollment')
         enrollment.refresh_from_db()
         
         return Response({
             'success': True,
             'data': {
-                'lesson_progress_id': lesson_progress.id,
-                'is_completed': lesson_progress.is_completed,
+                'lesson_progress_id': result.data['lesson_progress_id'],
+                'is_completed': result.data['is_completed'],
                 'enrollment_completion_percentage': float(enrollment.completion_percentage),
                 'enrollment_completed': enrollment.completed,
             }
@@ -315,22 +323,22 @@ def get_course_progress(request):
         # Validar enrollment
         enrollment = get_object_or_404(Enrollment, id=enrollment_id, user=request.user, status='active')
         
-        # Obtener progreso con el servicio
-        progress_service = LessonProgressService()
-        success, progress_data, error_message = progress_service.get_course_progress(
+        # Usar caso de uso para obtener progreso del curso
+        get_course_progress_use_case = GetCourseProgressUseCase()
+        result = get_course_progress_use_case.execute(
             user=request.user,
             enrollment_id=enrollment_id
         )
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({
             'success': True,
-            'data': progress_data
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -398,44 +406,23 @@ def get_lesson_progress(request):
             is_active=True
         )
         
-        # Obtener progreso con el servicio
-        progress_service = LessonProgressService()
-        success, lesson_progress, error_message = progress_service.get_lesson_progress(
+        # Usar caso de uso para obtener progreso de lección
+        get_lesson_progress_use_case = GetLessonProgressUseCase()
+        result = get_lesson_progress_use_case.execute(
             user=request.user,
             lesson_id=lesson_id,
             enrollment_id=enrollment_id
         )
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Si no hay progreso, retornar null
-        if not lesson_progress:
-            return Response({
-                'success': True,
-                'data': {
-                    'lesson_id': lesson_id,
-                    'is_completed': False,
-                    'progress_percentage': 0.0,
-                    'completed_at': None,
-                    'last_accessed_at': None,
-                }
-            }, status=status.HTTP_200_OK)
         
         return Response({
             'success': True,
-            'data': {
-                'lesson_progress_id': lesson_progress.id,
-                'lesson_id': lesson_id,
-                'is_completed': lesson_progress.is_completed,
-                'progress_percentage': float(lesson_progress.progress_percentage),
-                'completed_at': lesson_progress.completed_at.isoformat() if lesson_progress.completed_at else None,
-                'last_accessed_at': lesson_progress.last_accessed_at.isoformat(),
-                'time_watched_seconds': lesson_progress.time_watched_seconds,
-            }
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:

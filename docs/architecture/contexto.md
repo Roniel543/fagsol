@@ -197,10 +197,12 @@ FagSol Escuela Virtual es una plataforma educativa en línea que permite a estud
 
 ### **Autenticación:**
 - ✅ JWT con access y refresh tokens
-- ✅ Tokens almacenados en sessionStorage (más seguro que localStorage)
+- ✅ **Cookies HTTP-Only** (Secure, SameSite=Strict) - Tokens no expuestos en JavaScript
 - ✅ Refresh automático de tokens antes de expirar
+- ✅ Refresh rotativo (blacklist del token anterior)
 - ✅ Validación de tokens en cada request
-- ✅ Logout que invalida tokens server-side
+- ✅ Logout que invalida tokens server-side y limpia cookies
+- ✅ Sincronización entre pestañas con BroadcastChannel (solo eventos UI)
 
 ### **Autorización:**
 - ✅ Validación de permisos en backend (nunca confiar en frontend)
@@ -228,6 +230,10 @@ FagSol Escuela Virtual es una plataforma educativa en línea que permite a estud
 - `apps/core/models.py`
   - `UserProfile` - Perfil de usuario con rol
   - `InstructorApplication` - Solicitudes de instructor
+
+#### **Autenticación:**
+- `infrastructure/authentication/cookie_jwt_authentication.py` - Autenticación con cookies HTTP-Only
+- `infrastructure/utils/cookie_helpers.py` - Utilidades para manejo de cookies
 
 #### **Servicios:**
 - `infrastructure/services/auth_service.py` - Lógica de autenticación
@@ -394,9 +400,12 @@ AXES_COOLOFF_TIME = 0.5      # 30 minutos de bloqueo
 ```
 
 ### **Almacenamiento de Tokens:**
-- Usa `sessionStorage` en lugar de `localStorage` (más seguro)
-- Tokens se eliminan al cerrar la pestaña
-- Refresh automático antes de expirar
+- **Cookies HTTP-Only** (no accesibles desde JavaScript)
+- Tokens almacenados en cookies con `HttpOnly`, `Secure`, `SameSite=Strict`
+- Access token: 1 hora de vida
+- Refresh token: 1 día de vida, rotativo (se blacklistea al refrescar)
+- Cookies se limpian automáticamente en logout
+- Sincronización entre pestañas mediante BroadcastChannel (solo eventos, no tokens)
 
 ### **Validación de Permisos:**
 - Siempre validar en backend
@@ -422,6 +431,14 @@ Para problemas o preguntas sobre el proyecto, revisar:
 
 ---
 
-**Última actualización:** 2025-01-12  
-**Versión del documento:** 1.0
+**Última actualización:** 2025-01-27  
+**Versión del documento:** 2.0
+
+---
+
+## 📚 Documentación Adicional
+
+- [Análisis de Estructura](./ANALISIS_ESTRUCTURA.md) - Análisis profundo de la organización de archivos
+- [Guía de Pruebas Manuales](../migration/GUIA_PRUEBAS_MANUALES.md) - Cómo probar la implementación
+- [Seguridad Cookies HTTP-Only](../security/SECURITY_COOKIES_HTTPONLY.md) - Detalles de seguridad
 

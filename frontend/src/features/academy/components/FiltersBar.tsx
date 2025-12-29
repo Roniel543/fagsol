@@ -11,18 +11,18 @@ type Props = {
 
 export function FiltersBar({ q, category, level, categories, provider = '', onChange }: Props) {
     return (
-        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 w-full min-w-0">
             <input
                 value={q}
                 onChange={(e) => onChange({ q: e.target.value })}
                 placeholder="Buscar cursos..."
-                className="w-full sm:max-w-md rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm outline-none focus:border-primary-orange"
+                className="w-full sm:flex-1 sm:max-w-md rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm outline-none focus:border-primary-orange min-w-0"
             />
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial sm:justify-end">
                 <select
                     value={category}
                     onChange={(e) => onChange({ category: e.target.value })}
-                    className="rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm focus:border-primary-orange"
+                    className="flex-1 sm:flex-initial min-w-0 rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm focus:border-primary-orange text-white"
                 >
                     <option value="">Todas las categorías</option>
                     {categories.map((c) => (
@@ -32,7 +32,7 @@ export function FiltersBar({ q, category, level, categories, provider = '', onCh
                 <select
                     value={provider}
                     onChange={(e) => onChange({ provider: e.target.value })}
-                    className="rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm focus:border-primary-orange"
+                    className="flex-1 sm:flex-initial min-w-0 rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm focus:border-primary-orange text-white"
                 >
                     <option value="">Todos los proveedores</option>
                     <option value="fagsol">Fagsol</option>
@@ -41,7 +41,7 @@ export function FiltersBar({ q, category, level, categories, provider = '', onCh
                 <select
                     value={level}
                     onChange={(e) => onChange({ level: e.target.value })}
-                    className="rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm focus:border-primary-orange"
+                    className="flex-1 sm:flex-initial min-w-0 rounded-lg bg-zinc-950 border border-zinc-800 px-3 py-2 text-sm focus:border-primary-orange text-white"
                 >
                     <option value="">Todos los niveles</option>
                     <option value="beginner">Básico</option>

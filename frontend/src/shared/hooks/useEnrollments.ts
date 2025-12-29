@@ -1,65 +1,58 @@
 /**
- * Hooks SWR para data fetching de enrollments
+ * Hook para obtener enrollments (cursos inscritos) del usuario
+ * Usa SWR para caché y revalidación automática
  */
 
+import { BackendEnrollment, listEnrollments } from '@/shared/services/enrollments';
+import { logger } from '@/shared/utils/logger';
 import useSWR from 'swr';
-import { listEnrollments, getEnrollmentById, BackendEnrollment } from '@/shared/services/enrollments';
-import { useAuth } from './useAuth';
+
+export interface UseEnrollmentsOptions {
+    autoFetch?: boolean;
+}
+
+export interface UseEnrollmentsReturn {
+    enrollments: BackendEnrollment[];
+    isLoading: boolean;
+    isError: boolean;
+    error: Error | null;
+    mutate: () => Promise<any>;
+}
 
 /**
- * Hook para listar enrollments del usuario autenticado
+ * Hook para obtener los cursos en los que el usuario está inscrito
  */
-export function useEnrollments() {
-    const { isAuthenticated } = useAuth();
-    
-    const { data, error, isLoading, mutate } = useSWR(
-        isAuthenticated ? 'enrollments' : null,
+export function useEnrollments(options: UseEnrollmentsOptions = {}): UseEnrollmentsReturn {
+    const { autoFetch = true } = options;
+
+    const { data, error, isLoading, mutate } = useSWR<BackendEnrollment[]>(
+        autoFetch ? 'enrollments' : null,
         async () => {
-            const response = await listEnrollments();
-            return response.data;
+            try {
+                const response = await listEnrollments();
+                if (response.success) {
+                    return response.data;
+                } else {
+                    throw new Error('Error al obtener enrollments');
+                }
+            } catch (err) {
+                logger.error('Error fetching enrollments', err);
+                throw err;
+            }
         },
         {
-            revalidateOnFocus: false,
+            revalidateOnFocus: true,
             revalidateOnReconnect: true,
-            dedupingInterval: 5000,
+            shouldRetryOnError: true,
+            errorRetryCount: 3,
         }
     );
 
     return {
         enrollments: data || [],
-        count: data?.length || 0,
         isLoading,
         isError: !!error,
-        error,
+        error: error as Error | null,
         mutate,
     };
 }
-
-/**
- * Hook para obtener un enrollment por ID
- */
-export function useEnrollment(enrollmentId: string | null) {
-    const { isAuthenticated } = useAuth();
-    
-    const { data, error, isLoading, mutate } = useSWR(
-        isAuthenticated && enrollmentId ? ['enrollment', enrollmentId] : null,
-        async () => {
-            if (!enrollmentId) return null;
-            const response = await getEnrollmentById(enrollmentId);
-            return response.data;
-        },
-        {
-            revalidateOnFocus: false,
-            revalidateOnReconnect: true,
-        }
-    );
-
-    return {
-        enrollment: data || null,
-        isLoading,
-        isError: !!error,
-        error,
-        mutate,
-    };
-}
-

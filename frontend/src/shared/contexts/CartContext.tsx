@@ -2,6 +2,7 @@
 
 import { useCourses } from '@/shared/hooks/useCourses';
 import { Course } from '@/shared/types';
+import { logger } from '@/shared/utils/logger';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 export interface CartItem {
@@ -38,7 +39,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const cart = JSON.parse(localStorage.getItem('cart') || '[]');
         setCartItems(cart);
         setIsLoaded(true);
-        console.log('🛒 Cart loaded from localStorage:', cart.length, 'items');
+        logger.debug('Cart loaded from localStorage:', cart.length, 'items');
     }, []);
 
     // Sincronizar con localStorage cuando cambia el carrito
@@ -46,34 +47,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (isLoaded) {
             localStorage.setItem('cart', JSON.stringify(cartItems));
             window.dispatchEvent(new Event('cartUpdated'));
-            console.log('🛒 Cart updated - Total items:', cartItems.length);
+            logger.debug('Cart updated - Total items:', cartItems.length);
         }
     }, [cartItems, isLoaded]);
 
     // Agregar al carrito
     const addToCart = useCallback((courseId: string) => {
-        console.log('➕ Adding to cart:', courseId);
+        logger.debug('Adding to cart:', courseId);
         setCartItems((prev) => {
             const exists = prev.find((item) => item.id === courseId);
             if (exists) {
-                console.log('⚠️ Item already in cart');
+                logger.debug('Item already in cart');
                 return prev;
             }
             const newCart = [...prev, { id: courseId, qty: 1 }];
-            console.log('✅ Item added. New cart size:', newCart.length);
+            logger.debug('Item added. New cart size:', newCart.length);
             return newCart;
         });
     }, []);
 
     // Remover del carrito
     const removeFromCart = useCallback((courseId: string) => {
-        console.log('➖ Removing from cart:', courseId);
+        logger.debug('Removing from cart:', courseId);
         setCartItems((prev) => prev.filter((item) => item.id !== courseId));
     }, []);
 
     // Vaciar carrito
     const clearCart = useCallback(() => {
-        console.log('🗑️ Clearing cart');
+        logger.debug('Clearing cart');
         setCartItems([]);
     }, []);
 
@@ -88,7 +89,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             .map((item) => {
                 const course = courses.find((c) => c.id === item.id);
                 if (!course) {
-                    console.warn(`⚠️ Course ${item.id} not found in backend courses`);
+                    logger.debug(`Course ${item.id} not found in backend courses`);
                     return null;
                 }
                 return { ...item, course };
@@ -104,7 +105,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         const invalidItems = cartItems.filter(item => !validItemIds.includes(item.id));
 
         if (invalidItems.length > 0) {
-            console.log(`🧹 Removing ${invalidItems.length} invalid items from cart`);
+            logger.debug(`Removing ${invalidItems.length} invalid items from cart`);
             setCartItems(validItemIds.map(id => cartItems.find(item => item.id === id)!));
         }
     }, [cartItemsWithDetails, cartItems, isLoaded, coursesLoading]);

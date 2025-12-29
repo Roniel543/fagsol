@@ -8,53 +8,25 @@ Esta capa contiene:
 - Servicios: Implementaciones de servicios de aplicación
 """
 
-from .dtos import (
-    UserDTO, CreateUserDTO, UpdateUserDTO,
-    CourseDTO, CreateCourseDTO,
-    ModuleDTO, CreateModuleDTO,
-    EnrollmentDTO, CreateEnrollmentDTO,
-    PaymentDTO, CreatePaymentDTO,
-    PaginatedResponseDTO,
-    UserRoleDTO, CourseLevelDTO, PaymentStatusDTO
-)
+# DTOs - Importar según necesidad
+from .dtos import UseCaseResult
 
-from .interfaces import (
-    UserApplicationService,
-    CourseApplicationService,
-    ModuleApplicationService,
-    EnrollmentApplicationService,
-    PaymentApplicationService
-)
+# Interfaces - Se importarán cuando se implementen
+# from .interfaces import (
+#     UserApplicationService,
+#     CourseApplicationService,
+#     ...
+# )
 
-from .use_cases import (
-    CreateUserUseCase, GetUserUseCase, UpdateUserUseCase,
-    CreateCourseUseCase, GetCourseUseCase,
-    CreateModuleUseCase,
-    EnrollUserUseCase,
-    ProcessPaymentUseCase
-)
+# Casos de Uso - Importar desde módulos específicos
+from .use_cases.auth import LoginUseCase, RegisterUseCase, PasswordResetUseCase
 
 __all__ = [
     # DTOs
-    'UserDTO', 'CreateUserDTO', 'UpdateUserDTO',
-    'CourseDTO', 'CreateCourseDTO',
-    'ModuleDTO', 'CreateModuleDTO',
-    'EnrollmentDTO', 'CreateEnrollmentDTO',
-    'PaymentDTO', 'CreatePaymentDTO',
-    'PaginatedResponseDTO',
-    'UserRoleDTO', 'CourseLevelDTO', 'PaymentStatusDTO',
+    'UseCaseResult',
     
-    # Interfaces
-    'UserApplicationService',
-    'CourseApplicationService',
-    'ModuleApplicationService',
-    'EnrollmentApplicationService',
-    'PaymentApplicationService',
-    
-    # Casos de Uso
-    'CreateUserUseCase', 'GetUserUseCase', 'UpdateUserUseCase',
-    'CreateCourseUseCase', 'GetCourseUseCase',
-    'CreateModuleUseCase',
-    'EnrollUserUseCase',
-    'ProcessPaymentUseCase',
+    # Casos de Uso Auth
+    'LoginUseCase',
+    'RegisterUseCase',
+    'PasswordResetUseCase',
 ]

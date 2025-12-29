@@ -98,40 +98,40 @@ function CoursesAdminPageContent() {
     return (
         <div className="min-h-screen bg-white">
             {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200">
+            <header className="bg-white shadow-sm border-b border-gray-200 lg:relative">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">
+                    <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center pt-4 lg:pt-4 pb-4 sm:py-6 gap-4">
+                        <div className="flex-shrink-0">
+                            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                                 Administración de Cursos
                             </h1>
-                            <p className="text-gray-600">Gestiona los cursos de la plataforma</p>
+                            <p className="text-sm sm:text-base text-gray-600 mt-1">Gestiona los cursos de la plataforma</p>
                         </div>
-                        <div className="flex items-center space-x-4">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 sm:space-x-0">
                             {user?.role === 'admin' && (
-                                <Link href="/admin/courses/pending">
-                                    <Button variant="secondary" size="sm">
+                                <Link href="/admin/courses/pending" className="w-full sm:w-auto">
+                                    <Button variant="secondary" size="sm" className="w-full sm:w-auto py-3">
                                         Cursos Pendientes
                                     </Button>
                                 </Link>
                             )}
-                            <Link href="/dashboard">
-                                <Button variant="secondary" size="sm">
+                            <Link href="/dashboard" className="w-full sm:w-auto">
+                                <Button variant="secondary" size="sm" className="w-full sm:w-auto py-3">
                                     Volver al Dashboard
                                 </Button>
                             </Link>
-                            <Link href="/admin/courses/new">
-                                <Button variant="primary" size="sm">
+                            <Link href="/admin/courses/new" className="w-full sm:w-auto">
+                                <Button variant="primary" size="sm" className="w-full sm:w-auto py-3">
                                     Crear Nuevo Curso
                                 </Button>
                             </Link>
                         </div>
                     </div>
                 </div>
-            </header>
+            </header >
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            < main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8" >
                 <div className="px-4 py-6 sm:px-0">
                     {/* Error Message */}
                     {error && (
@@ -148,9 +148,8 @@ function CoursesAdminPageContent() {
                         </div>
                         <div className="flex flex-wrap gap-2">
                             {filterButtons.map((filter) => (
-                                <button
+                                <div
                                     key={filter.key || 'all'}
-                                    onClick={() => setStatusFilter(filter.key)}
                                     className={`
                                         px-4 py-2 rounded-lg text-sm font-medium transition-all
                                         flex items-center gap-2
@@ -158,8 +157,16 @@ function CoursesAdminPageContent() {
                                             ? 'bg-blue-600 text-white shadow-md'
                                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
                                         }
+                                        ${isLoadingCounts ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                                     `}
-                                    disabled={isLoadingCounts}
+                                    onClick={() => !isLoadingCounts && setStatusFilter(filter.key)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if ((e.key === 'Enter' || e.key === ' ') && !isLoadingCounts) {
+                                            setStatusFilter(filter.key);
+                                        }
+                                    }}
                                 >
                                     <span>{filter.label}</span>
                                     {!isLoadingCounts && (
@@ -176,17 +183,26 @@ function CoursesAdminPageContent() {
                                         </span>
                                     )}
                                     {statusFilter === filter.key && (
-                                        <button
+                                        <span
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setStatusFilter(undefined);
                                             }}
-                                            className="ml-1 hover:bg-blue-700 rounded-full p-0.5"
+                                            className="ml-1 hover:bg-blue-700 rounded-full p-0.5 cursor-pointer"
+                                            role="button"
+                                            tabIndex={0}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ' ') {
+                                                    e.stopPropagation();
+                                                    setStatusFilter(undefined);
+                                                }
+                                            }}
+                                            aria-label="Limpiar filtro"
                                         >
                                             <X className="w-3 h-3" />
-                                        </button>
+                                        </span>
                                     )}
-                                </button>
+                                </div>
                             ))}
                         </div>
                     </div>
@@ -250,9 +266,9 @@ function CoursesAdminPageContent() {
                                                 {/* Thumbnail */}
                                                 <div className="relative h-48 bg-gray-100 overflow-hidden">
                                                     {course.thumbnail_url ? (
-                                                                <img
-                                                                    src={course.thumbnail_url}
-                                                                    alt={course.title}
+                                                        <img
+                                                            src={course.thumbnail_url}
+                                                            alt={course.title}
                                                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                                         />
                                                     ) : (
@@ -337,11 +353,11 @@ function CoursesAdminPageContent() {
                                                 {/* Contenido del Card */}
                                                 <div className="p-5">
                                                     <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary-orange transition-colors">
-                                                                        {course.title}
-                                                                    </h3>
+                                                        {course.title}
+                                                    </h3>
                                                     <p className="text-sm text-gray-700 line-clamp-2 mb-4 min-h-[2.5rem]">
-                                                                    {course.short_description || course.description}
-                                                                </p>
+                                                        {course.short_description || course.description}
+                                                    </p>
 
                                                     {/* Información adicional */}
                                                     <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
@@ -349,31 +365,31 @@ function CoursesAdminPageContent() {
                                                             <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Precio</span>
                                                             <span className="text-lg font-bold text-primary-orange mt-1">S/ {course.price}</span>
                                                         </div>
-                                                                    {course.category && (
+                                                        {course.category && (
                                                             <div className="text-right">
                                                                 <span className="text-xs font-medium text-gray-600 uppercase tracking-wide block">Categoría</span>
                                                                 <span className="text-sm font-semibold text-gray-900 mt-1">{course.category}</span>
                                                             </div>
                                                         )}
-                                                        </div>
+                                                    </div>
 
                                                     {/* Botones principales siempre visibles */}
                                                     <div className="flex gap-2">
                                                         <Link href={`/admin/courses/${course.id}/edit`} className="flex-1">
                                                             <Button variant="primary" size="sm" className="w-full">
-                                                                        <Edit className="w-4 h-4 mr-1" />
-                                                                        Editar
-                                                                    </Button>
-                                                                </Link>
+                                                                <Edit className="w-4 h-4 mr-1" />
+                                                                Editar
+                                                            </Button>
+                                                        </Link>
                                                         <Link href={`/academy/course/${course.slug}`} className="flex-1">
                                                             <Button variant="secondary" size="sm" className="w-full">
                                                                 <Eye className="w-4 h-4 mr-1" />
                                                                 Ver
-                                                                    </Button>
-                                                                </Link>
-                                                            </div>
-                                                        </div>
+                                                            </Button>
+                                                        </Link>
                                                     </div>
+                                                </div>
+                                            </div>
                                         ))}
                                     </div>
                                 </div>
@@ -381,22 +397,22 @@ function CoursesAdminPageContent() {
                         </>
                     )}
                 </div>
-            </main>
+            </main >
 
             {/* Modal de confirmación para eliminar curso */}
-            <Modal
+            < Modal
                 isOpen={showDeleteModal}
                 onClose={handleDeleteCancel}
                 title="Eliminar Curso"
                 message="¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer."
-                icon={<AlertTriangle className="w-6 h-6" />}
+                icon={< AlertTriangle className="w-6 h-6" />}
                 variant="danger"
                 confirmText="Eliminar"
                 cancelText="Cancelar"
                 onConfirm={handleDeleteConfirm}
                 isLoading={deletingId !== null}
             />
-        </div>
+        </div >
     );
 }
 

@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useCart } from '@/shared/contexts/CartContext';
 import { CoursePlaceholder } from './CoursePlaceholder';
 import { MultiCurrencyPrice } from './MultiCurrencyPrice';
+import { logger } from '@/shared/utils/logger';
 
 export function MiniCart() {
     const { cartItemsWithDetails, removeFromCart, total, itemCount } = useCart();
@@ -29,7 +30,7 @@ export function MiniCart() {
     // Listener adicional para asegurar sincronización (por si acaso)
     useEffect(() => {
         const handleCartUpdate = () => {
-            console.log('🔔 MiniCart: cartUpdated event received');
+            logger.debug('MiniCart: cartUpdated event received');
             setForceUpdate(prev => prev + 1);
         };
         
@@ -39,7 +40,7 @@ export function MiniCart() {
 
     // Debug: Log cuando itemCount cambia
     useEffect(() => {
-        console.log('🔢 MiniCart: itemCount updated to', itemCount);
+        logger.debug('MiniCart: itemCount updated to', itemCount);
     }, [itemCount]);
 
     // Cerrar dropdown al hacer clic fuera

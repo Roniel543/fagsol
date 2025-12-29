@@ -18,9 +18,16 @@ from django.db.models import Q
 from django.db import models
 from apps.core.models import UserProfile, ContactMessage
 from apps.users.permissions import IsAdmin, IsAdminOrInstructor, has_perm, get_user_role, ROLE_ADMIN, can_edit_course
-from infrastructure.services.instructor_approval_service import InstructorApprovalService
-from infrastructure.services.course_approval_service import CourseApprovalService
-from infrastructure.services.instructor_application_service import InstructorApplicationService
+from infrastructure.services.instructor_approval_service import InstructorApprovalService  # Mantener para compatibilidad temporal
+from infrastructure.services.course_approval_service import CourseApprovalService  # Mantener para compatibilidad temporal
+from application.use_cases.course import ApproveCourseUseCase, RejectCourseUseCase
+from infrastructure.services.instructor_application_service import InstructorApplicationService  # Mantener para compatibilidad temporal
+from application.use_cases.instructor import (
+    ApproveInstructorUseCase,
+    RejectInstructorUseCase,
+    ApproveApplicationUseCase,
+    RejectApplicationUseCase
+)
 from apps.core.models import InstructorApplication
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -639,30 +646,31 @@ def approve_instructor(request, instructor_id):
     try:
         notes = request.data.get('notes', None)
         
-        service = InstructorApprovalService()
-        success, data, error_message = service.approve_instructor(
+        # Usar caso de uso para aprobar instructor
+        approve_instructor_use_case = ApproveInstructorUseCase()
+        result = approve_instructor_use_case.execute(
             admin_user=request.user,
             instructor_user_id=instructor_id,
             notes=notes
         )
         
-        if not success:
+        if not result.success:
             # Determinar código de estado apropiado
-            if 'no encontrado' in error_message.lower():
+            if 'no encontrado' in result.error_message.lower():
                 status_code = status.HTTP_404_NOT_FOUND
-            elif 'ya está' in error_message.lower():
+            elif 'ya está' in result.error_message.lower():
                 status_code = status.HTTP_400_BAD_REQUEST
             else:
                 status_code = status.HTTP_400_BAD_REQUEST
             
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
         
         return Response({
             'success': True,
-            'data': data,
+            'data': result.data,
             'message': 'Instructor aprobado exitosamente'
         }, status=status.HTTP_200_OK)
         
@@ -716,30 +724,31 @@ def reject_instructor(request, instructor_id):
                 'message': 'La razón de rechazo es requerida'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        service = InstructorApprovalService()
-        success, data, error_message = service.reject_instructor(
+        # Usar caso de uso para rechazar instructor
+        reject_instructor_use_case = RejectInstructorUseCase()
+        result = reject_instructor_use_case.execute(
             admin_user=request.user,
             instructor_user_id=instructor_id,
             rejection_reason=rejection_reason
         )
         
-        if not success:
+        if not result.success:
             # Determinar código de estado apropiado
-            if 'no encontrado' in error_message.lower():
+            if 'no encontrado' in result.error_message.lower():
                 status_code = status.HTTP_404_NOT_FOUND
-            elif 'ya está' in error_message.lower():
+            elif 'ya está' in result.error_message.lower():
                 status_code = status.HTTP_400_BAD_REQUEST
             else:
                 status_code = status.HTTP_400_BAD_REQUEST
             
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
         
         return Response({
             'success': True,
-            'data': data,
+            'data': result.data,
             'message': 'Instructor rechazado exitosamente'
         }, status=status.HTTP_200_OK)
         
@@ -956,30 +965,31 @@ def approve_course(request, course_id):
     try:
         notes = request.data.get('notes', None)
         
-        service = CourseApprovalService()
-        success, data, error_message = service.approve_course(
+        # Usar caso de uso para aprobar curso
+        approve_course_use_case = ApproveCourseUseCase()
+        result = approve_course_use_case.execute(
             admin_user=request.user,
             course_id=course_id,
             notes=notes
         )
         
-        if not success:
+        if not result.success:
             # Determinar código de estado apropiado
-            if 'no encontrado' in error_message.lower():
+            if 'no encontrado' in result.error_message.lower():
                 status_code = status.HTTP_404_NOT_FOUND
-            elif 'ya está' in error_message.lower() or 'no está en estado' in error_message.lower():
+            elif 'ya está' in result.error_message.lower() or 'no está en estado' in result.error_message.lower():
                 status_code = status.HTTP_400_BAD_REQUEST
             else:
                 status_code = status.HTTP_400_BAD_REQUEST
             
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
         
         return Response({
             'success': True,
-            'data': data,
+            'data': result.data,
             'message': 'Curso aprobado exitosamente'
         }, status=status.HTTP_200_OK)
         
@@ -1033,30 +1043,31 @@ def reject_course(request, course_id):
                 'message': 'La razón de rechazo es requerida'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        service = CourseApprovalService()
-        success, data, error_message = service.reject_course(
+        # Usar caso de uso para rechazar curso
+        reject_course_use_case = RejectCourseUseCase()
+        result = reject_course_use_case.execute(
             admin_user=request.user,
             course_id=course_id,
             rejection_reason=rejection_reason
         )
         
-        if not success:
+        if not result.success:
             # Determinar código de estado apropiado
-            if 'no encontrado' in error_message.lower():
+            if 'no encontrado' in result.error_message.lower():
                 status_code = status.HTTP_404_NOT_FOUND
-            elif 'ya está' in error_message.lower() or 'no está en estado' in error_message.lower():
+            elif 'ya está' in result.error_message.lower() or 'no está en estado' in result.error_message.lower():
                 status_code = status.HTTP_400_BAD_REQUEST
             else:
                 status_code = status.HTTP_400_BAD_REQUEST
             
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
         
         return Response({
             'success': True,
-            'data': data,
+            'data': result.data,
             'message': 'Curso rechazado exitosamente. El instructor debe realizar cambios.'
         }, status=status.HTTP_200_OK)
         
@@ -1190,26 +1201,28 @@ def approve_instructor_application(request, id):
     POST /api/v1/admin/instructor-applications/{id}/approve/
     """
     try:
-        service = InstructorApplicationService()
-        success, application, error_message = service.approve_application(
+        # Usar caso de uso para aprobar solicitud
+        approve_application_use_case = ApproveApplicationUseCase()
+        result = approve_application_use_case.execute(
             application_id=id,
             admin_user=request.user
         )
         
-        if not success:
-            status_code = status.HTTP_404_NOT_FOUND if 'no existe' in error_message.lower() else status.HTTP_400_BAD_REQUEST
+        if not result.success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no existe' in result.error_message.lower() else status.HTTP_400_BAD_REQUEST
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
         
+        application = result.extra.get('application')
         return Response({
             'success': True,
             'message': 'Solicitud aprobada exitosamente. El usuario ahora es instructor.',
             'data': {
-                'id': application.id,
+                'id': result.data['id'],
                 'user_id': application.user.id,
-                'status': application.status
+                'status': result.data['status']
             }
         }, status=status.HTTP_200_OK)
         
@@ -1257,26 +1270,27 @@ def reject_instructor_application(request, id):
     try:
         rejection_reason = request.data.get('rejection_reason', '')
         
-        service = InstructorApplicationService()
-        success, application, error_message = service.reject_application(
+        # Usar caso de uso para rechazar solicitud
+        reject_application_use_case = RejectApplicationUseCase()
+        result = reject_application_use_case.execute(
             application_id=id,
             admin_user=request.user,
             rejection_reason=rejection_reason
         )
         
-        if not success:
-            status_code = status.HTTP_404_NOT_FOUND if 'no existe' in error_message.lower() else status.HTTP_400_BAD_REQUEST
+        if not result.success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no existe' in result.error_message.lower() else status.HTTP_400_BAD_REQUEST
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
         
         return Response({
             'success': True,
             'message': 'Solicitud rechazada exitosamente',
             'data': {
-                'id': application.id,
-                'status': application.status
+                'id': result.data['id'],
+                'status': result.data['status']
             }
         }, status=status.HTTP_200_OK)
         

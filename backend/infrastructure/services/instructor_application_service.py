@@ -1,6 +1,16 @@
 """
 Servicio de Solicitudes de Instructor - FagSol Escuela Virtual
 Maneja la lógica de negocio para solicitudes de instructores
+
+⚠️ DEPRECATED: Este servicio ha sido migrado a casos de uso.
+Usar application.use_cases.instructor en su lugar:
+- CreateApplicationUseCase - Reemplaza InstructorApplicationService.create_application()
+- GetApplicationUseCase - Reemplaza InstructorApplicationService.get_user_application()
+- ApproveApplicationUseCase - Reemplaza InstructorApplicationService.approve_application()
+- RejectApplicationUseCase - Reemplaza InstructorApplicationService.reject_application()
+
+Este archivo se mantiene temporalmente para compatibilidad.
+Se eliminará en una versión futura.
 """
 
 import logging

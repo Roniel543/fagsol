@@ -18,7 +18,7 @@ export function AdminLayout({ children, requireAuth = true }: AdminLayoutProps) 
         <div className="min-h-screen bg-gray-100 flex">
             <AdminSidebar />
             <main className="flex-1 lg:ml-0 overflow-x-hidden bg-white">
-                <div className="p-4 lg:p-8 min-h-screen">
+                <div className="pt-16 lg:pt-4 p-4 lg:p-8 min-h-screen">
                     {children}
                 </div>
             </main>

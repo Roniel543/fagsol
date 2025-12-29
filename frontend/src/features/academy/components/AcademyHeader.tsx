@@ -2,6 +2,7 @@
 
 import { Button, MiniCart } from "@/shared/components";
 import { useAuth } from "@/shared/hooks/useAuth";
+import { useCourses } from "@/shared/hooks/useCourses";
 import {
   ArrowLeft,
   BookOpen,
@@ -12,7 +13,6 @@ import {
   Menu,
   Search,
   ShoppingCart,
-  TrendingUp,
   User,
   UserPlus,
   X,
@@ -20,7 +20,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { HeaderAuthSkeleton } from "./HeaderAuthSkeleton";
 import { ProfileDropdown } from "./ProfileDropdown";
 
@@ -33,7 +33,14 @@ export function AcademyHeader() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const searchRef = useRef<HTMLDivElement>(null);
+
+  // Obtener cursos del backend para búsqueda
+  const { courses, isLoading: isLoadingCourses } = useCourses({
+    status: 'published',
+    search: debouncedSearchQuery || undefined,
+  });
 
   // Marcar como montado después de la hidratación
   useEffect(() => {
@@ -114,40 +121,43 @@ export function AcademyHeader() {
       icon: GraduationCap,
       requiresAuth: true,
     },
-    {
-      name: "Mi Progreso",
-      href: "/academy/progreso",
-      icon: TrendingUp,
-      requiresAuth: true,
-    },
   ];
 
-  const suggestedCourses = [
-    {
-      title: "Curso de Programación Web",
-      category: "Tecnología",
-      students: 1250,
-    },
-    {
-      title: "Marketing Digital Completo",
-      category: "Negocios",
-      students: 980,
-    },
-    { title: "Diseño Gráfico Profesional", category: "Diseño", students: 750 },
-    { title: "Inglés Avanzado", category: "Idiomas", students: 1100 },
-    { title: "Fotografía y Edición", category: "Artes", students: 650 },
-    { title: "Emprendimiento y Startups", category: "Negocios", students: 850 },
-    { title: "Diseño UX/UI", category: "Diseño", students: 720 },
-    { title: "Excel Avanzado", category: "Negocios", students: 680 },
-  ];
+  // Debounce para la búsqueda (esperar 300ms después de que el usuario deje de escribir)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
 
-  const filteredCourses = searchQuery.trim()
-    ? suggestedCourses.filter(
-      (course) =>
-        course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.category.toLowerCase().includes(searchQuery.toLowerCase()),
-    )
-    : [];
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Obtener cursos populares (top 8 por rating o enrollments) cuando no hay búsqueda
+  const popularCourses = useMemo(() => {
+    if (!courses.length) return [];
+    // Ordenar por rating y enrollments, tomar los primeros 8
+    return [...courses]
+      .sort((a, b) => {
+        // Priorizar por rating, luego por número de ratings
+        const scoreA = a.rating * a.ratingsCount;
+        const scoreB = b.rating * b.ratingsCount;
+        return scoreB - scoreA;
+      })
+      .slice(0, 8);
+  }, [courses]);
+
+  // Filtrar cursos cuando hay búsqueda
+  const filteredCourses = useMemo(() => {
+    if (!debouncedSearchQuery.trim()) return [];
+
+    const query = debouncedSearchQuery.toLowerCase();
+    return courses.filter((course) => {
+      const matchesTitle = course.title.toLowerCase().includes(query);
+      const matchesCategory = course.category?.toLowerCase().includes(query);
+      const matchesSubtitle = course.subtitle?.toLowerCase().includes(query);
+      return matchesTitle || matchesCategory || matchesSubtitle;
+    }).slice(0, 8); // Limitar a 8 resultados en el dropdown
+  }, [courses, debouncedSearchQuery]);
 
   return (
     <>
@@ -180,6 +190,7 @@ export function AcademyHeader() {
                   height={60}
                   priority
                   className="h-16 sm:h-20 w-auto transition-all duration-300 group-hover:scale-105"
+                  style={{ width: 'auto', height: '100%' }}
                 />
                 <div className="hidden sm:block">
                   <span className="px-3 py-1 bg-gradient-to-r from-green-600 to-green-500 text-white text-xs font-bold rounded-lg">
@@ -213,63 +224,118 @@ export function AcademyHeader() {
 
                 {/* Dropdown de resultados */}
                 {isSearchFocused && (
-                  <div className="absolute top-full left-0 right-0 mt-3 bg-zinc-950 border-2 border-zinc-800/80 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden">
-                    {filteredCourses.length > 0 ? (
-                      <div className="py-2">
-                        <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Resultados
+                  <div className="absolute top-full left-0 right-0 mt-3 bg-zinc-950 border-2 border-zinc-800/80 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden z-50 max-h-96 overflow-y-auto">
+                    {debouncedSearchQuery.trim() ? (
+                      // Mostrar resultados de búsqueda
+                      isLoadingCourses ? (
+                        <div className="px-4 py-6 text-center text-gray-400 text-sm">
+                          Buscando cursos...
                         </div>
-                        {filteredCourses.map((course, index) => (
-                          <a
-                            key={index}
-                            href={`/academy/curso/${index + 1}`}
-                            className="flex items-center gap-4 px-4 py-3 hover:bg-gradient-to-r hover:from-zinc-900 hover:to-zinc-900/50 transition-all duration-200 group"
+                      ) : filteredCourses.length > 0 ? (
+                        <div className="py-2">
+                          <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Resultados ({filteredCourses.length})
+                          </div>
+                          {filteredCourses.map((course) => (
+                            <Link
+                              key={course.id}
+                              href={`/academy/course/${course.slug}`}
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-zinc-900 hover:to-zinc-900/50 transition-all duration-200 group"
+                              onClick={() => setIsSearchFocused(false)}
+                            >
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-orange/20 to-amber-500/20 border border-primary-orange/30 flex items-center justify-center group-hover:from-primary-orange/30 group-hover:to-amber-500/30 group-hover:border-primary-orange/50 transition-all flex-shrink-0">
+                                <BookOpen className="w-6 h-6 text-primary-orange group-hover:scale-110 transition-transform" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-medium group-hover:text-primary-orange transition-colors truncate mb-1">
+                                  {course.title}
+                                </p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {course.category && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-orange/10 text-primary-orange border border-primary-orange/20">
+                                      {course.category}
+                                    </span>
+                                  )}
+                                  <span className="text-gray-500 text-xs">
+                                    ⭐ {course.rating.toFixed(1)} ({course.ratingsCount})
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                          {filteredCourses.length >= 8 && (
+                            <Link
+                              href={`/academy/catalog?search=${encodeURIComponent(debouncedSearchQuery)}`}
+                              className="block px-4 py-3 text-center text-sm text-primary-orange hover:bg-zinc-900/50 transition-colors border-t border-zinc-800"
+                              onClick={() => setIsSearchFocused(false)}
+                            >
+                              Ver todos los resultados →
+                            </Link>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="px-4 py-6 text-center">
+                          <p className="text-gray-400 text-sm mb-2">No se encontraron cursos</p>
+                          <Link
+                            href="/academy/catalog"
+                            className="text-primary-orange text-sm hover:underline"
+                            onClick={() => setIsSearchFocused(false)}
                           >
-                            <div className="w-10 h-10 rounded-lg bg-primary-orange/10 flex items-center justify-center group-hover:bg-primary-orange/20 transition-colors">
-                              <BookOpen className="w-5 h-5 text-primary-orange" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-white text-sm font-medium group-hover:text-primary-orange transition-colors">
-                                {course.title}
-                              </p>
-                              <p className="text-gray-500 text-xs">
-                                {course.category} • {course.students}{" "}
-                                estudiantes
-                              </p>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-                    ) : searchQuery.trim() ? (
-                      <div className="px-4 py-6 text-center text-gray-400 text-sm">
-                        No se encontraron cursos
-                      </div>
+                            Explorar catálogo completo
+                          </Link>
+                        </div>
+                      )
                     ) : (
-                      <div className="py-2">
-                        <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          Cursos Populares
+                      // Mostrar cursos populares cuando no hay búsqueda
+                      isLoadingCourses ? (
+                        <div className="px-4 py-6 text-center text-gray-400 text-sm">
+                          Cargando cursos populares...
                         </div>
-                        {suggestedCourses.map((course, index) => (
-                          <a
-                            key={index}
-                            href={`/academy/curso/${index + 1}`}
-                            className="flex items-center gap-4 px-4 py-3 hover:bg-gradient-to-r hover:from-zinc-900 hover:to-zinc-900/50 transition-all duration-200 group"
+                      ) : popularCourses.length > 0 ? (
+                        <div className="py-2">
+                          <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            Cursos Populares
+                          </div>
+                          {popularCourses.map((course) => (
+                            <Link
+                              key={course.id}
+                              href={`/academy/course/${course.slug}`}
+                              className="flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-zinc-900 hover:to-zinc-900/50 transition-all duration-200 group"
+                              onClick={() => setIsSearchFocused(false)}
+                            >
+                              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-orange/20 to-amber-500/20 border border-primary-orange/30 flex items-center justify-center group-hover:from-primary-orange/30 group-hover:to-amber-500/30 group-hover:border-primary-orange/50 transition-all flex-shrink-0">
+                                <BookOpen className="w-6 h-6 text-primary-orange group-hover:scale-110 transition-transform" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-sm font-medium group-hover:text-primary-orange transition-colors truncate mb-1">
+                                  {course.title}
+                                </p>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {course.category && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-primary-orange/10 text-primary-orange border border-primary-orange/20">
+                                      {course.category}
+                                    </span>
+                                  )}
+                                  <span className="text-gray-500 text-xs">
+                                    ⭐ {course.rating.toFixed(1)} ({course.ratingsCount})
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                          <Link
+                            href="/academy/catalog"
+                            className="block px-4 py-3 text-center text-sm text-primary-orange hover:bg-zinc-900/50 transition-colors border-t border-zinc-800"
+                            onClick={() => setIsSearchFocused(false)}
                           >
-                            <div className="w-10 h-10 rounded-lg bg-primary-orange/10 flex items-center justify-center group-hover:bg-primary-orange/20 transition-colors">
-                              <BookOpen className="w-5 h-5 text-primary-orange" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="text-white text-sm font-medium group-hover:text-primary-orange transition-colors">
-                                {course.title}
-                              </p>
-                              <p className="text-gray-500 text-xs">
-                                {course.category} • {course.students}{" "}
-                                estudiantes
-                              </p>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
+                            Ver catálogo completo →
+                          </Link>
+                        </div>
+                      ) : (
+                        <div className="px-4 py-6 text-center text-gray-400 text-sm">
+                          No hay cursos disponibles
+                        </div>
+                      )
                     )}
                   </div>
                 )}

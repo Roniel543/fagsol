@@ -13,8 +13,14 @@ from apps.users.models import Enrollment
 from apps.users.permissions import (
     can_view_course, can_access_course_content, IsAdminOrInstructor, IsAdmin, is_admin
 )
-from infrastructure.services.course_service import CourseService
-from infrastructure.services.course_approval_service import CourseApprovalService
+from infrastructure.services.course_service import CourseService  # Mantener para compatibilidad temporal
+from infrastructure.services.course_approval_service import CourseApprovalService  # Mantener para compatibilidad temporal
+from infrastructure.services.currency_service import CurrencyService
+from application.use_cases.course import (
+    CreateCourseUseCase,
+    UpdateCourseUseCase,
+    DeleteCourseUseCase
+)
 from decimal import Decimal, ConversionSyntax
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -958,9 +964,10 @@ def create_course(request):
         if 'provider' in request.data:
             kwargs['provider'] = request.data['provider']
         
-        # 4. Usar servicio para crear curso
-        course_service = CourseService()
-        success, course, error_message = course_service.create_course(
+        # 4. Usar caso de uso para crear curso
+        currency_service = CurrencyService()
+        create_course_use_case = CreateCourseUseCase(currency_service=currency_service)
+        result = create_course_use_case.execute(
             user=request.user,
             title=title,
             description=description,
@@ -968,13 +975,21 @@ def create_course(request):
             **kwargs
         )
         
-        if not success:
+        if not result.success:
+            status_code = status.HTTP_400_BAD_REQUEST if 'requerido' in result.error_message.lower() or 'inválido' in result.error_message.lower() else status.HTTP_403_FORBIDDEN
             return Response({
                 'success': False,
-                'message': error_message
-            }, status=status.HTTP_400_BAD_REQUEST if 'requerido' in error_message.lower() or 'inválido' in error_message.lower() else status.HTTP_403_FORBIDDEN)
+                'message': result.error_message
+            }, status=status_code)
         
         # 5. Serializar respuesta
+        course = result.extra.get('course') if result.extra else None
+        if not course:
+            return Response({
+                'success': False,
+                'message': 'Error al crear curso'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
         return Response({
             'success': True,
             'data': {
@@ -1135,22 +1150,30 @@ def update_course(request, course_id):
                 'message': 'Debes enviar al menos un campo para actualizar'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 3. Usar servicio para actualizar curso
-        course_service = CourseService()
-        success, course, error_message = course_service.update_course(
+        # 3. Usar caso de uso para actualizar curso
+        currency_service = CurrencyService()
+        update_course_use_case = UpdateCourseUseCase(currency_service=currency_service)
+        result = update_course_use_case.execute(
             user=request.user,
             course_id=course_id,
             **kwargs
         )
         
-        if not success:
-            status_code = status.HTTP_404_NOT_FOUND if 'no encontrado' in error_message.lower() else (
-                status.HTTP_403_FORBIDDEN if 'permiso' in error_message.lower() else status.HTTP_400_BAD_REQUEST
+        if not result.success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no encontrado' in result.error_message.lower() else (
+                status.HTTP_403_FORBIDDEN if 'permiso' in result.error_message.lower() else status.HTTP_400_BAD_REQUEST
             )
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
+        
+        course = result.extra.get('course') if result.extra else None
+        if not course:
+            return Response({
+                'success': False,
+                'message': 'Error al actualizar curso'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         # 4. Serializar respuesta
         return Response({
@@ -1213,24 +1236,22 @@ def delete_course(request, course_id):
     - Instructores: Solo pueden eliminar sus propios cursos en estado 'draft' o 'needs_revision' sin estudiantes inscritos
     """
     try:
-        # 1. Usar servicio para eliminar curso
-        course_service = CourseService()
-        success, error_message = course_service.delete_course(
+        # 1. Usar caso de uso para eliminar curso
+        delete_course_use_case = DeleteCourseUseCase()
+        result = delete_course_use_case.execute(
             user=request.user,
             course_id=course_id
         )
         
-        if not success:
-            status_code = status.HTTP_404_NOT_FOUND if 'no encontrado' in error_message.lower() else status.HTTP_403_FORBIDDEN
+        if not result.success:
+            status_code = status.HTTP_404_NOT_FOUND if 'no encontrado' in result.error_message.lower() else status.HTTP_403_FORBIDDEN
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status_code)
         
         # 2. Retornar respuesta (incluir advertencia si existe)
-        response_message = 'Curso eliminado exitosamente'
-        if error_message and "Advertencia" in error_message:
-            response_message = error_message
+        response_message = result.data.get('message') if result.data else 'Curso eliminado exitosamente'
         
         return Response({
             'success': True,

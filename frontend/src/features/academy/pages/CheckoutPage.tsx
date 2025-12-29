@@ -219,12 +219,13 @@ function CheckoutPageContent() {
 								successColor: '#2D9B7F', // status-success
 								outlinePrimaryColor: '#F5A623',
 								outlineSecondaryColor: '#282828', // secondary-medium-gray
-								borderRadius: '8px',
-								fontFamily: 'var(--font-soraa), system-ui, sans-serif',
+								// Nota: borderRadius y fontFamily no son propiedades válidas en customVariables
+								// según la documentación de Mercado Pago Bricks
 							},
 						},
 						texts: {
 							fontType: 'custom',
+							// La personalización de fuente se puede hacer mediante CSS externo si es necesario
 						},
 					},
 					// Configuración de campos para mejorar validación

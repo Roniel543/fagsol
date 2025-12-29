@@ -43,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  #  WhiteNoise para servir archivos estáticos en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # CORS middleware debe ir antes de CommonMiddleware
     'django.middleware.common.CommonMiddleware',
@@ -133,7 +134,11 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'  # Directorio donde se recolectan archivos estáticos para producción
+
+#  WhiteNoise para servir archivos estáticos comprimidos en producción
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -150,7 +155,8 @@ AUTH_USER_MODEL = 'auth.User'  # Usamos Django User default con UserProfile
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'infrastructure.authentication.cookie_jwt_authentication.CookieJWTAuthentication',  # Cookies HTTP-Only (prioridad)
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Fallback para compatibilidad
     ),
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
@@ -278,6 +284,45 @@ if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
+# ==================================
+# CSRF CONFIGURATION
+# ==================================
+
+# Configuración CSRF para cookies HTTP-Only
+# SameSite=Strict ya proporciona protección CSRF básica
+# Django REST Framework exime automáticamente las vistas API de CSRF cuando usan autenticación por token
+# Sin embargo, con cookies HTTP-Only, mantenemos la protección CSRF activa
+
+CSRF_COOKIE_HTTPONLY = False  # CSRF token debe ser accesible desde JavaScript para APIs
+# CSRF_COOKIE_SECURE ya está configurado arriba en el bloque if not DEBUG
+CSRF_COOKIE_SAMESITE = 'Strict'  # Protección CSRF adicional
+CSRF_TRUSTED_ORIGINS = config(
+    'CSRF_TRUSTED_ORIGINS',
+    default='http://localhost:3000,http://127.0.0.1:3000',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
+
+# Django REST Framework exime automáticamente de CSRF cuando se usa autenticación por token
+# Pero con cookies HTTP-Only, necesitamos asegurar que funcione correctamente
+# DRF ya maneja esto automáticamente para vistas API con autenticación
+
+# ==================================
+# COOKIE CONFIGURATION (HTTP-Only JWT)
+# ==================================
+
+# Configuración de cookies para autenticación JWT
+COOKIE_ACCESS_TOKEN_NAME = 'access_token'
+COOKIE_REFRESH_TOKEN_NAME = 'refresh_token'
+
+# Tiempo de vida de cookies (en segundos)
+COOKIE_ACCESS_TOKEN_MAX_AGE = 60 * 60  # 1 hora (igual que ACCESS_TOKEN_LIFETIME)
+COOKIE_REFRESH_TOKEN_MAX_AGE = 24 * 60 * 60  # 1 día (igual que REFRESH_TOKEN_LIFETIME)
+
+# Configuración de seguridad de cookies
+COOKIE_HTTPONLY = True  # No accesible desde JavaScript (protección XSS)
+COOKIE_SECURE = not DEBUG  # Solo HTTPS en producción
+COOKIE_SAMESITE = 'Strict'  # Protección CSRF
 
 # ==================================
 # RATE LIMITING (Axes) - SEGURIDAD PARA PRODUCCIÓN

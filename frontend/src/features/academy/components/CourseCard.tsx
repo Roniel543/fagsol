@@ -11,8 +11,8 @@ type Props = {
 
 export function CourseCard({ course }: Props) {
     return (
-        <div className="group rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/60 hover:border-primary-orange transition-colors">
-            <Link href={`/academy/course/${course.slug}`} className="block">
+        <div className="group rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900/60 hover:border-primary-orange transition-colors w-full min-w-0">
+            <Link href={`/academy/course/${course.slug}`} className="block w-full min-w-0">
                 <div className="relative aspect-[16/9] bg-zinc-800">
                     {course.thumbnailUrl ? (
                         <Image src={course.thumbnailUrl} alt={course.title} fill className="object-cover" />

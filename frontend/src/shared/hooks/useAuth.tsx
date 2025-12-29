@@ -2,14 +2,9 @@
 
 import { authAPI } from '@/shared/services/api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '@/shared/types';
-import {
-    clearTokens,
-    getRefreshToken,
-    getUserData,
-    migrateTokensFromLocalStorage,
-    setTokens,
-    setUserData
-} from '@/shared/utils/tokenStorage';
+// clearTokens solo para limpiar tokens residuales en storage (si existen)
+import { logger } from '@/shared/utils/logger';
+import { clearTokens } from '@/shared/utils/tokenStorage';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
@@ -24,30 +19,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-
-function loadInitialUserSnapshot(): User | null {
-    if (typeof window === 'undefined') return null;
-
-    try {
-        // Migrar tokens de localStorage a sessionStorage (compatibilidad)
-        migrateTokensFromLocalStorage();
-
-        // Cargar snapshot del usuario desde sessionStorage
-        const userSnapshot = getUserData();
-        const accessToken = sessionStorage.getItem('access_token');
-
-        // Solo retornar snapshot si hay token y datos de usuario
-        if (accessToken && userSnapshot) {
-            return userSnapshot as User;
-        }
-
-        return null;
-    } catch (error) {
-        console.error('Error loading initial user snapshot:', error);
-        return null;
-    }
-}
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     // IMPORTANTE: Siempre empezar con null y loadingUser = true para SSR
     // Esto asegura que servidor y cliente rendericen lo mismo inicialmente
@@ -57,95 +28,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Flag para evitar revalidaciones durante login/logout en la misma pestaña
     const isProcessingAuth = useRef(false);
-    
+
     // ID único de esta pestaña para identificar mensajes propios
     const tabId = useRef(Math.random().toString(36).substring(7));
 
     useEffect(() => {
         /**
-         * Cargar snapshot inicial solo en el cliente (después de hidratación)
-         * Esto evita errores de hidratación mientras mantiene FOUC bajo
-         */
-        const loadSnapshot = () => {
-            const initialUser = loadInitialUserSnapshot();
-            if (initialUser) {
-                // Si hay snapshot, usarlo inmediatamente y marcar como no-loading
-                // Esto permite mostrar el contenido correcto rápidamente
-                setUser(initialUser);
-                setLoadingUser(false);
-            }
-        };
-
-        /**
          * Valida el usuario en background con la API
-         * Esto actualiza el estado con datos frescos del servidor
          */
         const validateUserInBackground = async () => {
             // Evitar revalidar si estamos procesando login/logout
             if (isProcessingAuth.current) {
                 return;
             }
-            const accessToken = typeof window !== 'undefined'
-                ? sessionStorage.getItem('access_token')
-                : null;
 
-            if (!accessToken) {
-                // No hay token, limpiar usuario si existe snapshot obsoleto
-                setUser(null);
-                setLoadingUser(false);
-                return;
-            }
-
-            // Validar token con el backend
+            // Validar sesión con el backend (las cookies se envían automáticamente)
             try {
                 const response = await authAPI.getCurrentUser();
 
                 if (response.success && response.user) {
-                    // Token válido, actualizar usuario con datos frescos
-                    setUserData(response.user);
+                    // Sesión válida, actualizar usuario con datos frescos
                     setUser(response.user);
                 } else {
-                    // Token inválido, intentar refrescar antes de limpiar
-                    console.log('🔄 Token inválido, intentando refrescar...');
+                    // Sesión inválida, intentar refrescar antes de limpiar
+                    logger.debug('Sesión inválida, intentando refrescar...');
                     try {
                         const { refreshAccessToken } = await import('@/shared/services/api');
-                        const newToken = await refreshAccessToken();
+                        const refreshSuccess = await refreshAccessToken();
 
-                        if (newToken) {
+                        if (refreshSuccess) {
                             // Si se pudo refrescar, intentar obtener el usuario nuevamente
                             const retryResponse = await authAPI.getCurrentUser();
                             if (retryResponse.success && retryResponse.user) {
-                                setUserData(retryResponse.user);
                                 setUser(retryResponse.user);
                             } else {
+                                // Limpiar tokens residuales en storage (si existen)
                                 clearTokens();
                                 setUser(null);
                             }
                         } else {
-                            // No se pudo refrescar, limpiar tokens
+                            // No se pudo refrescar, limpiar tokens residuales
                             clearTokens();
                             setUser(null);
                         }
                     } catch (refreshError) {
-                        console.error('Error refreshing token:', refreshError);
+                        logger.debug('Error refreshing token (normal si no hay sesión activa)');
                         clearTokens();
                         setUser(null);
                     }
                 }
             } catch (error) {
-                // Error al validar token (token expirado, inválido, etc.)
-                console.error('Error validating token:', error);
+                // Error al validar sesión (token expirado, inválido, etc.)
+                // No loguear errores de autenticación cuando no hay sesión (es normal)
+                logger.debug('Error validating session (normal si no hay sesión activa)');
 
                 // Intentar refrescar antes de limpiar
                 try {
                     const { refreshAccessToken } = await import('@/shared/services/api');
-                    const newToken = await refreshAccessToken();
+                    const refreshSuccess = await refreshAccessToken();
 
-                    if (newToken) {
+                    if (refreshSuccess) {
                         // Si se pudo refrescar, intentar obtener el usuario nuevamente
                         const retryResponse = await authAPI.getCurrentUser();
                         if (retryResponse.success && retryResponse.user) {
-                            setUserData(retryResponse.user);
                             setUser(retryResponse.user);
                         } else {
                             clearTokens();
@@ -156,8 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         setUser(null);
                     }
                 } catch (refreshError) {
-                    // Si el refresh también falla, limpiar tokens
-                    console.error('Error refreshing token during validation:', refreshError);
+                    // Si el refresh también falla, limpiar tokens residuales
+                    logger.debug('Error refreshing token during validation (normal si no hay sesión activa)');
                     clearTokens();
                     setUser(null);
                 }
@@ -166,8 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         };
 
-        // Cargar snapshot inicial y validar usuario
-        loadSnapshot();
+        // Validar usuario al montar el componente
         validateUserInBackground();
 
         /**
@@ -177,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let authChannel: BroadcastChannel | null = null;
         if (typeof BroadcastChannel !== 'undefined') {
             authChannel = new BroadcastChannel('auth-sync');
-            
+
             authChannel.onmessage = (event) => {
                 // Ignorar mensajes de la misma pestaña (evitar loops)
                 if (event.data.tabId === tabId.current) {
@@ -185,47 +129,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 if (event.data.type === 'TOKEN_UPDATED') {
-                    // Cuando otra pestaña hace login, intentar obtener un nuevo access token
-                    // usando el refresh token que está en localStorage (se comparte entre pestañas)
+                    // Cuando otra pestaña hace login/register, las cookies ya están establecidas
+                    // por el backend. Solo necesitamos revalidar el usuario en esta pestaña.
                     if (!isProcessingAuth.current) {
-                        const currentToken = sessionStorage.getItem('access_token');
-                        
-                        if (currentToken) {
-                            // Si ya hay token, simplemente revalidar
-                            validateUserInBackground();
-                        } else {
-                            // Si no hay token, intentar usar refresh token de localStorage para obtener uno nuevo
-                            // Usar getRefreshToken() que maneja el formato JSON y expiración
-                            const refreshToken = getRefreshToken();
-                            
-                            if (refreshToken) {
-                                // Intentar refrescar el token
-                                (async () => {
-                                    try {
-                                        const { refreshAccessToken } = await import('@/shared/services/api');
-                                        const newToken = await refreshAccessToken();
-                                        
-                                        if (newToken) {
-                                            // Si se obtuvo un nuevo token, revalidar usuario
-                                            validateUserInBackground();
-                                        } else {
-                                            console.warn('[BroadcastChannel] No se pudo obtener nuevo access token');
-                                        }
-                                    } catch (error) {
-                                        console.error('[BroadcastChannel] Error refreshing token:', error);
-                                    }
-                                })();
-                            } else {
-                                console.warn('[BroadcastChannel] No hay refresh token disponible');
-                            }
-                        }
+                        logger.debug('[BroadcastChannel] Otra pestaña hizo login, revalidando sesión...');
+                        // Revalidar usuario (las cookies se envían automáticamente)
+                        validateUserInBackground();
                     }
                 } else if (event.data.type === 'LOGOUT') {
                     // Cerrar sesión cuando otra pestaña cierra sesión
+                    // Las cookies ya fueron limpiadas por el backend en la otra pestaña
                     if (!isProcessingAuth.current) {
+                        logger.debug('[BroadcastChannel] Otra pestaña hizo logout, limpiando estado...');
+                        // Limpiar tokens residuales en storage (si existen)
                         clearTokens();
                         setUser(null);
                         setLoadingUser(false);
+                    }
+                } else if (event.data.type === 'SESSION_REFRESHED') {
+                    // Cuando otra pestaña refresca el token, revalidar en esta pestaña
+                    if (!isProcessingAuth.current) {
+                        logger.debug('[BroadcastChannel] Otra pestaña refrescó sesión, revalidando...');
+                        validateUserInBackground();
                     }
                 }
             };
@@ -246,14 +171,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const response = await authAPI.login(credentials.email, credentials.password);
 
-            if (response.success && response.user && response.tokens) {
-                // Guardar datos de forma segura en sessionStorage
-                setTokens(response.tokens.access, response.tokens.refresh);
-                setUserData(response.user);
+            if (response.success && response.user) {
+                // Las cookies HTTP-Only ya fueron establecidas por el backend
+                // Solo actualizar el estado del usuario
                 setUser(response.user);
                 setLoadingUser(false);
 
-                // Notificar a otras pestañas que hay un nuevo token (sin compartir el token)
+                // Notificar a otras pestañas que hay una nueva sesión (sin compartir tokens)
                 // Incluir tabId para que esta pestaña ignore su propio mensaje
                 if (typeof BroadcastChannel !== 'undefined') {
                     const channel = new BroadcastChannel('auth-sync');
@@ -263,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
                     channel.close();
                 } else {
-                    console.warn('[BroadcastChannel] No disponible en este navegador');
+                    logger.debug('[BroadcastChannel] No disponible en este navegador');
                 }
             } else {
                 isProcessingAuth.current = false;
@@ -271,7 +195,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             return response;
         } catch (error) {
-            console.error('Login error:', error);
+            // No loguear errores de autenticación esperados (ya se muestran en apiError)
+            // Solo loguear errores inesperados
+            if (error instanceof Error) {
+                const isExpectedError =
+                    error.message.includes('Credenciales incorrectas') ||
+                    error.message.includes('Cuenta bloqueada temporalmente') ||
+                    error.message.includes('bloqueada temporalmente');
+
+                if (!isExpectedError) {
+                    logger.error('Login error', error);
+                } else {
+                    // Errores esperados solo en debug
+                    logger.debug(`Login error (esperado): ${error.message}`);
+                }
+            }
             isProcessingAuth.current = false;
 
             // Extraer el mensaje de error si está disponible
@@ -301,14 +239,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             const response = await authAPI.register(userData);
 
-            if (response.success && response.user && response.tokens) {
-                // Guardar datos de forma segura en sessionStorage
-                setTokens(response.tokens.access, response.tokens.refresh);
-                setUserData(response.user);
+            if (response.success && response.user) {
+                // Las cookies HTTP-Only ya fueron establecidas por el backend
+                // Solo actualizar el estado del usuario
                 setUser(response.user);
                 setLoadingUser(false);
 
-                // Notificar a otras pestañas que hay un nuevo token (sin compartir el token)
+                // Notificar a otras pestañas que hay una nueva sesión (sin compartir tokens)
                 // Incluir tabId para que esta pestaña ignore su propio mensaje
                 if (typeof BroadcastChannel !== 'undefined') {
                     const channel = new BroadcastChannel('auth-sync');
@@ -318,7 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
                     channel.close();
                 } else {
-                    console.warn('[BroadcastChannel] No disponible en este navegador');
+                    logger.debug('[BroadcastChannel] No disponible en este navegador');
                 }
             } else {
                 isProcessingAuth.current = false;
@@ -326,11 +263,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             return response;
         } catch (error) {
-            console.error('Register error:', error);
+            // Solo loguear errores reales, no errores de validación esperados
+            logger.error('Register error', error);
             isProcessingAuth.current = false;
+
+            // Extraer el mensaje de error si está disponible
+            let errorMessage = 'Error de conexión con el servidor';
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            } else if (typeof error === 'string') {
+                errorMessage = error;
+            }
+
             return {
                 success: false,
-                message: 'Error de conexión con el servidor'
+                message: errorMessage
             };
         } finally {
             // Resetear el flag después de un pequeño delay
@@ -345,12 +292,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isProcessingAuth.current = true;
 
         try {
-            // Invalidar token en el servidor
+            // Invalidar token en el servidor (las cookies se limpian automáticamente)
             await authAPI.logout();
         } catch (error) {
-            console.error('Logout error:', error);
+            logger.debug('Logout error (puede ser normal si no hay sesión activa)');
         } finally {
-            // Siempre limpiar tokens localmente
+            // Limpiar tokens residuales en storage (si existen)
             clearTokens();
             setUser(null);
             setLoadingUser(false);

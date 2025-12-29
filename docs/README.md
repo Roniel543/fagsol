@@ -34,6 +34,7 @@ Guías para configurar el entorno de desarrollo y servicios externos.
 
 Guías prácticas para usar el sistema.
 
+- [Guía de Desarrollo](./guides/DESARROLLO_GUIA.md) - Guía para desarrolladores
 - [Probar Pago Real](./guides/pago-real.md)
 - [Panel de Administración](./guides/panel-admin.md)
 - [Flujo de Precios](./guides/flujo-precios.md)
@@ -41,6 +42,24 @@ Guías prácticas para usar el sistema.
 - [Permisos Django Admin](./guides/permisos-admin.md)
 - [Error Token Mercado Pago](./guides/error-token-mercadopago.md)
 - [Retenciones Mercado Pago](./guides/retenciones-mercadopago.md)
+- [Sincronización de Pestañas](./guides/sincronizacion-pestanas.md) - Cómo funciona la sincronización entre pestañas
+
+## 🏗️ Arquitectura
+
+Documentación de la arquitectura del proyecto.
+
+- [Contexto del Proyecto](./architecture/contexto.md) - Visión general y estructura
+- [Análisis de Estructura](./architecture/ANALISIS_ESTRUCTURA.md) - Análisis profundo de organización de archivos
+- [Arquitectura Limpia](./architecture/ARCHITECTURE.md) - Descripción de Clean Architecture
+- [Arquitectura Completa](./architecture/ARQUITECTURA_COMPLETA.md) - Arquitectura detallada del backend
+
+## 🔄 Migración a Cookies HTTP-Only
+
+Documentación de la migración de autenticación.
+
+- [Guía de Pruebas Manuales](./migration/GUIA_PRUEBAS_MANUALES.md) - Cómo probar manualmente
+- [Resumen de Migración](./migration/RESUMEN_MIGRACION.md) - Resumen ejecutivo
+- [Plan de Migración](./migration/cookies-http-only-plan.md) - Plan detallado
 
 ---
 
@@ -58,6 +77,7 @@ Documentación para producción y seguridad.
 
 Documentación específica del sistema de pagos.
 
+- [Guía de Pagos Backend](./payments/README_PAYMENTS.md) - Guía técnica de pagos
 - [Contexto de Pagos Reales](./payments/contexto.md)
 - [Sesión Pagos 2025-12-05](./payments/sesion-2025-12-05.md)
 - [Estrategias de Tasas de Cambio](./payments/tasas-cambio.md)
@@ -68,7 +88,7 @@ Documentación específica del sistema de pagos.
 
 ---
 
-## 🏗️ Arquitectura
+## 🏗️ Arquitectura (Detallada)
 
 Documentación de arquitectura y diseño del sistema.
 
@@ -90,6 +110,20 @@ Planes de implementación y mejoras futuras.
 - [Panel Admin Simplificado](./plans/panel-admin.md)
 - [Rutas Dashboard](./plans/rutas-dashboard.md)
 
+## 📝 Implementación
+
+Documentación sobre implementaciones específicas del backend.
+
+- [Implementación Backend Completa](./implementation/IMPLEMENTACION_BACKEND_COMPLETA.md) - Resumen de implementaciones completadas
+- [Implementación Fase 1 - Autorización](./implementation/IMPLEMENTACION_FASE1_AUTORIZACION.md) - Sistema de autorización
+- [Implementación Swagger](./implementation/IMPLEMENTACION_SWAGGER.md) - Documentación de API con Swagger
+
+## 🎯 Features
+
+Documentación específica de funcionalidades del sistema.
+
+- [Video URLs](./features/courses/README_VIDEO_URLS.md) - Gestión de URLs de videos
+
 ---
 
 ## 🧪 Tests
@@ -97,6 +131,7 @@ Planes de implementación y mejoras futuras.
 Documentación de testing.
 
 - [README Tests](./tests/README.md)
+- [Implementación Tests Integración](./tests/IMPLEMENTACION_TESTS_INTEGRACION.md) - Guía de tests de integración
 
 ---
 
@@ -134,5 +169,5 @@ Documentos históricos y sesiones anteriores (referencia).
 
 ---
 
-**Última actualización:** 6 de Diciembre, 2025
+**Última actualización:** 27 de Enero, 2025
 

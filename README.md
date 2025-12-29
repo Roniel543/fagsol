@@ -44,6 +44,7 @@
 - ✅ Ver estudiantes e inscripciones
 - ✅ Rutas específicas para gestión
 
+
 ### **Para Administradores:**
 - ✅ Panel de control completo
 - ✅ Gestionar solicitudes de instructores

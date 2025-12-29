@@ -7,10 +7,15 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.http import JsonResponse
-from infrastructure.services.auth_service import AuthService
-from infrastructure.services.instructor_application_service import InstructorApplicationService
-from infrastructure.services.password_reset_service import PasswordResetService
+from infrastructure.services.auth_service import AuthService  # Mantener para compatibilidad temporal
+from infrastructure.services.instructor_application_service import InstructorApplicationService  # Mantener para compatibilidad temporal
+from infrastructure.services.password_reset_service import PasswordResetService  # Mantener para compatibilidad temporal
+from application.use_cases.auth import LoginUseCase, RegisterUseCase, PasswordResetUseCase
+from application.use_cases.instructor import CreateApplicationUseCase, GetApplicationUseCase
 from infrastructure.external_services import DjangoEmailService
+from infrastructure.utils.cookie_helpers import set_auth_cookies, clear_auth_cookies, get_refresh_token_from_cookie
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -71,15 +76,44 @@ def login(request):
                 'message': 'Email y contraseña son requeridos'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 3. Usar el servicio de autenticación (pasar request para AxesBackend)
-        auth_service = AuthService()
-        result = auth_service.login(email, password, request=request)
+        # 3. Usar el caso de uso de autenticación
+        login_use_case = LoginUseCase(request=request)
+        result = login_use_case.execute(email, password)
         
         # 4. Retornar respuesta según el resultado
-        if result['success']:
-            return Response(result, status=status.HTTP_200_OK)
+        if result.success:
+            # Crear respuesta sin tokens en JSON (se establecerán como cookies)
+            response_data = {
+                'success': True,
+                'user': result.data.get('user')
+            }
+            response = Response(response_data, status=status.HTTP_200_OK)
+            
+            # Establecer cookies HTTP-Only con tokens
+            refresh_token_obj = result.extra.get('_refresh_token_object') if result.extra else None
+            if refresh_token_obj:
+                set_auth_cookies(response, refresh_token_obj)
+            
+            return response
         else:
-            return Response(result, status=status.HTTP_401_UNAUTHORIZED)
+            # Convertir UseCaseResult a formato de respuesta
+            response_data = {
+                'success': False,
+                'message': result.error_message
+            }
+            # Agregar información de bloqueo si existe
+            if result.extra:
+                if result.extra.get('is_locked'):
+                    response_data['is_locked'] = True
+                if result.extra.get('lockout_info'):
+                    response_data['lockout_info'] = result.extra.get('lockout_info')
+            
+            # Log para debugging (temporal)
+            import logging
+            logger = logging.getLogger('apps')
+            logger.info(f'Login fallido - Mensaje enviado: {result.error_message}')
+            
+            return Response(response_data, status=status.HTTP_401_UNAUTHORIZED)
             
     except Exception as e:
         return Response({
@@ -150,15 +184,30 @@ def register(request):
                 'message': 'No se puede registrar como administrador. Los administradores deben ser creados por otros administradores.'
             }, status=status.HTTP_403_FORBIDDEN)
         
-        # 4. Usar el servicio de autenticación (siempre con role='student')
-        auth_service = AuthService()
-        result = auth_service.register(email, password, first_name, last_name, role, confirm_password=confirm_password)
+        # 4. Usar el caso de uso de registro
+        register_use_case = RegisterUseCase()
+        result = register_use_case.execute(email, password, first_name, last_name, role, confirm_password)
         
         # 5. Retornar respuesta según el resultado
-        if result['success']:
-            return Response(result, status=status.HTTP_201_CREATED)
+        if result.success:
+            # Crear respuesta sin tokens en JSON (se establecerán como cookies)
+            response_data = {
+                'success': True,
+                'user': result.data.get('user')
+            }
+            response = Response(response_data, status=status.HTTP_201_CREATED)
+            
+            # Establecer cookies HTTP-Only con tokens
+            refresh_token_obj = result.extra.get('_refresh_token_object') if result.extra else None
+            if refresh_token_obj:
+                set_auth_cookies(response, refresh_token_obj)
+            
+            return response
         else:
-            return Response(result, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                'success': False,
+                'message': result.error_message
+            }, status=status.HTTP_400_BAD_REQUEST)
             
     except Exception as e:
         return Response({
@@ -243,8 +292,8 @@ def logout(request):
     logger = logging.getLogger('apps')
     
     try:
-        # Obtener refresh token del body
-        refresh_token = request.data.get('refresh')
+        # Obtener refresh token de cookie o del body (compatibilidad)
+        refresh_token = get_refresh_token_from_cookie(request) or request.data.get('refresh')
         
         if refresh_token:
             try:
@@ -260,11 +309,16 @@ def logout(request):
             # (el token expirará naturalmente)
             logger.info(f'Logout sin refresh token para usuario {request.user.id}')
         
-        # Siempre retornar éxito para no revelar información
-        return Response({
+        # Crear respuesta y limpiar cookies
+        response = Response({
             'success': True,
             'message': 'Logout exitoso'
         }, status=status.HTTP_200_OK)
+        
+        # Limpiar cookies de autenticación
+        clear_auth_cookies(response)
+        
+        return response
         
     except Exception as e:
         logger.error(f'Error en logout: {str(e)}')
@@ -273,6 +327,114 @@ def logout(request):
             'success': True,
             'message': 'Logout exitoso'
         }, status=status.HTTP_200_OK)
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Refresca el access token usando el refresh token de cookie. Rota el refresh token automáticamente.',
+    responses={
+        200: openapi.Response(
+            description='Token refrescado exitosamente',
+            examples={
+                'application/json': {
+                    'success': True,
+                    'user': {
+                        'id': 1,
+                        'email': 'user@example.com',
+                        'first_name': 'Juan',
+                        'last_name': 'Pérez',
+                        'role': 'student',
+                        'is_active': True
+                    }
+                }
+            }
+        ),
+        401: openapi.Response(description='Refresh token inválido o expirado')
+    },
+    tags=['Autenticación']
+)
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def refresh_token(request):
+    """
+    Refresca el access token usando el refresh token de cookie.
+    POST /api/v1/auth/refresh/
+    
+    Rota el refresh token automáticamente (blacklist del anterior, genera uno nuevo).
+    Establece nuevas cookies HTTP-Only.
+    """
+    import logging
+    logger = logging.getLogger('apps')
+    
+    try:
+        # Obtener refresh token de cookie
+        refresh_token_str = get_refresh_token_from_cookie(request)
+        
+        if not refresh_token_str:
+            return Response({
+                'success': False,
+                'message': 'No refresh token available'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        try:
+            # Validar y obtener token
+            refresh = RefreshToken(refresh_token_str)
+            
+            # Obtener usuario del token
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            user_id = refresh.get('user_id')
+            user = User.objects.get(id=user_id)
+            
+            # Blacklist del token anterior (rotación)
+            refresh.blacklist()
+            
+            # Generar nuevos tokens
+            new_refresh = RefreshToken.for_user(user)
+            
+            # Obtener perfil del usuario
+            from apps.core.models import UserProfile
+            try:
+                profile = user.profile
+                role = profile.role
+            except UserProfile.DoesNotExist:
+                # Crear perfil si no existe
+                profile = UserProfile.objects.create(user=user, role='student')
+                role = 'student'
+            
+            # Crear respuesta con datos del usuario
+            response_data = {
+                'success': True,
+                'user': {
+                    'id': user.id,
+                    'email': user.email,
+                    'first_name': user.first_name,
+                    'last_name': user.last_name,
+                    'role': role,
+                    'is_active': user.is_active
+                }
+            }
+            response = Response(response_data, status=status.HTTP_200_OK)
+            
+            # Establecer nuevas cookies
+            set_auth_cookies(response, new_refresh)
+            
+            logger.info(f'Token refrescado para usuario {user.id}')
+            return response
+            
+        except TokenError as e:
+            logger.warning(f'Error al refrescar token: {str(e)}')
+            return Response({
+                'success': False,
+                'message': 'Invalid or expired refresh token'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+    except Exception as e:
+        logger.error(f'Error en refresh_token: {str(e)}', exc_info=True)
+        return Response({
+            'success': False,
+            'message': 'Error al refrescar token'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @swagger_auto_schema(
@@ -422,9 +584,9 @@ def apply_to_be_instructor(request):
         except (ValueError, TypeError):
             experience_years = 0
         
-        # 4. Usar el servicio para crear la solicitud
-        service = InstructorApplicationService()
-        success, application, error_message = service.create_application(
+        # 4. Usar caso de uso para crear la solicitud
+        create_application_use_case = CreateApplicationUseCase()
+        result = create_application_use_case.execute(
             user=request.user,
             professional_title=professional_title,
             experience_years=experience_years,
@@ -435,21 +597,17 @@ def apply_to_be_instructor(request):
             cv_file=cv_file
         )
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_400_BAD_REQUEST)
         
         # 5. Retornar respuesta exitosa
         return Response({
             'success': True,
             'message': 'Solicitud enviada. Te notificaremos cuando sea revisada.',
-            'data': {
-                'id': application.id,
-                'status': application.status,
-                'created_at': application.created_at.isoformat()
-            }
+            'data': result.data
         }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
@@ -509,52 +667,26 @@ def get_my_instructor_application(request):
     Requiere autenticación
     """
     try:
-        from infrastructure.services.instructor_application_service import InstructorApplicationService
+        # Usar caso de uso para obtener la solicitud
+        get_application_use_case = GetApplicationUseCase()
+        result = get_application_use_case.execute(request.user)
         
-        # Obtener la solicitud del usuario
-        service = InstructorApplicationService()
-        application = service.get_user_application(request.user)
-        
-        if not application:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': 'No tienes una solicitud de instructor'
+                'message': result.error_message
             }, status=status.HTTP_404_NOT_FOUND)
         
-        # Verificar si puede volver a aplicar (si fue rechazada)
-        can_reapply = None
-        days_remaining = None
-        if application.status == 'rejected':
-            can_reapply, days_remaining = service.can_reapply(request.user)
-        
-        # Serializar datos
-        data = {
-            'id': application.id,
-            'professional_title': application.professional_title,
-            'experience_years': application.experience_years,
-            'specialization': application.specialization,
-            'bio': application.bio,
-            'portfolio_url': application.portfolio_url,
-            'motivation': application.motivation,
-            'cv_file_url': request.build_absolute_uri(application.cv_file.url) if application.cv_file else None,
-            'status': application.status,
-            'status_display': application.get_status_display(),
-            'reviewed_by': {
-                'id': application.reviewed_by.id,
-                'email': application.reviewed_by.email,
-            } if application.reviewed_by else None,
-            'reviewed_at': application.reviewed_at.isoformat() if application.reviewed_at else None,
-            'rejection_reason': application.rejection_reason,
-            'created_at': application.created_at.isoformat(),
-            'updated_at': application.updated_at.isoformat(),
-            # Información sobre volver a aplicar
-            'can_reapply': can_reapply if application.status == 'rejected' else None,
-            'days_remaining': days_remaining if application.status == 'rejected' else None,
-        }
+        # Obtener la aplicación del resultado extra para el cv_file_url
+        application = result.extra.get('application')
+        if application and application.cv_file:
+            result.data['cv_file_url'] = request.build_absolute_uri(application.cv_file.url)
+        else:
+            result.data['cv_file_url'] = None
         
         return Response({
             'success': True,
-            'data': data
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -624,19 +756,16 @@ def forgot_password(request):
         from django.conf import settings
         frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
         
-        # 4. Usar servicio de password reset
-        password_reset_service = PasswordResetService()
-        success, message, data = password_reset_service.request_password_reset(
-            email=email,
-            frontend_url=frontend_url
-        )
+        # 4. Usar caso de uso de password reset
+        password_reset_use_case = PasswordResetUseCase()
+        result = password_reset_use_case.request_password_reset(email, frontend_url)
         
         # 5. Si hay datos (usuario existe y rate limit OK), enviar email
-        if success and data and data.get('user'):
+        if result.success and result.extra and result.extra.get('user'):
             try:
-                user = data['user']
+                user = result.extra['user']
                 user_name = user.get_full_name() or user.first_name or user.email.split('@')[0]
-                reset_url = data['reset_url']
+                reset_url = result.data.get('reset_url')
                 
                 # Enviar email
                 email_service = DjangoEmailService()
@@ -655,6 +784,7 @@ def forgot_password(request):
                 logger.error(f'Error al enviar email de reset password: {str(email_error)}', exc_info=True)
         
         # 6. Siempre retornar éxito (por seguridad, no revelar si email existe)
+        message = result.data.get('message') if result.data else 'Si el email existe, se enviará un link de restablecimiento'
         return Response({
             'success': True,
             'message': message
@@ -749,25 +879,22 @@ def reset_password(request):
                 'message': 'La contraseña debe tener al menos 8 caracteres'
             }, status=status.HTTP_400_BAD_REQUEST)
         
-        # 5. Usar servicio de password reset
-        password_reset_service = PasswordResetService()
-        success, message, user = password_reset_service.reset_password(
-            uid=uid,
-            token=token,
-            new_password=new_password
-        )
+        # 5. Usar caso de uso de password reset
+        password_reset_use_case = PasswordResetUseCase()
+        result = password_reset_use_case.reset_password(uid, token, new_password)
         
         # 6. Retornar respuesta
-        if success:
+        if result.success:
+            user = result.extra.get('user') if result.extra else None
             logger.info(f'Contraseña restablecida exitosamente para usuario: {user.email if user else "unknown"}')
             return Response({
                 'success': True,
-                'message': message
+                'message': result.data.get('message') if result.data else 'Contraseña restablecida exitosamente'
             }, status=status.HTTP_200_OK)
         else:
             return Response({
                 'success': False,
-                'message': message
+                'message': result.error_message
             }, status=status.HTTP_400_BAD_REQUEST)
         
     except Exception as e:
@@ -809,9 +936,12 @@ def validate_reset_token(request, uid, token):
     logger = logging.getLogger('apps')
     
     try:
-        # Validar token
-        password_reset_service = PasswordResetService()
-        is_valid, user, error_message = password_reset_service.validate_token(uid, token)
+        # Validar token usando caso de uso
+        password_reset_use_case = PasswordResetUseCase()
+        result = password_reset_use_case.validate_token(uid, token)
+        is_valid = result.success
+        error_message = result.error_message if not result.success else None
+        user = result.extra.get('user') if result.extra else None
         
         if is_valid and user:
             return Response({

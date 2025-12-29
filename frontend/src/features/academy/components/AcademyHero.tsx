@@ -1,9 +1,22 @@
 'use client';
 
-import { Search, Play, Star, Users, BookOpen, TrendingUp } from 'lucide-react';
 import { AnimatedCounter } from '@/shared/components';
+import { BookOpen, Play, Search, Star, TrendingUp, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { FormEvent, useState } from 'react';
 
 export function AcademyHero() {
+    const router = useRouter();
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const handleSearch = (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            router.push(`/academy/catalog?search=${encodeURIComponent(searchQuery.trim())}`);
+        } else {
+            router.push('/academy/catalog');
+        }
+    };
     const stats = [
         { value: 500, label: 'Estudiantes Activos', suffix: '+' },
         { value: 50, label: 'Cursos Prácticos', suffix: '+' },
@@ -52,23 +65,28 @@ export function AcademyHero() {
 
                     {/* Descripción */}
                     <p className="text-base sm:text-lg md:text-xl text-gray-400 max-w-3xl mx-auto mb-10 animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                        Plataforma de educación en línea abierta a todo el público. Encuentra cursos sobre cualquier tema que te interese. 
+                        Plataforma de educación en línea abierta a todo el público. Encuentra cursos sobre cualquier tema que te interese.
                         Aprende a tu ritmo, certifícate y transforma tu carrera con conocimientos aplicables al mundo real.
                     </p>
 
                     {/* Buscador Grande */}
                     <div className="max-w-5xl mx-auto mb-10 animate-fade-in" style={{ animationDelay: '0.3s' }}>
-                        <div className="relative group">
-                            <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400 group-hover:text-primary-orange transition-colors" />
+                        <form onSubmit={handleSearch} className="relative group">
+                            <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 w-6 h-6 text-gray-400 group-hover:text-primary-orange transition-colors pointer-events-none" />
                             <input
                                 type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
                                 placeholder="Busca cualquier curso que te interese..."
-                                className="w-full pl-16 pr-6 py-5 bg-zinc-900/80 border-2 border-zinc-700 hover:border-zinc-600 focus:border-primary-orange rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-primary-orange/20 transition-all duration-300 shadow-xl text-base"
+                                className="w-full pl-16 pr-32 py-5 bg-zinc-900/80 border-2 border-zinc-700 hover:border-zinc-600 focus:border-primary-orange rounded-2xl text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-primary-orange/20 transition-all duration-300 shadow-xl text-base"
                             />
-                            <button className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-3 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/40">
+                            <button
+                                type="submit"
+                                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-3 bg-gradient-to-r from-primary-orange to-amber-600 hover:from-amber-600 hover:to-primary-orange text-white font-semibold rounded-xl transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary-orange/40 active:scale-95"
+                            >
                                 Buscar
                             </button>
-                        </div>
+                        </form>
                     </div>
 
                     {/* CTAs */}

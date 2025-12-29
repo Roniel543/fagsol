@@ -1,9 +1,9 @@
 import { ApiResponse, AuthResponse } from '@/shared/types';
-import { clearTokens, getAccessToken, getRefreshToken, isTokenExpiringSoon, setTokens } from '@/shared/utils/tokenStorage';
+// Se mantiene solo para compatibilidad y limpieza
+import { logger } from '@/shared/utils/logger';
+import { clearTokens } from '@/shared/utils/tokenStorage';
 
 // Configuración de la API
-// NEXT_PUBLIC_API_URL se carga automáticamente desde .env en Next.js
-// OBLIGATORIO: Debe estar definida en .env
 
 /**
  * Obtiene la URL base de la API de forma segura
@@ -43,14 +43,13 @@ function getJwtBaseUrl(): string {
 
 export const API_CONFIG = {
     BASE_URL: baseUrl,
-    JWT_BASE_URL: getJwtBaseUrl(), // http://localhost:8000 (sin /api/v1)
     ENDPOINTS: {
         LOGIN: '/auth/login/',
         REGISTER: '/auth/register/',
         HEALTH: '/auth/health/',
         LOGOUT: '/auth/logout/',
+        REFRESH: '/auth/refresh/', // Endpoint de refresh con cookies
         ME: '/auth/me/', // Obtener usuario actual
-        REFRESH: '/api/token/refresh/', // Endpoint de Simple JWT
         // Payments endpoints (requieren backend)
         PAYMENT_INTENT: '/payments/intent/',
         PAYMENT_PROCESS: '/payments/process/',
@@ -59,13 +58,15 @@ export const API_CONFIG = {
 
 // Flag para evitar múltiples refresh simultáneos
 let isRefreshing = false;
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
 /**
- * Refresca el token de acceso usando el refresh token
- * Exportada para uso en otros módulos (ej: useAuth)
+ * Refresca el access token usando el refresh token de cookie.
+ * Las cookies se envían automáticamente con credentials: 'include'.
+ * 
+ * @returns true si el refresh fue exitoso, false en caso contrario
  */
-export async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<boolean> {
     // Si ya hay un refresh en curso, esperar a que termine
     if (isRefreshing && refreshPromise) {
         return refreshPromise;
@@ -74,41 +75,26 @@ export async function refreshAccessToken(): Promise<string | null> {
     isRefreshing = true;
     refreshPromise = (async () => {
         try {
-            const refreshToken = getRefreshToken();
-            if (!refreshToken) {
-                throw new Error('No refresh token available');
-            }
-
-            const response = await fetch(`${API_CONFIG.JWT_BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH}`, {
+            const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH}`, {
                 method: 'POST',
+                credentials: 'include', // IMPORTANTE: Incluir cookies
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ refresh: refreshToken }),
             });
 
             if (!response.ok) {
                 throw new Error('Failed to refresh token');
             }
 
-            const data = await response.json();
-
-            if (data.access) {
-                // El backend tiene ROTATE_REFRESH_TOKENS activado, así que puede enviar un nuevo refresh token
-                // Si viene un nuevo refresh token, usarlo; si no, mantener el actual
-                const newRefreshToken = data.refresh || getRefreshToken();
-                if (newRefreshToken) {
-                    setTokens(data.access, newRefreshToken);
-                }
-                return data.access;
-            }
-
-            throw new Error('No access token in refresh response');
+            // El backend establece nuevas cookies automáticamente
+            // No necesitamos hacer nada más, las cookies se actualizan en el navegador
+            return true;
         } catch (error) {
-            console.error('Error refreshing token:', error);
-            // Si falla el refresh, limpiar tokens y forzar re-login
+            logger.debug('Error refreshing token (normal si no hay sesión activa)');
+            // Si falla el refresh, limpiar tokens locales (si existen) y forzar re-login
             clearTokens();
-            return null;
+            return false;
         } finally {
             isRefreshing = false;
             refreshPromise = null;
@@ -129,90 +115,62 @@ export const apiRequest = async <T = any>(
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${API_CONFIG.BASE_URL}${normalizedEndpoint}`;
 
-    // Debug: mostrar URL en desarrollo
-    if (process.env.NODE_ENV === 'development') {
-        console.log('🔗 API Request:', url);
-    }
+    // Log de request (solo método y endpoint, sin información sensible)
+    logger.apiRequest(options.method || 'GET', normalizedEndpoint);
 
-    // Verificar si el token está próximo a expirar y refrescarlo preventivamente
-    // Solo intentar refresh si hay un token actual (evita errores en login/register)
-    const currentToken = getAccessToken();
-    if (currentToken && isTokenExpiringSoon()) {
-        try {
-            await refreshAccessToken();
-        } catch (error) {
-            // Si falla el refresh preventivo, continuar con el request original
-            // El request fallará con 401 y se manejará después
-            console.warn('Preventive token refresh failed, continuing with original request');
-        }
-    }
-
-    const defaultOptions: RequestInit = {
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
+    // Configurar opciones por defecto con credentials: 'include' para cookies
+    const defaultHeaders: HeadersInit = {
+        'Content-Type': 'application/json',
     };
 
-    // Añadir token de autorización si existe
-    let token = getAccessToken();
-    if (token) {
-        defaultOptions.headers = {
-            ...defaultOptions.headers,
-            'Authorization': `Bearer ${token}`,
-        };
-    }
-
-    // Construir los headers finales que se usarán en la petición
-    const finalHeaders = {
-        ...defaultOptions.headers,
+    // Fusionar headers: primero defaults, luego los que vienen en options
+    const mergedHeaders: HeadersInit = {
+        ...defaultHeaders,
         ...(options.headers || {}),
     };
 
+    const defaultOptions: RequestInit = {
+        credentials: 'include', // IMPORTANTE: Incluir cookies en todas las requests
+        headers: mergedHeaders,
+    };
+
     // Construir las opciones finales para la petición
+    // IMPORTANTE: No sobrescribir headers aquí, ya están fusionados arriba
     const finalOptions: RequestInit = {
         ...defaultOptions,
         ...options,
-        headers: finalHeaders,
+        // Asegurar que headers estén fusionados correctamente
+        headers: mergedHeaders,
+        // Asegurar que credentials esté presente
+        credentials: options.credentials ?? 'include',
     };
 
     try {
         let response = await fetch(url, finalOptions);
 
         // Si el token expiró (401), intentar refrescar y reintentar
-        if (response.status === 401 && token) {
-            console.log('🔄 Token expirado, intentando refrescar...');
-            const newToken = await refreshAccessToken();
+        // No intentar refrescar en endpoints de autenticación (login, register)
+        // porque esos endpoints no requieren token y el 401 es un error de credenciales
+        const isAuthEndpoint = normalizedEndpoint.includes('/auth/login') ||
+            normalizedEndpoint.includes('/auth/register') ||
+            normalizedEndpoint.includes('/auth/logout');
 
-            if (newToken) {
-                console.log('✅ Token refrescado exitosamente, reintentando petición...');
-                // Reintentar con el nuevo token
-                // IMPORTANTE: Preservar TODOS los headers originales y actualizar solo Authorization
-                const retryOptions: RequestInit = {
-                    method: finalOptions.method || 'GET',
-                    headers: {
-                        ...finalHeaders, // Preservar todos los headers originales
-                        'Authorization': `Bearer ${newToken}`, // Sobrescribir solo Authorization
-                    },
-                    // Mantener el body original si existe
-                    body: finalOptions.body,
-                };
+        if (response.status === 401 && !isAuthEndpoint) {
+            logger.auth('Token expirado, intentando refrescar...');
+            // Guardar el response original antes de intentar refrescar
+            const originalResponse = response.clone();
+            const refreshSuccess = await refreshAccessToken();
 
-                // Copiar otros campos de finalOptions (como signal, etc.)
-                if (finalOptions.signal) {
-                    retryOptions.signal = finalOptions.signal;
-                }
-
-                response = await fetch(url, retryOptions);
+            if (refreshSuccess) {
+                logger.auth('Token refrescado exitosamente, reintentando petición...');
+                // Reintentar con las mismas opciones (las cookies se actualizaron automáticamente)
+                response = await fetch(url, finalOptions);
             } else {
-                // Si no se pudo refrescar, verificar si el refresh token también expiró
-                console.warn('⚠️ No se pudo refrescar el token');
-                // No limpiar tokens aquí, dejar que el código de abajo lo maneje
-                // Solo lanzar error para que se maneje apropiadamente
-                throw new Error('Authentication failed. Please login again.');
+                // Si no se pudo refrescar, usar el response original para extraer el mensaje
+                logger.warn('No se pudo refrescar el token');
+                response = originalResponse;
             }
         }
-
         if (!response.ok) {
             // Intentar obtener el mensaje de error del backend
             let errorMessage = `HTTP error! status: ${response.status}`;
@@ -227,15 +185,15 @@ export const apiRequest = async <T = any>(
                 }
             } catch (e) {
                 // Si no se puede parsear JSON, usar el mensaje por defecto
-                console.warn('Could not parse error response:', e);
+                logger.debug('Could not parse error response');
             }
 
-            // Si sigue siendo 401 después del refresh, limpiar tokens
+            // Si sigue siendo 401 después del refresh, limpiar tokens locales (si existen)
             if (response.status === 401) {
-                clearTokens();
+                clearTokens(); // Limpiar cualquier token residual en storage
             }
 
-            // Crear un error con el mensaje del backend
+            // Crear un error ccon el mensaje del backend
             const error = new Error(errorMessage);
             (error as any).status = response.status;
             (error as any).response = response;
@@ -244,7 +202,13 @@ export const apiRequest = async <T = any>(
 
         return await response.json();
     } catch (error) {
-        console.error('API Request Error:', error);
+        // Log del error sin exponer información sensible
+        if (error instanceof Error) {
+            logger.apiError(normalizedEndpoint, (error as any).status || 0, error.message);
+        } else {
+            logger.error('API Request Error', error);
+        }
+
         // Si el error ya tiene un mensaje, mantenerlo
         if (error instanceof Error && error.message) {
             throw error;
@@ -286,15 +250,15 @@ export const authAPI = {
 
     logout: async (): Promise<void> => {
         try {
-            // Intentar invalidar token en el servidor
+            // Invalidar token en el servidor (las cookies se limpian automáticamente)
             await apiRequest(API_CONFIG.ENDPOINTS.LOGOUT, {
                 method: 'POST',
             });
         } catch (error) {
-            // Si falla, igual limpiar tokens localmente
-            console.error('Error during server-side logout:', error);
+            // Si falla, igual limpiar tokens locales (si existen)
+            logger.debug('Error during server-side logout (puede ser normal si no hay sesión)');
         } finally {
-            // Siempre limpiar tokens localmente
+            // Limpiar tokens locales residuales (si existen)
             clearTokens();
         }
     },
@@ -326,16 +290,11 @@ export const authAPI = {
         formData.append('motivation', data.motivation);
         if (data.cv_file) formData.append('cv_file', data.cv_file);
 
-        // Para FormData, no usar Content-Type: application/json
-        const token = getAccessToken();
-        const headers: HeadersInit = {};
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-
+        // Para FormData, no usar Content-Type (el navegador lo establece automáticamente)
+        // Las cookies se envían automáticamente con credentials: 'include'
         const response = await fetch(`${API_CONFIG.BASE_URL}/auth/apply-instructor/`, {
             method: 'POST',
-            headers,
+            credentials: 'include', // IMPORTANTE: Incluir cookies
             body: formData,
         });
 

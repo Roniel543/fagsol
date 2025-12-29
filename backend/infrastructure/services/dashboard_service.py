@@ -1,6 +1,17 @@
 """
 Servicio de Dashboard - FagSol Escuela Virtual
 Maneja la lógica de negocio para estadísticas del dashboard según rol
+
+⚠️ DEPRECATED: Este servicio ha sido migrado a casos de uso.
+Usar application.use_cases.dashboard en su lugar:
+- GetAdminStatsUseCase - Reemplaza DashboardService.get_admin_stats()
+- GetInstructorStatsUseCase - Reemplaza DashboardService.get_instructor_stats()
+- GetStudentStatsUseCase - Reemplaza DashboardService.get_student_stats()
+- GetPublicStatsUseCase - Reemplaza DashboardService.get_public_stats()
+- GetDashboardStatsUseCase - Reemplaza DashboardService.get_dashboard_stats()
+
+Este archivo se mantiene temporalmente para compatibilidad.
+Se eliminará en una versión futura.
 """
 
 import logging

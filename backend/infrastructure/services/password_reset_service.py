@@ -1,6 +1,12 @@
 """
 Servicio de restablecimiento de contraseña - FagSol Escuela Virtual
 Usa Django PasswordResetTokenGenerator nativo para seguridad
+
+⚠️ DEPRECATED: Este servicio ha sido migrado a casos de uso.
+Usar application.use_cases.auth.password_reset_use_case.PasswordResetUseCase en su lugar.
+
+Este archivo se mantiene temporalmente para compatibilidad.
+Se eliminará en una versión futura.
 """
 
 import logging

@@ -70,7 +70,9 @@ export function RegisterForm() {
                 setError(response.message || 'Error en el registro');
             }
         } catch (err) {
-            setError('Error de conexión con el servidor');
+            // Extraer el mensaje de error específico si está disponible
+            const errorMessage = err instanceof Error ? err.message : 'Error de conexión con el servidor';
+            setError(errorMessage);
         } finally {
             setLoading(false);
         }

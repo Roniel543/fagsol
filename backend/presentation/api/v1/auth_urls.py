@@ -4,7 +4,7 @@ URLs de autenticación - FagSol Escuela Virtual
 
 from django.urls import path
 from presentation.views.auth_views import (
-    login, register, auth_health, logout, get_current_user, 
+    login, register, auth_health, logout, get_current_user, refresh_token,
     apply_to_be_instructor, get_my_instructor_application,
     forgot_password, reset_password, validate_reset_token
 )
@@ -14,6 +14,7 @@ urlpatterns = [
     path('login/', login, name='auth_login'),
     path('register/', register, name='auth_register'),
     path('logout/', logout, name='auth_logout'),
+    path('refresh/', refresh_token, name='auth_refresh'),
     path('me/', get_current_user, name='auth_me'),
     path('health/', auth_health, name='auth_health'),
     # Instructor application

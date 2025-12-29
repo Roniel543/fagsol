@@ -2,15 +2,13 @@
 
 import { Button, LoadingSpinner } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast';
-import { useActivateUser, useAdminUsers, useDeactivateUser, useDeleteUser } from '@/shared/hooks/useAdminUsers';
+import { useAdminUsers, useDeleteUser } from '@/shared/hooks/useAdminUsers';
 import Link from 'next/link';
 import { useState } from 'react';
 
 function UsersAdminPageContent() {
     const { users, isLoading, mutate } = useAdminUsers();
     const { deleteUser, isDeleting } = useDeleteUser();
-    const { activateUser, isActivating } = useActivateUser();
-    const { deactivateUser, isDeactivating } = useDeactivateUser();
     const { showToast } = useToast();
     const [deletingId, setDeletingId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -36,28 +34,6 @@ function UsersAdminPageContent() {
         }
     };
 
-    const handleActivate = async (userId: number) => {
-        try {
-            await activateUser(userId);
-            showToast('Usuario activado exitosamente', 'success');
-            mutate();
-        } catch (err: any) {
-            showToast(err.message || 'Error al activar el usuario', 'error');
-        }
-    };
-
-    const handleDeactivate = async (userId: number) => {
-        if (!confirm('¿Estás seguro de que deseas desactivar este usuario?')) {
-            return;
-        }
-        try {
-            await deactivateUser(userId);
-            showToast('Usuario desactivado exitosamente', 'success');
-            mutate();
-        } catch (err: any) {
-            showToast(err.message || 'Error al desactivar el usuario', 'error');
-        }
-    };
 
     const getRoleBadge = (role: string) => {
         const colors = {
@@ -95,18 +71,20 @@ function UsersAdminPageContent() {
         <div>
             {/* Header */}
             <div className="mb-6">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h1 className="text-3xl font-bold text-gray-900">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+                    <div className="flex-1 min-w-0">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                             Gestión de Usuarios
                         </h1>
-                        <p className="text-gray-700 font-medium mt-1">Administra los usuarios de la plataforma</p>
+                        <p className="text-sm sm:text-base text-gray-700 font-medium mt-1">Administra los usuarios de la plataforma</p>
                     </div>
-                    <Link href="/admin/users/new">
-                        <Button variant="primary" size="sm">
-                            Crear Nuevo Usuario
-                        </Button>
-                    </Link>
+                    <div className="flex-shrink-0">
+                        <Link href="/admin/users/new">
+                            <Button variant="primary" size="sm" className="w-full sm:w-auto">
+                                Crear Nuevo Usuario
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
             </div>
 
@@ -189,7 +167,7 @@ function UsersAdminPageContent() {
                                     .filter((user) => {
                                         if (filters.search) {
                                             const search = filters.search.toLowerCase();
-                                            const matchesSearch = 
+                                            const matchesSearch =
                                                 (user.first_name?.toLowerCase().includes(search) || '') ||
                                                 (user.last_name?.toLowerCase().includes(search) || '') ||
                                                 user.email.toLowerCase().includes(search);
@@ -229,35 +207,11 @@ function UsersAdminPageContent() {
                                                         </div>
                                                     </div>
                                                     <div className="flex items-center space-x-2 ml-4 flex-wrap gap-2">
-                                                        <Link href={`/admin/users/${user.id}`}>
-                                                            <Button variant="secondary" size="sm">
-                                                                Ver
-                                                            </Button>
-                                                        </Link>
                                                         <Link href={`/admin/users/${user.id}/edit`}>
                                                             <Button variant="primary" size="sm">
                                                                 Editar
                                                             </Button>
                                                         </Link>
-                                                        {user.is_active ? (
-                                                            <Button
-                                                                variant="secondary"
-                                                                size="sm"
-                                                                onClick={() => handleDeactivate(user.id)}
-                                                                disabled={isDeactivating}
-                                                            >
-                                                                {isDeactivating ? 'Desactivando...' : 'Desactivar'}
-                                                            </Button>
-                                                        ) : (
-                                                            <Button
-                                                                variant="success"
-                                                                size="sm"
-                                                                onClick={() => handleActivate(user.id)}
-                                                                disabled={isActivating}
-                                                            >
-                                                                {isActivating ? 'Activando...' : 'Activar'}
-                                                            </Button>
-                                                        )}
                                                         <Button
                                                             variant="danger"
                                                             size="sm"

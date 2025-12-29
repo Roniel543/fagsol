@@ -141,6 +141,7 @@ export async function processPayment(
             {
                 method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json', // ✅ Asegurar Content-Type explícitamente
                     'X-Idempotency-Key': finalIdempotencyKey,
                 },
                 body: JSON.stringify({
@@ -248,18 +249,18 @@ export async function getPaymentHistory(
             page: page.toString(),
             page_size: Math.min(pageSize, 100).toString(),
         });
-        
+
         if (status) {
             params.append('status', status);
         }
-        
+
         const response = await apiRequest<PaymentHistoryResponse['data']>(
             `/payments/history/?${params.toString()}`,
             {
                 method: 'GET',
             }
         );
-        
+
         return {
             success: response.success || false,
             data: response.data,

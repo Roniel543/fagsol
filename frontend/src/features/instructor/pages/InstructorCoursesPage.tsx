@@ -46,7 +46,7 @@ function InstructorCoursesPageContent() {
         if (courseStatus !== 'draft' && courseStatus !== 'needs_revision') {
             return {
                 canDelete: false,
-                reason: courseStatus === 'published' 
+                reason: courseStatus === 'published'
                     ? 'No puedes eliminar cursos publicados. Contacta a un administrador.'
                     : 'Solo puedes eliminar cursos en estado "Borrador" o "Requiere Cambios".'
             };
@@ -65,7 +65,7 @@ function InstructorCoursesPageContent() {
 
     const handleDeleteClick = (course: any) => {
         const { canDelete, reason } = canDeleteCourse(course);
-        
+
         if (!canDelete) {
             showToast(reason || 'No puedes eliminar este curso', 'error');
             return;
@@ -89,15 +89,15 @@ function InstructorCoursesPageContent() {
         try {
             const result = await deleteCourse(courseToDelete.id);
             if (result.success) {
-                showToast('✅ Curso eliminado exitosamente', 'success');
+                showToast('Curso eliminado exitosamente', 'success');
                 mutate();
                 // Invalidar caché del dashboard para que se actualice inmediatamente
                 swrMutate('dashboard-stats');
             } else {
-                showToast(`❌ ${result.message || 'Error al eliminar el curso'}`, 'error');
+                showToast(`${result.message || 'Error al eliminar el curso'}`, 'error');
             }
         } catch (err: any) {
-            showToast(`❌ ${err.message || 'Error al eliminar el curso'}`, 'error');
+            showToast(`${err.message || 'Error al eliminar el curso'}`, 'error');
         } finally {
             setDeletingId(null);
             setCourseToDelete(null);
@@ -351,21 +351,24 @@ function InstructorCoursesPageContent() {
                                                 </Link>
                                                 {(() => {
                                                     const { canDelete, reason } = canDeleteCourse(course);
+                                                    const tooltipText = !canDelete ? reason : 'Eliminar curso';
                                                     return (
-                                                <Button
-                                                    variant="danger"
-                                                    size="sm"
-                                                            onClick={() => handleDeleteClick(course)}
-                                                            disabled={deletingId === course.id || !canDelete}
-                                                            title={!canDelete ? reason : 'Eliminar curso'}
-                                                            className="hover:scale-110 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                            {deletingId === course.id ? (
-                                                                <LoadingSpinner size="sm" />
-                                                            ) : (
-                                                    <Trash2 className="w-4 h-4" />
-                                                            )}
-                                                </Button>
+                                                        <div title={tooltipText} className="inline-block">
+                                                            <Button
+                                                                variant="danger"
+                                                                size="sm"
+                                                                onClick={() => handleDeleteClick(course)}
+                                                                disabled={deletingId === course.id || !canDelete}
+                                                                aria-label={tooltipText}
+                                                                className="hover:scale-110 transition-transform duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                {deletingId === course.id ? (
+                                                                    <LoadingSpinner size="sm" />
+                                                                ) : (
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                )}
+                                                            </Button>
+                                                        </div>
                                                     );
                                                 })()}
                                             </div>

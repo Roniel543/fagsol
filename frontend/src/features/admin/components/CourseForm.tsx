@@ -7,7 +7,7 @@ import { useRequestCourseReview } from '@/shared/hooks/useCourses';
 import { CreateCourseRequest, UpdateCourseRequest, getCourseById } from '@/shared/services/courses';
 import { AlertCircle, AlertTriangle, ArrowRight, BookOpen, CheckCircle2, Clock, DollarSign, Eye, FileText, Image as ImageIcon, Info, Layers, Plus, Shield, Tag, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import { mutate as swrMutate } from 'swr';
 
 interface CourseFormProps {
@@ -65,6 +65,30 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
     const [error, setError] = useState<string | null>(null);
     const [currentStatus, setCurrentStatus] = useState<string>('draft');
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+    // Bloquear scroll del body cuando el modal está abierto
+    useEffect(() => {
+        if (showSuccessModal) {
+            // Guardar el valor actual del overflow
+            const originalOverflow = document.body.style.overflow;
+            const originalPaddingRight = document.body.style.paddingRight;
+
+            // Calcular el ancho de la scrollbar para evitar el shift del contenido
+            const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+            // Bloquear scroll y compensar el padding
+            document.body.style.overflow = 'hidden';
+            if (scrollbarWidth > 0) {
+                document.body.style.paddingRight = `${scrollbarWidth}px`;
+            }
+
+            return () => {
+                // Restaurar valores originales
+                document.body.style.overflow = originalOverflow;
+                document.body.style.paddingRight = originalPaddingRight;
+            };
+        }
+    }, [showSuccessModal]);
     const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [reviewComments, setReviewComments] = useState<string>(''); // Comentarios de revisión (solo para admin)
@@ -900,159 +924,208 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
 
                 {/* Modal de éxito al crear curso */}
                 {showSuccessModal && createdCourseId && (
-                    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowSuccessModal(false)}>
+                    <Fragment>
+                        {/* Backdrop separado para cubrir todo incluyendo el header */}
                         <div
-                            className="bg-secondary-dark-gray border border-primary-orange/30 rounded-xl shadow-2xl max-w-2xl w-full mx-4 animate-fade-in overflow-hidden"
-                            onClick={(e) => e.stopPropagation()}
+                            className="fixed bg-black/80 backdrop-blur-md z-[9998]"
+                            onClick={() => setShowSuccessModal(false)}
+                            aria-hidden="true"
+                            style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                width: '100vw',
+                                height: '100vh',
+                                minHeight: '100vh',
+                                minWidth: '100vw',
+                                margin: 0,
+                                padding: 0
+                            }}
+                        />
+                        {/* Contenedor del modal */}
+                        <div
+                            className="fixed flex items-center justify-center z-[9999] pointer-events-none"
+                            style={{
+                                position: 'fixed',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                width: '100vw',
+                                height: '100vh',
+                                minHeight: '100vh',
+                                minWidth: '100vw',
+                                margin: 0,
+                                padding: '1rem',
+                                overflowY: 'auto',
+                                WebkitOverflowScrolling: 'touch',
+                                overscrollBehavior: 'contain'
+                            }}
                         >
-                            {/* Header con gradiente */}
-                            <div className="bg-gradient-to-r from-primary-orange/20 via-amber-500/10 to-primary-orange/20 border-b border-primary-orange/30 p-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
-                                            <CheckCircle2 className="w-8 h-8 text-white" />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-2xl font-bold text-primary-white mb-1">
-                                                ¡Curso Creado Exitosamente!
-                                            </h3>
-                                            <p className="text-secondary-light-gray">
-                                                Tu curso está en estado <span className="font-semibold text-amber-400">"Borrador"</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowSuccessModal(false)}
-                                        className="w-10 h-10 rounded-lg bg-primary-black/40 hover:bg-primary-black/60 border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 flex items-center justify-center group"
-                                    >
-                                        <X className="w-5 h-5 text-secondary-light-gray group-hover:text-primary-white transition-colors" />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Contenido del modal */}
-                            <div className="p-6 space-y-6">
-                                {/* Mensaje principal */}
-                                <div className="bg-primary-black/40 border border-primary-orange/20 rounded-lg p-4">
-                                    <p className="text-primary-white text-center font-medium">
-                                        {user?.role === 'instructor'
-                                            ? 'Ahora puedes agregar contenido a tu curso. Sigue estos pasos para completarlo:'
-                                            : 'El curso ha sido creado exitosamente. Puedes agregar contenido y configurarlo según sea necesario:'
-                                        }
-                                    </p>
-                                </div>
-
-                                {/* Pasos siguientes */}
-                                <div className="space-y-4">
-                                    <h4 className="text-lg font-bold text-primary-white flex items-center space-x-2">
-                                        <Layers className="w-5 h-5 text-primary-orange" />
-                                        <span>Próximos Pasos</span>
-                                    </h4>
-
-                                    {/* Paso 1 */}
-                                    <div className="flex items-start space-x-4 p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group">
-                                        <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-primary-orange to-amber-500 rounded-lg flex items-center justify-center font-bold text-primary-white shadow-lg group-hover:scale-110 transition-transform duration-300">
-                                            1
-                                        </div>
-                                        <div className="flex-1">
-                                            <h5 className="font-semibold text-primary-white mb-1 flex items-center space-x-2">
-                                                <Plus className="w-4 h-4 text-primary-orange" />
-                                                <span>Agregar Módulos y Lecciones</span>
-                                            </h5>
-                                            <p className="text-sm text-secondary-light-gray">
-                                                Organiza el contenido de tu curso en módulos y agrega lecciones con videos, textos y materiales.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Paso 2 */}
-                                    <div className="flex items-start space-x-4 p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group opacity-75">
-                                        <div className="flex-shrink-0 w-10 h-10 bg-secondary-dark-gray rounded-lg flex items-center justify-center font-bold text-secondary-light-gray border border-primary-orange/20">
-                                            2
-                                        </div>
-                                        <div className="flex-1">
-                                            <h5 className="font-semibold text-secondary-light-gray mb-1 flex items-center space-x-2">
-                                                <FileText className="w-4 h-4 text-secondary-light-gray" />
-                                                <span>Revisar y Completar Información</span>
-                                            </h5>
-                                            <p className="text-sm text-secondary-light-gray">
-                                                Asegúrate de que toda la información esté completa y las imágenes sean de calidad.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Paso 3 - Diferente según el rol */}
-                                    {user?.role === 'instructor' ? (
-                                        <div className="flex items-start space-x-4 p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group opacity-75">
-                                            <div className="flex-shrink-0 w-10 h-10 bg-secondary-dark-gray rounded-lg flex items-center justify-center font-bold text-secondary-light-gray border border-primary-orange/20">
-                                                3
+                            <div
+                                className="bg-secondary-dark-gray border border-primary-orange/30 rounded-2xl shadow-2xl max-w-2xl w-full my-auto animate-fade-in overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] pointer-events-auto"
+                                onClick={(e) => e.stopPropagation()}
+                                style={{
+                                    marginTop: 'max(1rem, env(safe-area-inset-top))',
+                                    marginBottom: 'max(1rem, env(safe-area-inset-bottom))',
+                                    marginLeft: 'auto',
+                                    marginRight: 'auto',
+                                    flexShrink: 0
+                                }}
+                            >
+                                {/* Header con gradiente - Responsive */}
+                                <div className="bg-gradient-to-r from-primary-orange/20 via-amber-500/10 to-primary-orange/20 border-b border-primary-orange/30 p-4 sm:p-6 flex-shrink-0">
+                                    <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-4">
+                                        <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 flex-1 min-w-0">
+                                            <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg flex-shrink-0">
+                                                <CheckCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                                             </div>
-                                            <div className="flex-1">
-                                                <h5 className="font-semibold text-secondary-light-gray mb-1 flex items-center space-x-2">
-                                                    <Clock className="w-4 h-4 text-secondary-light-gray" />
-                                                    <span>Solicitar Revisión</span>
-                                                </h5>
-                                                <p className="text-sm text-secondary-light-gray">
-                                                    Cuando tu curso esté completo, solicita revisión para que un administrador lo apruebe y publique.
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className="text-xl sm:text-2xl font-bold text-primary-white mb-1 leading-tight">
+                                                    ¡Curso Creado Exitosamente!
+                                                </h3>
+                                                <p className="text-sm sm:text-base text-secondary-light-gray">
+                                                    Tu curso está en estado <span className="font-semibold text-amber-400">"Borrador"</span>
                                                 </p>
                                             </div>
                                         </div>
-                                    ) : (
-                                        <div className="flex items-start space-x-4 p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group opacity-75">
-                                            <div className="flex-shrink-0 w-10 h-10 bg-secondary-dark-gray rounded-lg flex items-center justify-center font-bold text-secondary-light-gray border border-primary-orange/20">
-                                                3
+                                        <button
+                                            onClick={() => setShowSuccessModal(false)}
+                                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-primary-black/40 hover:bg-primary-black/60 border border-primary-orange/20 hover:border-primary-orange/40 transition-all duration-300 flex items-center justify-center group flex-shrink-0"
+                                            aria-label="Cerrar modal"
+                                        >
+                                            <X className="w-4 h-4 sm:w-5 sm:h-5 text-secondary-light-gray group-hover:text-primary-white transition-colors" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Contenido del modal - Scrollable */}
+                                <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto flex-1">
+                                    {/* Mensaje principal */}
+                                    <div className="bg-primary-black/40 border border-primary-orange/20 rounded-lg p-3 sm:p-4">
+                                        <p className="text-sm sm:text-base text-primary-white text-center font-medium leading-relaxed">
+                                            {user?.role === 'instructor'
+                                                ? 'Ahora puedes agregar contenido a tu curso. Sigue estos pasos para completarlo:'
+                                                : 'El curso ha sido creado exitosamente. Puedes agregar contenido y configurarlo según sea necesario:'
+                                            }
+                                        </p>
+                                    </div>
+
+                                    {/* Pasos siguientes */}
+                                    <div className="space-y-3 sm:space-y-4">
+                                        <h4 className="text-base sm:text-lg font-bold text-primary-white flex items-center space-x-2">
+                                            <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-primary-orange flex-shrink-0" />
+                                            <span>Próximos Pasos</span>
+                                        </h4>
+
+                                        {/* Paso 1 */}
+                                        <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group">
+                                            <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-primary-orange to-amber-500 rounded-lg flex items-center justify-center font-bold text-sm sm:text-base text-primary-white shadow-lg group-hover:scale-110 transition-transform duration-300">
+                                                1
                                             </div>
-                                            <div className="flex-1">
-                                                <h5 className="font-semibold text-secondary-light-gray mb-1 flex items-center space-x-2">
-                                                    <CheckCircle2 className="w-4 h-4 text-secondary-light-gray" />
-                                                    <span>Publicar el Curso</span>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="font-semibold text-sm sm:text-base text-primary-white mb-1 flex items-center space-x-2">
+                                                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 text-primary-orange flex-shrink-0" />
+                                                    <span className="break-words">Agregar Módulos y Lecciones</span>
                                                 </h5>
-                                                <p className="text-sm text-secondary-light-gray">
-                                                    Una vez que el contenido esté completo, puedes cambiar el estado del curso a "Publicado" para que esté disponible para los estudiantes.
+                                                <p className="text-xs sm:text-sm text-secondary-light-gray leading-relaxed">
+                                                    Organiza el contenido de tu curso en módulos y agrega lecciones con videos, textos y materiales.
                                                 </p>
                                             </div>
                                         </div>
-                                    )}
-                                </div>
 
-                                {/* Acciones */}
-                                <div className="flex items-center justify-between pt-4 border-t border-primary-orange/20">
-                                    <Button
-                                        variant="secondary"
-                                        onClick={() => {
-                                            setShowSuccessModal(false);
-                                            if (onSuccess) {
-                                                onSuccess();
-                                            } else {
-                                                if (user?.role === 'instructor') {
-                                                    router.push('/instructor/courses');
+                                        {/* Paso 2 */}
+                                        <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group opacity-75">
+                                            <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 bg-secondary-dark-gray rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm text-secondary-light-gray border border-primary-orange/20">
+                                                2
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <h5 className="font-semibold text-sm sm:text-base text-secondary-light-gray mb-1 flex items-center space-x-2">
+                                                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-secondary-light-gray flex-shrink-0" />
+                                                    <span className="break-words">Revisar y Completar Información</span>
+                                                </h5>
+                                                <p className="text-xs sm:text-sm text-secondary-light-gray leading-relaxed">
+                                                    Asegúrate de que toda la información esté completa y las imágenes sean de calidad.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Paso 3 - Diferente según el rol */}
+                                        {user?.role === 'instructor' ? (
+                                            <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group opacity-75">
+                                                <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 bg-secondary-dark-gray rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm text-secondary-light-gray border border-primary-orange/20">
+                                                    3
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h5 className="font-semibold text-sm sm:text-base text-secondary-light-gray mb-1 flex items-center space-x-2">
+                                                        <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-secondary-light-gray flex-shrink-0" />
+                                                        <span className="break-words">Solicitar Revisión</span>
+                                                    </h5>
+                                                    <p className="text-xs sm:text-sm text-secondary-light-gray leading-relaxed">
+                                                        Cuando tu curso esté completo, solicita revisión para que un administrador lo apruebe y publique.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-start space-x-3 sm:space-x-4 p-3 sm:p-4 bg-primary-black/40 border border-primary-orange/20 rounded-lg hover:border-primary-orange/40 transition-all duration-300 group opacity-75">
+                                                <div className="flex-shrink-0 w-9 h-9 sm:w-10 sm:h-10 bg-secondary-dark-gray rounded-lg flex items-center justify-center font-bold text-xs sm:text-sm text-secondary-light-gray border border-primary-orange/20">
+                                                    3
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h5 className="font-semibold text-sm sm:text-base text-secondary-light-gray mb-1 flex items-center space-x-2">
+                                                        <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4 text-secondary-light-gray flex-shrink-0" />
+                                                        <span className="break-words">Publicar el Curso</span>
+                                                    </h5>
+                                                    <p className="text-xs sm:text-sm text-secondary-light-gray leading-relaxed">
+                                                        Una vez que el contenido esté completo, puedes cambiar el estado del curso a "Publicado" para que esté disponible para los estudiantes.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Acciones - Responsive */}
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 pt-4 border-t border-primary-orange/20">
+                                        <Button
+                                            variant="secondary"
+                                            onClick={() => {
+                                                setShowSuccessModal(false);
+                                                if (onSuccess) {
+                                                    onSuccess();
                                                 } else {
-                                                    router.push('/admin/courses');
+                                                    if (user?.role === 'instructor') {
+                                                        router.push('/instructor/courses');
+                                                    } else {
+                                                        router.push('/admin/courses');
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                    >
-                                        {user?.role === 'instructor' ? 'Ver Mis Cursos' : 'Ver Todos los Cursos'}
-                                    </Button>
-                                    <Button
-                                        variant="primary"
-                                        onClick={() => {
-                                            setShowSuccessModal(false);
-                                            if (user?.role === 'instructor') {
-                                                router.push(`/instructor/courses/${createdCourseId}/modules`);
-                                            } else {
-                                                router.push(`/admin/courses/${createdCourseId}/modules`);
-                                            }
-                                        }}
-                                        className="flex items-center space-x-2"
-                                    >
-                                        <span>Agregar Contenido</span>
-                                        <ArrowRight className="w-4 h-4" />
-                                    </Button>
+                                            }}
+                                            className="w-full sm:w-auto order-2 sm:order-1"
+                                        >
+                                            {user?.role === 'instructor' ? 'Ver Mis Cursos' : 'Ver Todos los Cursos'}
+                                        </Button>
+                                        <Button
+                                            variant="primary"
+                                            onClick={() => {
+                                                setShowSuccessModal(false);
+                                                if (user?.role === 'instructor') {
+                                                    router.push(`/instructor/courses/${createdCourseId}/modules`);
+                                                } else {
+                                                    router.push(`/admin/courses/${createdCourseId}/modules`);
+                                                }
+                                            }}
+                                            className="flex items-center justify-center space-x-2 w-full sm:w-auto order-1 sm:order-2"
+                                        >
+                                            <span>Agregar Contenido</span>
+                                            <ArrowRight className="w-4 h-4" />
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </Fragment>
                 )}
 
                 {/* Modal de Solicitar Revisión */}

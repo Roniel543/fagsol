@@ -8,7 +8,14 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from infrastructure.services.dashboard_service import DashboardService
+from infrastructure.services.dashboard_service import DashboardService  # Mantener para compatibilidad temporal
+from application.use_cases.dashboard import (
+    GetDashboardStatsUseCase,
+    GetAdminStatsUseCase,
+    GetInstructorStatsUseCase,
+    GetStudentStatsUseCase,
+    GetPublicStatsUseCase
+)
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
@@ -71,18 +78,19 @@ def get_dashboard_stats(request):
     - Student: Estadísticas de sus enrollments
     """
     try:
-        dashboard_service = DashboardService()
-        success, stats, error_message = dashboard_service.get_dashboard_stats(request.user)
+        # Usar caso de uso para obtener estadísticas del dashboard
+        get_dashboard_stats_use_case = GetDashboardStatsUseCase()
+        result = get_dashboard_stats_use_case.execute(request.user)
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_403_FORBIDDEN)
         
         return Response({
             'success': True,
-            'data': stats
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -114,18 +122,19 @@ def get_admin_stats(request):
     Solo accesible para administradores
     """
     try:
-        dashboard_service = DashboardService()
-        success, stats, error_message = dashboard_service.get_admin_stats(request.user)
+        # Usar caso de uso para obtener estadísticas de admin
+        get_admin_stats_use_case = GetAdminStatsUseCase()
+        result = get_admin_stats_use_case.execute(request.user)
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_403_FORBIDDEN)
         
         return Response({
             'success': True,
-            'data': stats
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -157,18 +166,19 @@ def get_instructor_stats(request):
     Solo accesible para instructores
     """
     try:
-        dashboard_service = DashboardService()
-        success, stats, error_message = dashboard_service.get_instructor_stats(request.user)
+        # Usar caso de uso para obtener estadísticas de instructor
+        get_instructor_stats_use_case = GetInstructorStatsUseCase()
+        result = get_instructor_stats_use_case.execute(request.user)
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_403_FORBIDDEN)
         
         return Response({
             'success': True,
-            'data': stats
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -199,18 +209,19 @@ def get_student_stats(request):
     Accesible para todos los usuarios autenticados
     """
     try:
-        dashboard_service = DashboardService()
-        success, stats, error_message = dashboard_service.get_student_stats(request.user)
+        # Usar caso de uso para obtener estadísticas de estudiante
+        get_student_stats_use_case = GetStudentStatsUseCase()
+        result = get_student_stats_use_case.execute(request.user)
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_403_FORBIDDEN)
         
         return Response({
             'success': True,
-            'data': stats
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:
@@ -260,18 +271,19 @@ def get_public_stats(request):
     - Años de experiencia
     """
     try:
-        dashboard_service = DashboardService()
-        success, stats, error_message = dashboard_service.get_public_stats()
+        # Usar caso de uso para obtener estadísticas públicas
+        get_public_stats_use_case = GetPublicStatsUseCase()
+        result = get_public_stats_use_case.execute()
         
-        if not success:
+        if not result.success:
             return Response({
                 'success': False,
-                'message': error_message
+                'message': result.error_message
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response({
             'success': True,
-            'data': stats
+            'data': result.data
         }, status=status.HTTP_200_OK)
         
     except Exception as e:

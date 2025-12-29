@@ -1,5 +1,13 @@
 """
 Servicio de autenticación - FagSol Escuela Virtual
+
+⚠️ DEPRECATED: Este servicio ha sido migrado a casos de uso.
+Usar application.use_cases.auth en su lugar:
+- LoginUseCase - Reemplaza AuthService.login()
+- RegisterUseCase - Reemplaza AuthService.register()
+
+Este archivo se mantiene temporalmente para compatibilidad.
+Se eliminará en una versión futura.
 """
 
 from typing import Optional
@@ -330,7 +338,10 @@ class AuthService:
                     'tokens': {
                         'access': str(refresh.access_token),
                         'refresh': str(refresh)
-                    }
+                    },
+                    # Incluir RefreshToken object para establecer cookies (no se serializa en JSON)
+                    '_refresh_token_object': refresh,
+                    '_user_object': user,  # También incluir user object para evitar queries adicionales
                 }
             else:
                 # Log para debugging (sin exponer información sensible)
@@ -444,7 +455,10 @@ class AuthService:
                 'tokens': {
                     'access': str(refresh.access_token),
                     'refresh': str(refresh)
-                }
+                },
+                # Incluir RefreshToken object para establecer cookies (no se serializa en JSON)
+                '_refresh_token_object': refresh,
+                '_user_object': user,  # También incluir user object para evitar queries adicionales
             }
             
         except Exception as e:
