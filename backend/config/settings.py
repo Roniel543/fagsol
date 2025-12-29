@@ -96,6 +96,7 @@ DATABASES = {
         'PORT': config('DB_PORT', default='5432'),
         'OPTIONS': {
             'client_encoding': 'UTF8',
+            'sslmode': 'require',  # Requerir SSL para conexiones a Azure PostgreSQL
         },
     }
 }
