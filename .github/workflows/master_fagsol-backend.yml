@@ -50,16 +50,22 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Prepare deployment package
+        run: |
+          # Crear directorio temporal para el despliegue
+          mkdir -p deploy_package
+          # Copiar todo el contenido de backend a la raíz del package
+          cp -r backend/* deploy_package/
+          # Asegurar que requirements.txt esté en la raíz
+          cp backend/requirements.txt deploy_package/requirements.txt
+          # Eliminar archivos innecesarios
+          rm -rf deploy_package/venv deploy_package/__pycache__ deploy_package/**/__pycache__
+
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            backend/
-            !backend/antenv/
-            !backend/venv/
-            !backend/__pycache__/
-            !backend/**/__pycache__/
+          path: deploy_package/
 
   deploy:
     runs-on: ubuntu-latest
