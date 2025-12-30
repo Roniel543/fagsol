@@ -54,12 +54,34 @@ jobs:
         run: |
           # Crear directorio temporal para el despliegue
           mkdir -p deploy_package
-          # Copiar todo el contenido de backend a la raíz del package
-          cp -r backend/* deploy_package/
+          # Copiar contenido de backend EXCLUYENDO venv y otros directorios grandes
+          rsync -av --exclude='venv' \
+                    --exclude='antenv' \
+                    --exclude='__pycache__' \
+                    --exclude='*.pyc' \
+                    --exclude='.pytest_cache' \
+                    --exclude='.coverage' \
+                    --exclude='htmlcov' \
+                    --exclude='node_modules' \
+                    --exclude='.next' \
+                    --exclude='env' \
+                    --exclude='.venv' \
+                    --exclude='*.log' \
+                    --exclude='.DS_Store' \
+                    --exclude='Thumbs.db' \
+                    --exclude='media' \
+                    --exclude='staticfiles' \
+                    backend/ deploy_package/
           # Asegurar que requirements.txt esté en la raíz
           cp backend/requirements.txt deploy_package/requirements.txt
-          # Eliminar archivos innecesarios
-          rm -rf deploy_package/venv deploy_package/__pycache__ deploy_package/**/__pycache__
+          # Limpieza adicional por si acaso
+          find deploy_package -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+          find deploy_package -type f -name "*.pyc" -delete 2>/dev/null || true
+          # Mostrar tamaño del paquete
+          echo "Tamaño del paquete de despliegue:"
+          du -sh deploy_package
+          echo "Número de archivos en el paquete:"
+          find deploy_package -type f | wc -l
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
@@ -87,9 +109,15 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6C82FA05A127426E8E34B7E0673E74E9 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_41FB12A187CD40539F6433521BF34E7F }}
 
+      - name: Wait before deployment
+        run: |
+          echo "Esperando 30 segundos para evitar conflictos con reinicios del contenedor..."
+          sleep 30
+
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
           app-name: 'fagsol-backend'
           slot-name: 'Production'
+          package: '.'
