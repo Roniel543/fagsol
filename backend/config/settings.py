@@ -105,7 +105,7 @@ DATABASES = {
         'HOST': DB_HOST,
         'PORT': config('DB_PORT', default='5432'),
         'OPTIONS': DB_OPTIONS,
-        'CONN_MAX_AGE': 600,
+        'CONN_MAX_AGE': 500,
     }
 }
 
