@@ -77,6 +77,11 @@ jobs:
           # Limpieza adicional por si acaso
           find deploy_package -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find deploy_package -type f -name "*.pyc" -delete 2>/dev/null || true
+          # Asegurar que startup.sh sea ejecutable
+          if [ -f deploy_package/startup.sh ]; then
+            chmod +x deploy_package/startup.sh
+            echo "startup.sh marcado como ejecutable"
+          fi
           # Mostrar tamaño del paquete
           echo "Tamaño del paquete de despliegue:"
           du -sh deploy_package
