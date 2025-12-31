@@ -28,6 +28,8 @@ jobs:
           cd frontend
           npm ci
           NODE_ENV=production npm run build
+          # Instalar solo dependencias de producción para el despliegue
+          npm ci --only=production
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
