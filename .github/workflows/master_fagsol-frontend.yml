@@ -114,8 +114,8 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'fagsol-frontend'
-          resource-group: 'fagsol-rg'
+          app-name: 'fagsol-frontend-a2awgdejacgvcrex'
+          resource-group-name: 'fagsol-rg'
           slot-name: 'Production'
           package: '.'
 
