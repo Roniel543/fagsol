@@ -78,10 +78,21 @@ jobs:
           # Limpieza adicional por si acaso
           find deploy_package -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
           find deploy_package -type f -name "*.pyc" -delete 2>/dev/null || true
-          # Asegurar que startup.sh sea ejecutable
-          if [ -f deploy_package/startup.sh ]; then
+          # Asegurar que startup.sh sea ejecutable y esté en la raíz
+          if [ -f backend/startup.sh ]; then
+            cp backend/startup.sh deploy_package/startup.sh
             chmod +x deploy_package/startup.sh
-            echo "startup.sh marcado como ejecutable"
+            echo "✓ startup.sh copiado y marcado como ejecutable"
+          else
+            echo "⚠ ADVERTENCIA: startup.sh no encontrado en backend/"
+          fi
+          # Verificar que startup.sh existe
+          if [ -f deploy_package/startup.sh ]; then
+            echo "✓ startup.sh presente en el paquete de despliegue"
+            ls -la deploy_package/startup.sh
+          else
+            echo "✗ ERROR: startup.sh no está en el paquete de despliegue"
+            exit 1
           fi
           # Mostrar tamaño del paquete
           echo "Tamaño del paquete de despliegue:"
@@ -141,6 +152,16 @@ jobs:
             echo "⚠ No se pudo verificar el estado, pero continuando con el despliegue..."
           fi
           
+      - name: Configure startup command
+        run: |
+          echo "Configurando comando de inicio en Azure..."
+          az webapp config set \
+            --name fagsol-backend \
+            --resource-group fagsol-rg \
+            --startup-file "bash startup.sh" || {
+            echo "⚠ No se pudo configurar el comando de inicio, pero continuando..."
+          }
+
       - name: Wait before deployment
         run: |
           echo "Esperando 60 segundos para evitar conflictos con reinicios del contenedor..."
@@ -156,6 +177,5 @@ jobs:
           resource-group-name: 'fagsol-rg'
           slot-name: 'Production'
           package: '.'
-          startup-command: 'bash startup.sh'
 
 
