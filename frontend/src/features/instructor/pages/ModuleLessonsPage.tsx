@@ -1,7 +1,7 @@
 'use client';
 
-import { Button, LoadingSpinner, ProtectedRoute } from '@/shared/components';
 import { InstructorHeader } from '@/features/instructor/components/InstructorHeader';
+import { Button, LoadingSpinner, ProtectedRoute } from '@/shared/components';
 import { useToast } from '@/shared/components/Toast';
 import { useAdminLessons, useDeleteLesson } from '@/shared/hooks/useAdminLessons';
 import { useAdminModules } from '@/shared/hooks/useAdminModules';
@@ -35,11 +35,11 @@ function ModuleLessonsPageContent() {
 
         try {
             await deleteLesson(lessonId);
-            showToast('✅ Lección eliminada exitosamente', 'success');
+            showToast('Lección eliminada exitosamente', 'success');
             mutate();
         } catch (err: any) {
             setError(err.message || 'Error al eliminar la lección');
-            showToast(`❌ ${err.message || 'Error al eliminar la lección'}`, 'error');
+            showToast(`${err.message || 'Error al eliminar la lección'}`, 'error');
         } finally {
             setDeletingId(null);
         }
