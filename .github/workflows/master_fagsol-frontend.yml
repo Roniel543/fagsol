@@ -1,6 +1,5 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Node.js, GitHub Actions, and Azure App Service: https://aka.ms/nodejs-webapps-actions
 
 name: Build and deploy Node.js app to Azure Web App - fagsol-frontend
 
@@ -8,114 +7,59 @@ on:
   push:
     branches:
       - master
-    paths-ignore:
-      - 'backend/**'
-      - 'docs/**'
-      - '*.md'
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: read #This is required for actions/checkout
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Node.js version
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          node-version: '20.x'
 
-      - name: Install dependencies
+      - name: npm install, build, and test
         run: |
-          cd frontend
-          npm ci
+          npm install
+          npm run build --if-present
+          npm run test --if-present
 
-      - name: Build Next.js application
-        run: |
-          cd frontend
-          npm run build
-        env:
-          NODE_ENV: production
-          # Las variables NEXT_PUBLIC_* se configuran en Azure App Service
-
-      - name: Prepare deployment package
-        run: |
-          # Crear directorio temporal para el despliegue
-          mkdir -p deploy_package
-          # Copiar contenido de frontend EXCLUYENDO node_modules y otros directorios grandes
-          rsync -av --exclude='node_modules' \
-                    --exclude='.next' \
-                    --exclude='.git' \
-                    --exclude='__pycache__' \
-                    --exclude='*.pyc' \
-                    --exclude='.pytest_cache' \
-                    --exclude='.coverage' \
-                    --exclude='htmlcov' \
-                    --exclude='env' \
-                    --exclude='.venv' \
-                    --exclude='venv' \
-                    --exclude='*.log' \
-                    --exclude='.DS_Store' \
-                    --exclude='Thumbs.db' \
-                    --exclude='test-results' \
-                    --exclude='playwright-report' \
-                    --exclude='.playwright' \
-                    frontend/ deploy_package/
-          # Asegurar que package.json y package-lock.json estén en la raíz
-          cp frontend/package.json deploy_package/package.json
-          cp frontend/package-lock.json deploy_package/package-lock.json 2>/dev/null || true
-          # Copiar archivos de configuración importantes
-          if [ -f frontend/.deployment ]; then
-            cp frontend/.deployment deploy_package/.deployment
-          fi
-          # Mostrar tamaño del paquete
-          echo "Tamaño del paquete de despliegue:"
-          du -sh deploy_package
-          echo "Número de archivos en el paquete:"
-          find deploy_package -type f | wc -l
-
-      - name: Upload artifact for deployment jobs
+      - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: nodejs-app
-          path: deploy_package/
+          name: node-app
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
     needs: build
     permissions:
-      id-token: write
-      contents: read
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
 
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: nodejs-app
-
+          name: node-app
+      
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_CEE14BBB8DEE4611B42DC7D5719AB4CE }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6C82FA05A127426E8E34B7E0673E74E9 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_41FB12A187CD40539F6433521BF34E7F }}
-
-      - name: Wait before deployment
-        run: |
-          echo "Esperando 30 segundos para evitar conflictos con reinicios del contenedor..."
-          sleep 30
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_105BBE8F84F949B3882B33709BC89CAC }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_98FCEBD4DC7841DCAB92A5D7FB37677E }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_17BC8AF7D9BA44A3B1223EB76D1D181A }}
 
       - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
         with:
-          app-name: 'fagsol-frontend-a2awgdejacgvcrex'
-          resource-group-name: 'fagsol-rg'
+          app-name: 'fagsol-frontend'
           slot-name: 'Production'
-          package: '.'
-
+          package: .
+          
