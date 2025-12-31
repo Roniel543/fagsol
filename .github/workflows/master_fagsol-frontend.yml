@@ -49,6 +49,27 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
+          path: deploy
+      
+      - name: Prepare deployment package
+        run: |
+          # Mover contenido de deploy/node-app a la raíz
+          if [ -d "deploy/node-app" ]; then
+            mv deploy/node-app/* .
+            mv deploy/node-app/.* . 2>/dev/null || true
+          else
+            mv deploy/* .
+            mv deploy/.* . 2>/dev/null || true
+          fi
+          # Verificar que package.json existe
+          if [ ! -f "package.json" ]; then
+            echo "ERROR: package.json no encontrado"
+            ls -la
+            exit 1
+          fi
+          echo "✓ package.json encontrado"
+          echo "✓ Estructura del despliegue:"
+          ls -la | head -20
       
       - name: Login to Azure
         uses: azure/login@v2
