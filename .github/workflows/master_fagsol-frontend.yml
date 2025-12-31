@@ -89,11 +89,22 @@ jobs:
           ls -la deploy-package/.next/static/ | head -5 || echo "  ⚠ .next/static está vacío o no existe"
 
       - name: Upload artifact for deployment job
+        run: |
+          cd frontend
+          # Crear un tar.gz que incluya todo, incluyendo archivos ocultos
+          echo "✓ Creando archivo tar con todo el contenido..."
+          tar -czf deploy-package.tar.gz -C deploy-package .
+          echo "✓ Archivo tar creado:"
+          ls -lh deploy-package.tar.gz
+          # Verificar que .next está en el tar
+          echo "✓ Verificando contenido del tar:"
+          tar -tzf deploy-package.tar.gz | grep "\.next" | head -10 || echo "⚠ .next no encontrado en tar"
+          
+      - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: frontend/deploy-package
-          # Incluir archivos ocultos explícitamente
+          path: frontend/deploy-package.tar.gz
           if-no-files-found: error
 
   deploy:
@@ -112,63 +123,49 @@ jobs:
       
       - name: Prepare deployment package
         run: |
-          # El artefacto ya viene preparado desde el build job
-          # Necesitamos encontrar la estructura correcta del artefacto
-          echo "✓ Explorando estructura completa del artefacto:"
-          find deploy -type f -name "server.js" | head -5
-          find deploy -type d -name ".next" | head -5
-          echo "✓ Estructura completa de deploy:"
-          find deploy -maxdepth 3 -type d | sort
-          
-          # Buscar el directorio que contiene server.js
-          DEPLOY_ROOT=""
-          if [ -f "deploy/node-app/server.js" ]; then
-            DEPLOY_ROOT="deploy/node-app"
-          elif [ -f "deploy/server.js" ]; then
-            DEPLOY_ROOT="deploy"
+          # El artefacto viene como tar.gz, necesitamos extraerlo
+          echo "✓ Extrayendo artefacto..."
+          if [ -f "deploy/deploy-package.tar.gz" ]; then
+            tar -xzf deploy/deploy-package.tar.gz
+            echo "✓ Artefacto extraído"
+          elif [ -f "deploy/node-app/deploy-package.tar.gz" ]; then
+            tar -xzf deploy/node-app/deploy-package.tar.gz
+            echo "✓ Artefacto extraído desde node-app/"
           else
-            echo "✗ ERROR: No se encontró server.js en el artefacto"
-            find deploy -name "server.js" || echo "No se encontró server.js en ninguna ubicación"
-            exit 1
-          fi
-          
-          echo "✓ Directorio raíz del despliegue: $DEPLOY_ROOT"
-          
-          # Listar contenido para debug (incluyendo ocultos)
-          echo "✓ Contenido de $DEPLOY_ROOT (incluyendo archivos ocultos):"
-          ls -la $DEPLOY_ROOT | head -25
-          
-          # Verificar que .next existe antes de copiar
-          if [ ! -d "$DEPLOY_ROOT/.next" ]; then
-            echo "⚠ ADVERTENCIA: .next no encontrado en $DEPLOY_ROOT"
-            echo "✓ Buscando .next en otras ubicaciones..."
-            find deploy -type d -name ".next" -exec ls -la {} \; | head -10
-            echo "⚠ Continuando, pero .next puede no estar presente"
-          else
-            echo "✓ .next encontrado en $DEPLOY_ROOT"
-            ls -la $DEPLOY_ROOT/.next/ | head -10
-          fi
-          
-          # Copiar todo el contenido incluyendo archivos ocultos
-          # Usar cp -a para preservar todo y copiar recursivamente
-          echo "✓ Copiando contenido desde $DEPLOY_ROOT..."
-          cp -a $DEPLOY_ROOT/. .
-          
-          # Verificar que .next se copió
-          if [ -d ".next" ]; then
-            echo "✓ .next copiado correctamente"
-            ls -la .next/ | head -10
-          else
-            echo "✗ ERROR: .next no se copió correctamente"
-            echo "✓ Intentando crear .next manualmente desde el artefacto..."
-            if [ -d "$DEPLOY_ROOT/.next" ]; then
-              cp -r $DEPLOY_ROOT/.next .
-              echo "✓ .next copiado manualmente"
+            echo "⚠ No se encontró tar.gz, intentando usar estructura directa..."
+            # Buscar el directorio que contiene server.js
+            DEPLOY_ROOT=""
+            if [ -f "deploy/node-app/server.js" ]; then
+              DEPLOY_ROOT="deploy/node-app"
+            elif [ -f "deploy/server.js" ]; then
+              DEPLOY_ROOT="deploy"
             else
-              echo "✗ ERROR: .next no existe en el artefacto"
+              echo "✗ ERROR: No se encontró server.js en el artefacto"
+              find deploy -name "server.js" || echo "No se encontró server.js en ninguna ubicación"
               exit 1
             fi
+            echo "✓ Copiando desde $DEPLOY_ROOT..."
+            cp -a $DEPLOY_ROOT/. .
           fi
+          
+          # Verificar estructura del despliegue
+          echo "✓ Estructura del despliegue final:"
+          ls -la | head -25
+          echo "✓ Verificando archivos críticos:"
+          [ -f "package.json" ] && echo "  ✓ package.json encontrado" || (echo "  ✗ package.json NO encontrado" && exit 1)
+          [ -f "server.js" ] && echo "  ✓ server.js encontrado" || (echo "  ✗ server.js NO encontrado" && exit 1)
+          if [ -d ".next" ]; then
+            echo "  ✓ .next encontrado"
+            ls -la .next/ | head -10
+            [ -d ".next/static" ] && echo "  ✓ .next/static encontrado" || (echo "  ✗ .next/static NO encontrado" && exit 1)
+          else
+            echo "  ✗ .next NO encontrado"
+            echo "  ⚠ Buscando .next en el artefacto..."
+            find deploy -type d -name ".next" | head -5
+            exit 1
+          fi
+          [ -d "public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
+          [ -f ".deployment" ] && echo "  ✓ .deployment encontrado" || echo "  ⚠ .deployment no encontrado (se creará)"
           
           # Verificar estructura del despliegue
           echo "✓ Estructura del despliegue final:"
