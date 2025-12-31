@@ -15,10 +15,14 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,.azurewebsites.net',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 # Application definition
-INSTALLED_APPS = [
+INSTALLED_APPS = [  
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -288,13 +292,13 @@ SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0  # 1 año en producción
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 
-# Solo en producción
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False  # Azure ya maneja HTTPS
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
 
-# ==================================
+
+# ==================================    
 # CSRF CONFIGURATION
 # ==================================
 
@@ -528,3 +532,15 @@ os.makedirs(BASE_DIR / 'logs', exist_ok=True)
 
 
 #CONTACT_EMAIL = config('CONTACT_EMAIL', default='info@fagsol.com')
+
+
+
+# Azure App Service proxy fix
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+USE_X_FORWARDED_HOST = True
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://fagsol-backend-e5ghbzhyhnd2f7bn.centralus-01.azurewebsites.net",
+    "https://fagsol-frontend.azurewebsites.net",
+]
