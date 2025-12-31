@@ -26,7 +26,8 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.12'
+
 
       - name: Install system dependencies
         run: |
@@ -126,3 +127,4 @@ jobs:
           app-name: 'fagsol-backend'
           slot-name: 'Production'
           package: '.'
+
