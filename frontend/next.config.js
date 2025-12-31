@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-
   // Configuración de imágenes
   images: {
     // En desarrollo, desactivar optimización para permitir cualquier dominio
@@ -9,14 +8,7 @@ const nextConfig = {
     ...(process.env.NODE_ENV === 'development' ? {
       unoptimized: true, // Desactiva optimización pero permite cualquier dominio
     } : {}),
-    domains: [
-      'localhost',
-      '127.0.0.1',
-      'fagsol.com',
-      'backend',
-      'example.com', // Para desarrollo/testing
-      // Agregar dominios de imágenes externas (ej: AWS S3, Cloudinary)
-    ],
+
     // Para Vercel, puedes usar remotePatterns (más seguro)
     remotePatterns: [
       {
@@ -61,6 +53,7 @@ const nextConfig = {
       },
     ],
   },
+  turbopack: {},
 
   // Nota: Las variables NEXT_PUBLIC_* se cargan automáticamente desde .env
   // No es necesario definirlas aquí a menos que quieras un valor por defecto diferente

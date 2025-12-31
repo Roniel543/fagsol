@@ -1,3 +1,4 @@
+'use client';
 import dynamic from 'next/dynamic';
 
 const CourseLearnPage = dynamic(() => import('@/features/academy/pages/CourseLearnPage'), { ssr: false });

@@ -1,13 +1,13 @@
+'use client';
 import ResetPasswordPage from '@/features/auth/pages/ResetPasswordPage';
 
-interface PageProps {
-    params: {
-        uid: string;
-        token: string;
-    };
-}
+type Params = {
+    uid: string;
+    token: string;
+};
 
-export default function Page({ params }: PageProps) {
-    return <ResetPasswordPage params={params} />;
+export default async function Page({ params }: { params: Promise<Params> }) {
+    const resolvedParams = await params;
+    return <ResetPasswordPage params={resolvedParams} />;
 }
 
