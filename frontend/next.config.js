@@ -25,6 +25,14 @@ const nextConfig = {
       },
       {
         protocol: 'https',
+        hostname: '**.azurewebsites.net', // Azure App Service
+      },
+      {
+        protocol: 'https',
+        hostname: '**.blob.core.windows.net', // Azure Blob Storage
+      },
+      {
+        protocol: 'https',
         hostname: '**.amazonaws.com',
       },
       {
@@ -136,7 +144,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline'", // 'unsafe-inline' necesario para Tailwind
       `img-src ${imgSrcDirectives.join(' ')}`, // Permitir imágenes del backend y Azure Blob Storage
       "font-src 'self' data:",
-      "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://api.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://http2.mlstatic.com https://*.mlstatic.com https://api.mercadolibre.com", // Mercado Pago Bricks necesita mlstatic.com para assets
+      "connect-src 'self' http://localhost:8000 http://127.0.0.1:8000 https://*.azurewebsites.net https://api.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://http2.mlstatic.com https://*.mlstatic.com https://api.mercadolibre.com", // Azure App Service y Mercado Pago Bricks necesita mlstatic.com para assets
       "frame-src 'self' https://www.mercadopago.com https://*.mercadopago.com https://www.mercadolibre.com https://*.mercadolibre.com https://player.vimeo.com ",
       "object-src 'none'",
       "base-uri 'self'",
