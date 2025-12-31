@@ -42,12 +42,16 @@ build/
 dist/
 .vercel
 
-# Nodee
+# Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+node_modules.tar.gz
+frontend/node_modules.tar.gz
+deploy-package/
+frontend/deploy-package/
 
 # Environment
 .env

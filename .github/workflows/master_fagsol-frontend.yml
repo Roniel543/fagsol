@@ -29,11 +29,46 @@ jobs:
           npm ci
           NODE_ENV=production npm run build
 
+      - name: Prepare standalone build for Azure
+        run: |
+          cd frontend
+          # El build standalone crea .next/standalone con solo lo necesario
+          # Copiamos los archivos necesarios para el despliegue
+          mkdir -p deploy-package
+          # Copiar la carpeta standalone completa (contiene server.js y node_modules mínimos)
+          cp -r .next/standalone/* deploy-package/
+          # Copiar la carpeta static necesaria para los assets
+          mkdir -p deploy-package/.next
+          cp -r .next/static deploy-package/.next/static
+          # Copiar archivos públicos
+          cp -r public deploy-package/public
+          # Crear un package.json optimizado para Azure con el comando correcto
+          cat > deploy-package/package.json << 'EOF'
+          {
+            "name": "fagsol-frontend",
+            "version": "0.1.0",
+            "private": true,
+            "scripts": {
+              "start": "node server.js"
+            },
+            "engines": {
+              "node": ">=20.0.0"
+            }
+          }
+          EOF
+          # Crear un .deployment para Azure
+          echo "[config]" > deploy-package/.deployment
+          echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> deploy-package/.deployment
+          # Verificar estructura
+          echo "✓ Estructura del paquete de despliegue:"
+          ls -la deploy-package/ | head -15
+          [ -f "deploy-package/server.js" ] && echo "✓ server.js encontrado" || (echo "✗ server.js NO encontrado" && exit 1)
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: frontend
+          path: frontend/deploy-package
 
   deploy:
     runs-on: ubuntu-latest
@@ -51,7 +86,8 @@ jobs:
       
       - name: Prepare deployment package
         run: |
-          # Mover contenido de deploy/node-app a la raíz
+          # El artefacto ya viene preparado desde el build job
+          # Solo necesitamos moverlo a la raíz para el deploy
           if [ -d "deploy/node-app" ]; then
             mv deploy/node-app/* .
             mv deploy/node-app/.* . 2>/dev/null || true
@@ -59,17 +95,14 @@ jobs:
             mv deploy/* .
             mv deploy/.* . 2>/dev/null || true
           fi
-          # Eliminar artefactos de Oryx para evitar extracciones en runtime
-          rm -f oryx-manifest.toml node_modules.tar.gz
-          # Verificar que package.json existe
-          if [ ! -f "package.json" ]; then
-            echo "ERROR: package.json no encontrado"
-            ls -la
-            exit 1
-          fi
-          echo "✓ package.json encontrado"
+          # Verificar estructura del despliegue
           echo "✓ Estructura del despliegue:"
           ls -la | head -20
+          echo "✓ Verificando archivos críticos:"
+          [ -f "package.json" ] && echo "  ✓ package.json encontrado" || (echo "  ✗ package.json NO encontrado" && exit 1)
+          [ -d ".next" ] && echo "  ✓ .next encontrado" || (echo "  ✗ .next NO encontrado" && exit 1)
+          [ -d "public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
+          [ -f ".deployment" ] && echo "  ✓ .deployment encontrado" || echo "  ⚠ .deployment no encontrado (se creará)"
       
       - name: Login to Azure
         uses: azure/login@v2

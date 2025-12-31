@@ -59,8 +59,8 @@ const nextConfig = {
   // No es necesario definirlas aquí a menos que quieras un valor por defecto diferente
 
   // Configuración para producción
-  // En Vercel no necesitas 'standalone', pero puedes dejarlo si planeas usar Docker
-  // output: 'standalone', // Comentado para Vercel
+  // 'standalone' es necesario para Azure App Service - crea una versión optimizada
+  output: 'standalone',
 
   // Optimizaciones para producción
   compress: true,
