@@ -115,6 +115,7 @@ jobs:
         id: deploy-to-webapp
         with:
           app-name: 'fagsol-frontend'
+          resource-group: 'fagsol-rg'
           slot-name: 'Production'
           package: '.'
 
