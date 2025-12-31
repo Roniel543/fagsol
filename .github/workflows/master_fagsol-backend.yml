@@ -164,8 +164,8 @@ jobs:
 
       - name: Wait before deployment
         run: |
-          echo "Esperando 60 segundos para evitar conflictos con reinicios del contenedor..."
-          sleep 60
+          echo "Esperando 90 segundos para evitar conflictos con reinicios del contenedor..."
+          sleep 90
           echo "Espera completada, procediendo con el despliegue..."
 
       - name: 'Deploy to Azure Web App'
@@ -177,5 +177,7 @@ jobs:
           resource-group-name: 'fagsol-rg'
           slot-name: 'Production'
           package: '.'
+          retry-on-timeout: true
+          retry-count: 3
 
 

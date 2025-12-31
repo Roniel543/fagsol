@@ -63,6 +63,11 @@ jobs:
           # Crear un .deployment para Azure
           echo "[config]" > deploy-package/.deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> deploy-package/.deployment
+          # Crear .deploymentignore para evitar que Azure procese node_modules
+          echo "node_modules/" > deploy-package/.deploymentignore
+          echo ".git/" >> deploy-package/.deploymentignore
+          # Crear .skipdeploy para indicar que no se debe hacer build
+          touch deploy-package/.skipdeploy || true
           # Verificar estructura ANTES de crear el artefacto
           echo "✓ Estructura del paquete de despliegue:"
           ls -la deploy-package/ | head -20
@@ -87,6 +92,12 @@ jobs:
           find deploy-package -maxdepth 2 -type d | sort
           echo "✓ Verificando que .next/static tenga contenido:"
           ls -la deploy-package/.next/static/ | head -5 || echo "  ⚠ .next/static está vacío o no existe"
+          # Asegurar que no haya node_modules en la raíz (el standalone ya los incluye)
+          if [ -d "deploy-package/node_modules" ]; then
+            echo "⚠ ADVERTENCIA: node_modules encontrado en deploy-package, removiendo..."
+            rm -rf deploy-package/node_modules
+            echo "✓ node_modules removido (el standalone ya los incluye)"
+          fi
 
       - name: Upload artifact for deployment job
         run: |
@@ -203,13 +214,32 @@ jobs:
             --startup-file "npm start" || {
             echo "⚠ No se pudo configurar el comando de inicio, pero continuando..."
           }
-          # Desactivar build automático
+          # Desactivar build automático y optimización de Node.js
           az webapp config appsettings set \
             --name fagsol-frontend \
             --resource-group fagsol-rg \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ENABLE_ORYX_BUILD=false || {
+            --settings \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+              ENABLE_ORYX_BUILD=false \
+              SCM_COMMAND_IDLE_TIMEOUT=600 \
+              WEBSITE_NODE_DEFAULT_VERSION=~20 \
+              POST_BUILD_COMMAND="" \
+              PRE_BUILD_COMMAND="" || {
             echo "⚠ No se pudieron configurar las variables, pero continuando..."
           }
+          # Desactivar optimización de node_modules (no crear tar.gz)
+          az webapp config set \
+            --name fagsol-frontend \
+            --resource-group fagsol-rg \
+            --generic-configurations '{"nodeDefaultVersion": "~20"}' || {
+            echo "⚠ No se pudo configurar node version, pero continuando..."
+          }
+
+      - name: Wait before deployment
+        run: |
+          echo "Esperando 90 segundos para evitar conflictos con reinicios del contenedor..."
+          sleep 90
+          echo "Espera completada, procediendo con el despliegue..."
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
@@ -219,4 +249,6 @@ jobs:
           resource-group-name: 'fagsol-rg'
           slot-name: 'Production'
           package: .
+          retry-on-timeout: true
+          retry-count: 3
           
