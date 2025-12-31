@@ -36,7 +36,10 @@ jobs:
           # Copiamos los archivos necesarios para el despliegue
           mkdir -p deploy-package
           # Copiar la carpeta standalone completa (contiene server.js y node_modules mínimos)
+          # Usar dotglob para incluir archivos ocultos
+          shopt -s dotglob
           cp -r .next/standalone/* deploy-package/
+          shopt -u dotglob
           # Copiar la carpeta static necesaria para los assets
           # La carpeta .next debe existir en la raíz del deploy para que Next.js encuentre los assets
           mkdir -p deploy-package/.next
@@ -62,13 +65,16 @@ jobs:
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> deploy-package/.deployment
           # Verificar estructura
           echo "✓ Estructura del paquete de despliegue:"
-          ls -la deploy-package/ | head -15
+          ls -la deploy-package/ | head -20
           echo "✓ Verificando archivos críticos en deploy-package:"
           [ -f "deploy-package/server.js" ] && echo "  ✓ server.js encontrado" || (echo "  ✗ server.js NO encontrado" && exit 1)
           [ -d "deploy-package/.next" ] && echo "  ✓ .next encontrado" || (echo "  ✗ .next NO encontrado" && exit 1)
           [ -d "deploy-package/.next/static" ] && echo "  ✓ .next/static encontrado" || (echo "  ✗ .next/static NO encontrado" && exit 1)
           [ -d "deploy-package/public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
           [ -f "deploy-package/package.json" ] && echo "  ✓ package.json encontrado" || (echo "  ✗ package.json NO encontrado" && exit 1)
+          # Verificar contenido de .next
+          echo "✓ Contenido de deploy-package/.next:"
+          ls -la deploy-package/.next/ || echo "  ⚠ No se puede listar .next"
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -112,10 +118,13 @@ jobs:
           
           echo "✓ Directorio raíz del despliegue: $DEPLOY_ROOT"
           
-          # Copiar todos los archivos a la raíz del workspace
-          cp -r $DEPLOY_ROOT/* .
-          # Copiar archivos ocultos (como .deployment)
-          cp -r $DEPLOY_ROOT/.* . 2>/dev/null || true
+          # Listar contenido para debug
+          echo "✓ Contenido de $DEPLOY_ROOT:"
+          ls -la $DEPLOY_ROOT | head -20
+          
+          # Copiar todo el contenido incluyendo archivos ocultos
+          # Usar cp -a para preservar todo y copiar recursivamente
+          cp -a $DEPLOY_ROOT/. .
           
           # Verificar estructura del despliegue
           echo "✓ Estructura del despliegue final:"
@@ -123,8 +132,16 @@ jobs:
           echo "✓ Verificando archivos críticos:"
           [ -f "package.json" ] && echo "  ✓ package.json encontrado" || (echo "  ✗ package.json NO encontrado" && exit 1)
           [ -f "server.js" ] && echo "  ✓ server.js encontrado" || (echo "  ✗ server.js NO encontrado" && exit 1)
-          [ -d ".next" ] && echo "  ✓ .next encontrado" || (echo "  ✗ .next NO encontrado" && exit 1)
-          [ -d ".next/static" ] && echo "  ✓ .next/static encontrado" || (echo "  ✗ .next/static NO encontrado" && exit 1)
+          if [ -d ".next" ]; then
+            echo "  ✓ .next encontrado"
+            ls -la .next/ | head -10
+            [ -d ".next/static" ] && echo "  ✓ .next/static encontrado" || (echo "  ✗ .next/static NO encontrado" && exit 1)
+          else
+            echo "  ✗ .next NO encontrado"
+            echo "  ⚠ Intentando crear .next desde el artefacto..."
+            find deploy -type d -name "static" | head -5
+            exit 1
+          fi
           [ -d "public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
           [ -f ".deployment" ] && echo "  ✓ .deployment encontrado" || echo "  ⚠ .deployment no encontrado (se creará)"
       
