@@ -18,7 +18,7 @@ function ModuleLessonsPageContent() {
     const moduleId = params?.moduleId as string;
     const { course, isLoading: isLoadingCourse } = useCourse(courseId);
     const { modules } = useAdminModules(courseId);
-    const module = modules.find(m => m.id === moduleId);
+    const moduleData = modules.find(m => m.id === moduleId);
     const { lessons, isLoading, mutate } = useAdminLessons(moduleId);
     const { deleteLesson, isDeleting } = useDeleteLesson();
     const { showToast } = useToast();
@@ -81,7 +81,7 @@ function ModuleLessonsPageContent() {
         );
     }
 
-    if (!course || !module) {
+    if (!course || !moduleData) {
         return (
             <div className="min-h-screen bg-primary-black flex items-center justify-center p-4">
                 <div className="bg-secondary-dark-gray/60 backdrop-blur-sm border border-red-500/30 rounded-xl shadow-lg p-8 text-center max-w-md w-full">
@@ -111,7 +111,7 @@ function ModuleLessonsPageContent() {
 
             {/* Header */}
             <InstructorHeader
-                title={`Lecciones: ${module.title}`}
+                title={`Lecciones: ${moduleData.title}`}
                 subtitle={`Curso: ${course.title}`}
                 showBackButton={true}
                 backHref={`/instructor/courses/${courseId}/modules`}

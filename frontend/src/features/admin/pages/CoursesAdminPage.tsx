@@ -250,7 +250,7 @@ function CoursesAdminPageContent() {
                                                     {' '}
                                                     con estado{' '}
                                                     <span className="font-semibold">
-                                                        "{filterButtons.find((f) => f.key === statusFilter)?.label}"
+                                                        &quot;{filterButtons.find((f) => f.key === statusFilter)?.label}&quot;
                                                     </span>
                                                 </>
                                             )}

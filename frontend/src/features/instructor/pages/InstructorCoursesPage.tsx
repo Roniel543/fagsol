@@ -388,7 +388,7 @@ function InstructorCoursesPageContent() {
                     message={
                         courseToDelete ? (
                             <div className="space-y-2">
-                                <p>¿Estás seguro de que deseas eliminar el curso <strong>"{courseToDelete.title}"</strong>?</p>
+                                <p>¿Estás seguro de que deseas eliminar el curso <strong>&quot;{courseToDelete.title}&quot;</strong>?</p>
                                 <p className="text-sm text-gray-600">Esta acción no se puede deshacer. El curso será archivado.</p>
                             </div>
                         ) : '¿Estás seguro de que deseas eliminar este curso?'

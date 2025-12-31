@@ -467,7 +467,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                 ) : (
                                     <>
                                         <p className="text-sm text-orange-200/90 mb-3">
-                                            El administrador ha marcado tu curso como "Requiere Cambios".
+                                            El administrador ha marcado tu curso como &quot;Requiere Cambios&quot;.
                                         </p>
                                         <p className="text-sm text-orange-200/90 mb-3">
                                             Por favor, revisa el contenido de tu curso y realiza las mejoras necesarias.
@@ -987,7 +987,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                                     ¡Curso Creado Exitosamente!
                                                 </h3>
                                                 <p className="text-sm sm:text-base text-secondary-light-gray">
-                                                    Tu curso está en estado <span className="font-semibold text-amber-400">"Borrador"</span>
+                                                    Tu curso está en estado <span className="font-semibold text-amber-400">&quot;Borrador&quot;</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -1079,7 +1079,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                                         <span className="break-words">Publicar el Curso</span>
                                                     </h5>
                                                     <p className="text-xs sm:text-sm text-secondary-light-gray leading-relaxed">
-                                                        Una vez que el contenido esté completo, puedes cambiar el estado del curso a "Publicado" para que esté disponible para los estudiantes.
+                                                        Una vez que el contenido esté completo, puedes cambiar el estado del curso a &quot;Publicado&quot; para que esté disponible para los estudiantes.
                                                     </p>
                                                 </div>
                                             </div>
@@ -1198,7 +1198,7 @@ export function CourseForm({ courseId, onSuccess, onCancel }: CourseFormProps) {
                                             <div className="flex-1">
                                                 <h5 className="font-semibold text-primary-white mb-1">Cambio de Estado</h5>
                                                 <p className="text-sm text-secondary-light-gray">
-                                                    El estado de tu curso cambiará a <span className="font-semibold text-blue-300">"Pendiente de Revisión"</span> y no podrás editarlo hasta que se complete la revisión.
+                                                    El estado de tu curso cambiará a <span className="font-semibold text-blue-300">&quot;Pendiente de Revisión&quot;</span> y no podrás editarlo hasta que se complete la revisión.
                                                 </p>
                                             </div>
                                         </div>

@@ -59,15 +59,15 @@ export function ModuleForm({ courseId, moduleId, onSuccess, onCancel }: ModuleFo
         try {
             setLoadingModule(true);
             const response = await listCourseModules(courseId);
-            const module = response.data.find(m => m.id === moduleId);
-            if (module) {
+            const moduleData = response.data.find(m => m.id === moduleId);
+            if (moduleData) {
                 setFormData({
-                    title: module.title || '',
-                    description: module.description || '',
-                    price: module.price || 0,
-                    is_purchasable: module.is_purchasable || false,
-                    order: module.order || 0,
-                    is_active: module.is_active,
+                    title: moduleData.title || '',
+                    description: moduleData.description || '',
+                    price: moduleData.price || 0,
+                    is_purchasable: moduleData.is_purchasable || false,
+                    order: moduleData.order || 0,
+                    is_active: moduleData.is_active,
                 });
             }
         } catch (err: any) {

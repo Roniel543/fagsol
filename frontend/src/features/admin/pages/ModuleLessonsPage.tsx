@@ -17,7 +17,7 @@ function ModuleLessonsPageContent() {
     const moduleId = params?.moduleId as string;
     const { course, isLoading: isLoadingCourse } = useCourse(courseId);
     const { modules } = useAdminModules(courseId);
-    const module = modules.find(m => m.id === moduleId);
+    const moduleData = modules.find(m => m.id === moduleId);
     const { lessons, isLoading, mutate } = useAdminLessons(moduleId);
     const { deleteLesson, isDeleting } = useDeleteLesson();
     const { showToast } = useToast();
@@ -90,7 +90,7 @@ function ModuleLessonsPageContent() {
         );
     }
 
-    if (!course || !module) {
+    if (!course || !moduleData) {
         return (
             <div className="flex items-center justify-center py-12">
                 <Card className="p-8 text-center">
@@ -110,7 +110,7 @@ function ModuleLessonsPageContent() {
                 <div className="flex justify-between items-center">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900">
-                            Lecciones: {module.title}
+                            Lecciones: {moduleData.title}
                         </h1>
                         <p className="text-gray-600 mt-1">
                             Curso: {course.title}
