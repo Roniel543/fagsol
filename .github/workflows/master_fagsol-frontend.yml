@@ -28,8 +28,6 @@ jobs:
           cd frontend
           npm ci
           NODE_ENV=production npm run build
-          # Instalar solo dependencias de producción para el despliegue
-          npm ci --only=production
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -61,6 +59,8 @@ jobs:
             mv deploy/* .
             mv deploy/.* . 2>/dev/null || true
           fi
+          # Eliminar artefactos de Oryx para evitar extracciones en runtime
+          rm -f oryx-manifest.toml node_modules.tar.gz
           # Verificar que package.json existe
           if [ ! -f "package.json" ]; then
             echo "ERROR: package.json no encontrado"
