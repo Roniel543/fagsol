@@ -152,6 +152,24 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_98FCEBD4DC7841DCAB92A5D7FB37677E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_17BC8AF7D9BA44A3B1223EB76D1D181A }}
 
+      - name: Configure startup command and disable build
+        run: |
+          echo "Configurando comando de inicio y desactivando build automático..."
+          # Configurar comando de inicio
+          az webapp config set \
+            --name fagsol-frontend \
+            --resource-group fagsol-rg \
+            --startup-file "npm start" || {
+            echo "⚠ No se pudo configurar el comando de inicio, pero continuando..."
+          }
+          # Desactivar build automático
+          az webapp config appsettings set \
+            --name fagsol-frontend \
+            --resource-group fagsol-rg \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false ENABLE_ORYX_BUILD=false || {
+            echo "⚠ No se pudieron configurar las variables, pero continuando..."
+          }
+
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
