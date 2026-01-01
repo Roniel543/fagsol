@@ -5,7 +5,30 @@ echo "=========================================="
 echo "Iniciando aplicación Django en Azure"
 echo "=========================================="
 
+# Cambiar al directorio de la aplicación
 cd /home/site/wwwroot
+
+# Crear entorno virtual si no existe
+if [ ! -d "antenv" ]; then
+    echo "Creando entorno virtual..."
+    python3 -m venv antenv
+fi
+
+# Activar entorno virtual
+echo "Activando entorno virtual..."
+source antenv/bin/activate
+
+# Actualizar pip
+echo "Actualizando pip..."
+pip install --upgrade pip
+
+# Instalar dependencias
+echo "Instalando dependencias desde requirements.txt..."
+if [ -f "requirements.txt" ]; then
+    pip install --no-cache-dir -r requirements.txt
+else
+    echo "⚠ ADVERTENCIA: requirements.txt no encontrado"
+fi
 
 # Función para esperar la base de datos
 wait_for_db() {
