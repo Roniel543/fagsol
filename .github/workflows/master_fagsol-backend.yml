@@ -93,14 +93,6 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6C82FA05A127426E8E34B7E0673E74E9 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_41FB12A187CD40539F6433521BF34E7F }}
 
-      - name: Configure startup command
-        run: |
-          echo "Configurando comando de inicio en Azure..."
-          az webapp config set \
-            --name fagsol-backend \
-            --resource-group fagsol-rg \
-            --startup-file "bash /home/site/wwwroot/startup.sh"
-
       - name: Prepare deployment package
         run: |
           # El artefacto viene en un subdirectorio, necesitamos moverlo a la raíz
@@ -126,6 +118,25 @@ jobs:
             echo "✗ ERROR: requirements.txt no encontrado"
             exit 1
           fi
+          # Crear .deployment para desactivar build automático
+          echo "[config]" > .deployment
+          echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> .deployment
+
+      - name: Configure Azure settings
+        run: |
+          echo "Configurando Azure para desactivar build automático..."
+          # Desactivar build automático
+          az webapp config appsettings set \
+            --name fagsol-backend \
+            --resource-group fagsol-rg \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false || true
+          # Configurar comando de inicio
+          az webapp config set \
+            --name fagsol-backend \
+            --resource-group fagsol-rg \
+            --startup-file "bash /home/site/wwwroot/startup.sh" || true
+          echo "Esperando 30 segundos para evitar conflictos..."
+          sleep 30
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
@@ -134,5 +145,4 @@ jobs:
           resource-group-name: 'fagsol-rg'
           slot-name: 'Production'
           package: '.'
-          retry-on-timeout: true
-          retry-count: 3
+          restart: true
