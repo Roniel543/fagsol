@@ -135,8 +135,9 @@ jobs:
             --name fagsol-backend \
             --resource-group fagsol-rg \
             --startup-file "bash /home/site/wwwroot/startup.sh" || true
-          echo "Esperando 30 segundos para evitar conflictos..."
-          sleep 30
+          echo "Esperando 120 segundos para que el contenedor SCM se estabilice después de la configuración..."
+          sleep 120
+          echo "Espera completada, procediendo con el despliegue..."
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
