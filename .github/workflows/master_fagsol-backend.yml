@@ -96,31 +96,57 @@ jobs:
       - name: Prepare deployment package
         run: |
           # El artefacto viene en un subdirectorio, necesitamos moverlo a la raíz
+          echo "✓ Buscando artefacto..."
+          find . -name "startup.sh" -o -name "requirements.txt" | head -10
+          
           if [ -d "deploy_package" ]; then
-            mv deploy_package/* .
-            mv deploy_package/.* . 2>/dev/null || true
-            rmdir deploy_package 2>/dev/null || true
+            echo "✓ Moviendo contenido de deploy_package a la raíz..."
+            cp -a deploy_package/* .
+            cp -a deploy_package/.* . 2>/dev/null || true
+            # Verificar después de copiar
+            ls -la | head -20
+          elif [ -d "python-app" ]; then
+            echo "✓ Moviendo contenido de python-app a la raíz..."
+            cp -a python-app/* .
+            cp -a python-app/.* . 2>/dev/null || true
+          else
+            echo "⚠ No se encontró deploy_package ni python-app, buscando en estructura actual..."
+            find . -type f -name "*.py" | head -5
+            find . -type f -name "startup.sh" | head -5
           fi
+          
           # Verificar que startup.sh está presente
           if [ -f "startup.sh" ]; then
             chmod +x startup.sh
             echo "✓ startup.sh encontrado y marcado como ejecutable"
             ls -la startup.sh
+            head -5 startup.sh
           else
-            echo "✗ ERROR: startup.sh no encontrado"
+            echo "✗ ERROR: startup.sh no encontrado después de mover archivos"
+            echo "✓ Estructura actual:"
             ls -la
+            echo "✓ Buscando startup.sh en todo el directorio:"
+            find . -name "startup.sh" 2>/dev/null || echo "No encontrado"
             exit 1
           fi
+          
           # Verificar que requirements.txt está presente
           if [ -f "requirements.txt" ]; then
             echo "✓ requirements.txt encontrado"
+            head -5 requirements.txt
           else
             echo "✗ ERROR: requirements.txt no encontrado"
+            find . -name "requirements.txt" 2>/dev/null || echo "No encontrado"
             exit 1
           fi
+          
           # Crear .deployment para desactivar build automático
           echo "[config]" > .deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> .deployment
+          
+          # Verificación final
+          echo "✓ Archivos en la raíz del despliegue:"
+          ls -la | head -15
 
       - name: Configure Azure settings
         run: |
@@ -130,11 +156,11 @@ jobs:
             --name fagsol-backend \
             --resource-group fagsol-rg \
             --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false || true
-          # Configurar comando de inicio
+          # Configurar comando de inicio (usar ruta relativa, Azure lo resuelve desde /home/site/wwwroot)
           az webapp config set \
             --name fagsol-backend \
             --resource-group fagsol-rg \
-            --startup-file "bash /home/site/wwwroot/startup.sh" || true
+            --startup-file "bash startup.sh" || true
           echo "Esperando 120 segundos para que el contenedor SCM se estabilice después de la configuración..."
           sleep 120
           echo "Espera completada, procediendo con el despliegue..."
