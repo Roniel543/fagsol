@@ -38,14 +38,10 @@ jobs:
             tcl-dev \
             tk-dev
 
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-
-      - name: Prepare deployment package
+      - name: Prepare deployment package with dependencies
         run: |
           mkdir -p deploy_package
+          # Copiar código del backend
           rsync -av --exclude='__pycache__' \
                     --exclude='*.pyc' \
                     --exclude='.pytest_cache' \
@@ -58,14 +54,29 @@ jobs:
                     --exclude='Thumbs.db' \
                     --exclude='media' \
                     --exclude='staticfiles' \
+                    --exclude='venv' \
+                    --exclude='antenv' \
                     backend/ deploy_package/
-          cp backend/requirements.txt deploy_package/requirements.txt
+          
+          # Crear entorno virtual e instalar dependencias en el paquete
+          cd deploy_package
+          python3 -m venv antenv
+          source antenv/bin/activate
+          pip install --upgrade pip
+          pip install --no-cache-dir -r requirements.txt
+          deactivate
+          cd ..
+          
+          # Copiar startup.sh
           if [ -f backend/startup.sh ]; then
             cp backend/startup.sh deploy_package/startup.sh
             chmod +x deploy_package/startup.sh
           fi
+          
           echo "Tamaño del paquete de despliegue:"
           du -sh deploy_package
+          echo "Tamaño del entorno virtual:"
+          du -sh deploy_package/antenv
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4

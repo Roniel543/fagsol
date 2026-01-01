@@ -8,26 +8,26 @@ echo "=========================================="
 # Cambiar al directorio de la aplicación
 cd /home/site/wwwroot
 
-# Crear entorno virtual si no existe
-if [ ! -d "antenv" ]; then
-    echo "Creando entorno virtual..."
+# Activar entorno virtual (ya viene instalado desde el build)
+if [ -d "antenv" ]; then
+    echo "Activando entorno virtual existente..."
+    source antenv/bin/activate
+    echo "✓ Entorno virtual activado"
+else
+    echo "⚠ ADVERTENCIA: entorno virtual no encontrado, creándolo..."
     python3 -m venv antenv
+    source antenv/bin/activate
+    pip install --upgrade pip
+    if [ -f "requirements.txt" ]; then
+        echo "Instalando dependencias desde requirements.txt..."
+        pip install --no-cache-dir -r requirements.txt
+    fi
 fi
 
-# Activar entorno virtual
-echo "Activando entorno virtual..."
-source antenv/bin/activate
-
-# Actualizar pip
-echo "Actualizando pip..."
-pip install --upgrade pip
-
-# Instalar dependencias
-echo "Instalando dependencias desde requirements.txt..."
-if [ -f "requirements.txt" ]; then
+# Verificar que Django está instalado
+if ! python -c "import django" 2>/dev/null; then
+    echo "⚠ ADVERTENCIA: Django no encontrado, instalando dependencias..."
     pip install --no-cache-dir -r requirements.txt
-else
-    echo "⚠ ADVERTENCIA: requirements.txt no encontrado"
 fi
 
 # Función para esperar la base de datos
