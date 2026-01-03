@@ -33,18 +33,45 @@ fi
 # Función para esperar la base de datos
 wait_for_db() {
     echo "Esperando a que la base de datos esté disponible..."
+    echo "Host: ${DB_HOST:-no configurado}"
+    echo "Database: ${DB_NAME:-no configurado}"
+    echo "User: ${DB_USER:-no configurado}"
     ATTEMPTS=0
-    MAX_ATTEMPTS=30
-    DELAY=2
+    MAX_ATTEMPTS=10
+    DELAY=3
 
-    until python manage.py dbshell >/dev/null 2>&1 || [ $ATTEMPTS -eq $MAX_ATTEMPTS ]; do
-        echo "Intento $((ATTEMPTS+1))/$MAX_ATTEMPTS: base de datos no disponible. Esperando $DELAY segundos..."
+    until python -c "
+import os
+import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
+from django.db import connection
+connection.ensure_connection()
+" 2>&1 || [ $ATTEMPTS -eq $MAX_ATTEMPTS ]; do
+        ERROR_OUTPUT=$(python -c "
+import os
+import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
+from django.db import connection
+try:
+    connection.ensure_connection()
+except Exception as e:
+    print(str(e))
+" 2>&1 || echo "Error desconocido")
+        echo "Intento $((ATTEMPTS+1))/$MAX_ATTEMPTS: Error de conexión: $ERROR_OUTPUT"
         ATTEMPTS=$((ATTEMPTS+1))
         sleep $DELAY
     done
 
     if [ $ATTEMPTS -eq $MAX_ATTEMPTS ]; then
-        echo "⚠ No se pudo conectar a la base de datos después de $MAX_ATTEMPTS intentos. Continuando..."
+        echo "⚠ ERROR CRÍTICO: No se pudo conectar a la base de datos después de $MAX_ATTEMPTS intentos."
+        echo "⚠ Verifica:"
+        echo "  1. Firewall de PostgreSQL permite conexiones desde Azure Services"
+        echo "  2. Variables de entorno DB_HOST, DB_NAME, DB_USER, DB_PASSWORD están correctas"
+        echo "  3. La base de datos está en estado 'Ready'"
+        echo "  4. El nombre de la base de datos existe en PostgreSQL"
+        echo "⚠ Continuando sin conexión a BD (la app fallará)..."
     else
         echo "✓ Base de datos disponible."
     fi
