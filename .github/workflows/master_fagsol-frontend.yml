@@ -32,7 +32,9 @@ jobs:
           NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: TEST-2742c5af-4c5d-4ea6-9924-da7ba403fd7a
         run: |
           cd frontend
-          npm ci
+          # Instalar TODAS las dependencias (incluyendo devDependencies como tailwindcss)
+          # tailwindcss, postcss, autoprefixer están en devDependencies pero son necesarios para el build
+          npm ci --include=dev
           echo "🔍 Verificando variables de entorno para el build:"
           echo "  NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
           echo "  NODE_ENV=${NODE_ENV}"
