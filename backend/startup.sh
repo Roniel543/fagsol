@@ -108,49 +108,47 @@ migrate_db() {
 
 migrate_db
 
-# Recolectar archivos estáticos
-# NOTA: Django solo es API REST, los archivos estáticos son mínimos (Admin + Swagger)
-# IMPORTANTE: CompressedManifestStaticFilesStorage requiere que se genere manifest.json
-# Si collectstatic falla, el admin de Django no funcionará (error 500)
+# Verificar archivos estáticos
+# NOTA: collectstatic ya se ejecutó durante el BUILD en GitHub Actions
+# Solo verificamos que existan, NO los regeneramos (evita timeout)
 echo "=========================================="
-echo "Recolectando archivos estáticos..."
-echo "  (Admin Django + Swagger UI - debería ser rápido)"
+echo "Verificando archivos estáticos..."
+echo "  (Ya fueron generados durante el build)"
 echo "=========================================="
 
 # Verificar que el directorio staticfiles existe
-mkdir -p staticfiles
+if [ ! -d "staticfiles" ]; then
+    echo "⚠ ADVERTENCIA: staticfiles no existe, creándolo..."
+    mkdir -p staticfiles
+fi
 
-# Ejecutar collectstatic SIN limitar la salida para ver errores completos
-# El --clear limpia archivos antiguos antes de recolectar
-# El --noinput evita preguntas interactivas
-echo "Ejecutando: python manage.py collectstatic --noinput --clear"
-if python manage.py collectstatic --noinput --clear; then
-    echo "✓ collectstatic completado exitosamente"
+# Verificar que el manifest.json existe (crítico para CompressedManifestStaticFilesStorage)
+if [ -f "staticfiles/staticfiles.json" ] || [ -f "staticfiles/manifest.json" ]; then
+    echo "✓ Manifest de archivos estáticos encontrado"
+    ls -lh staticfiles/*.json 2>/dev/null | head -3 || echo "  (manifest en otro formato)"
     
-    # Verificar que el manifest.json se generó (crítico para CompressedManifestStaticFilesStorage)
-    if [ -f "staticfiles/staticfiles.json" ] || [ -f "staticfiles/manifest.json" ]; then
-        echo "✓ Manifest de archivos estáticos generado correctamente"
-        ls -lh staticfiles/*.json 2>/dev/null | head -3 || echo "  (manifest en otro formato)"
-    else
-        echo "⚠ ADVERTENCIA: manifest.json no encontrado después de collectstatic"
-        echo "  Esto puede causar errores 500 en el admin de Django"
-        echo "  Verificando contenido de staticfiles:"
-        ls -la staticfiles/ | head -10
-    fi
-    
-    # Mostrar resumen de archivos recolectados
+    # Mostrar resumen de archivos estáticos
     echo "✓ Resumen de archivos estáticos:"
     du -sh staticfiles/ 2>/dev/null || echo "  (no se pudo calcular tamaño)"
-    find staticfiles -type f | wc -l | xargs echo "  Archivos totales:"
+    FILE_COUNT=$(find staticfiles -type f 2>/dev/null | wc -l)
+    echo "  Archivos totales: $FILE_COUNT"
+    
+    if [ "$FILE_COUNT" -eq 0 ]; then
+        echo "⚠ ADVERTENCIA: staticfiles está vacío"
+        echo "  Ejecutando collectstatic (sin --clear para ser más rápido)..."
+        timeout 30 python manage.py collectstatic --noinput 2>&1 | tail -20 || {
+            echo "⚠ collectstatic falló o timeout, pero continuando..."
+        }
+    fi
 else
-    echo "✗ ERROR CRÍTICO: collectstatic falló"
-    echo "  El admin de Django NO funcionará sin archivos estáticos"
-    echo "  Revisando errores..."
-    # Intentar de nuevo sin --clear para ver si ayuda
-    echo "  Reintentando sin --clear..."
-    python manage.py collectstatic --noinput || {
-        echo "✗ collectstatic falló nuevamente"
-        echo "  Continuando de todas formas (la app puede fallar en /admin/)"
+    echo "⚠ ADVERTENCIA: manifest.json no encontrado"
+    echo "  Esto puede causar errores 500 en el admin de Django"
+    echo "  Ejecutando collectstatic (sin --clear para ser más rápido)..."
+    timeout 30 python manage.py collectstatic --noinput 2>&1 | tail -20 || {
+        echo "✗ ERROR: collectstatic falló o timeout"
+        echo "  El admin de Django puede no funcionar correctamente"
+        echo "  Verificando contenido de staticfiles:"
+        ls -la staticfiles/ | head -10
     }
 fi
 
