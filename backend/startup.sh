@@ -108,16 +108,25 @@ migrate_db() {
 
 migrate_db
 
-# Recolectar archivos estáticos (con timeout y en background si es necesario)
-echo "Recolectando archivos estáticos..."
-# Intentar con timeout, si no está disponible, ejecutar directamente
+# Recolectar archivos estáticos
+# NOTA: Django solo es API REST, los archivos estáticos son mínimos (Admin + Swagger)
+# Por lo tanto, collectstatic debería ser rápido. Si tarda mucho, hay un problema.
+echo "Recolectando archivos estáticos (Admin Django + Swagger UI)..."
+echo "  (Esto debería ser rápido ya que Django solo es API REST)"
+
+# Ejecutar collectstatic con timeout corto (solo Admin y Swagger, no debería tardar)
 if command -v timeout >/dev/null 2>&1; then
-    timeout 30 python manage.py collectstatic --noinput || echo "⚠ Timeout o error en collectstatic, continuando..."
+    timeout 20 python manage.py collectstatic --noinput --clear 2>&1 | head -20 || {
+        echo "⚠ Timeout o error en collectstatic (continuando de todas formas)"
+        echo "  Los archivos estáticos se servirán desde WhiteNoise si están disponibles"
+    }
 else
-    python manage.py collectstatic --noinput || echo "⚠ Error en collectstatic, continuando..."
+    python manage.py collectstatic --noinput --clear 2>&1 | head -20 || {
+        echo "⚠ Error en collectstatic (continuando de todas formas)"
+    }
 fi
 
-echo "✓ Recolección de archivos estáticos completada"
+echo "✓ Recolección de archivos estáticos completada (o omitida si hubo error)"
 
 # Configurar puerto (Azure App Service configura PORT automáticamente)
 # Azure puede usar PORT o WEBSITES_PORT
