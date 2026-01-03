@@ -110,23 +110,51 @@ migrate_db
 
 # Recolectar archivos estáticos
 # NOTA: Django solo es API REST, los archivos estáticos son mínimos (Admin + Swagger)
-# Por lo tanto, collectstatic debería ser rápido. Si tarda mucho, hay un problema.
-echo "Recolectando archivos estáticos (Admin Django + Swagger UI)..."
-echo "  (Esto debería ser rápido ya que Django solo es API REST)"
+# IMPORTANTE: CompressedManifestStaticFilesStorage requiere que se genere manifest.json
+# Si collectstatic falla, el admin de Django no funcionará (error 500)
+echo "=========================================="
+echo "Recolectando archivos estáticos..."
+echo "  (Admin Django + Swagger UI - debería ser rápido)"
+echo "=========================================="
 
-# Ejecutar collectstatic con timeout corto (solo Admin y Swagger, no debería tardar)
-if command -v timeout >/dev/null 2>&1; then
-    timeout 20 python manage.py collectstatic --noinput --clear 2>&1 | head -20 || {
-        echo "⚠ Timeout o error en collectstatic (continuando de todas formas)"
-        echo "  Los archivos estáticos se servirán desde WhiteNoise si están disponibles"
-    }
+# Verificar que el directorio staticfiles existe
+mkdir -p staticfiles
+
+# Ejecutar collectstatic SIN limitar la salida para ver errores completos
+# El --clear limpia archivos antiguos antes de recolectar
+# El --noinput evita preguntas interactivas
+echo "Ejecutando: python manage.py collectstatic --noinput --clear"
+if python manage.py collectstatic --noinput --clear; then
+    echo "✓ collectstatic completado exitosamente"
+    
+    # Verificar que el manifest.json se generó (crítico para CompressedManifestStaticFilesStorage)
+    if [ -f "staticfiles/staticfiles.json" ] || [ -f "staticfiles/manifest.json" ]; then
+        echo "✓ Manifest de archivos estáticos generado correctamente"
+        ls -lh staticfiles/*.json 2>/dev/null | head -3 || echo "  (manifest en otro formato)"
+    else
+        echo "⚠ ADVERTENCIA: manifest.json no encontrado después de collectstatic"
+        echo "  Esto puede causar errores 500 en el admin de Django"
+        echo "  Verificando contenido de staticfiles:"
+        ls -la staticfiles/ | head -10
+    fi
+    
+    # Mostrar resumen de archivos recolectados
+    echo "✓ Resumen de archivos estáticos:"
+    du -sh staticfiles/ 2>/dev/null || echo "  (no se pudo calcular tamaño)"
+    find staticfiles -type f | wc -l | xargs echo "  Archivos totales:"
 else
-    python manage.py collectstatic --noinput --clear 2>&1 | head -20 || {
-        echo "⚠ Error en collectstatic (continuando de todas formas)"
+    echo "✗ ERROR CRÍTICO: collectstatic falló"
+    echo "  El admin de Django NO funcionará sin archivos estáticos"
+    echo "  Revisando errores..."
+    # Intentar de nuevo sin --clear para ver si ayuda
+    echo "  Reintentando sin --clear..."
+    python manage.py collectstatic --noinput || {
+        echo "✗ collectstatic falló nuevamente"
+        echo "  Continuando de todas formas (la app puede fallar en /admin/)"
     }
 fi
 
-echo "✓ Recolección de archivos estáticos completada (o omitida si hubo error)"
+echo "=========================================="
 
 # Configurar puerto (Azure App Service configura PORT automáticamente)
 # Azure puede usar PORT o WEBSITES_PORT
