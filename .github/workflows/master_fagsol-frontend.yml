@@ -24,10 +24,16 @@ jobs:
           node-version: '20.x'
 
       - name: npm install, build, and test
+        env:
+          # IMPORTANTE: NEXT_PUBLIC_* se inyectan en tiempo de BUILD, no runtime
+          # Estas variables deben estar aquí, no solo en Azure Portal
+          NODE_ENV: production
+          NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL || 'https://fagsol-backend-e5ghbzhyhnd2f7bn.centralus-01.azurewebsites.net/api/v1' }}
+          NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: ${{ secrets.NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY || 'TEST-2742c5af-4c5d-4ea6-9924-da7ba403fd7a' }}
         run: |
           cd frontend
           npm ci
-          NODE_ENV=production npm run build
+          npm run build
 
       - name: Prepare standalone build for Azure
         run: |
