@@ -8,6 +8,13 @@ echo "=========================================="
 # Cambiar al directorio de la aplicación
 cd /home/site/wwwroot
 
+# Mostrar variables de entorno importantes (sin mostrar contraseñas)
+echo "Variables de entorno:"
+echo "  - PORT: ${PORT:-no configurado}"
+echo "  - WEBSITES_PORT: ${WEBSITES_PORT:-no configurado}"
+echo "  - DB_HOST: ${DB_HOST:-no configurado}"
+echo "  - DB_NAME: ${DB_NAME:-no configurado}"
+
 # Activar entorno virtual (ya viene instalado desde el build)
 if [ -d "antenv" ]; then
     echo "Activando entorno virtual existente..."
@@ -101,21 +108,59 @@ migrate_db() {
 
 migrate_db
 
-# Recolectar archivos estáticos
+# Recolectar archivos estáticos (con timeout y en background si es necesario)
 echo "Recolectando archivos estáticos..."
-python manage.py collectstatic --noinput || echo "⚠ Error al recolectar archivos estáticos, pero continuando..."
+# Intentar con timeout, si no está disponible, ejecutar directamente
+if command -v timeout >/dev/null 2>&1; then
+    timeout 30 python manage.py collectstatic --noinput || echo "⚠ Timeout o error en collectstatic, continuando..."
+else
+    python manage.py collectstatic --noinput || echo "⚠ Error en collectstatic, continuando..."
+fi
 
-# Configurar puerto
-PORT=${PORT:-8000}
+echo "✓ Recolección de archivos estáticos completada"
 
+# Configurar puerto (Azure App Service configura PORT automáticamente)
+# Azure puede usar PORT o WEBSITES_PORT
+if [ -z "$PORT" ] && [ -n "$WEBSITES_PORT" ]; then
+    PORT=$WEBSITES_PORT
+elif [ -z "$PORT" ]; then
+    PORT=8000
+    echo "⚠ ADVERTENCIA: PORT no configurado, usando puerto por defecto 8000"
+fi
+
+# Asegurar que PORT es un número
+if ! [[ "$PORT" =~ ^[0-9]+$ ]]; then
+    echo "⚠ ERROR: PORT no es un número válido: $PORT, usando 8000"
+    PORT=8000
+fi
+
+echo "=========================================="
+echo "Configuración final:"
+echo "  - Puerto: $PORT"
+echo "  - Workers: 2"
+echo "  - Timeout: 180"
 echo "=========================================="
 echo "Iniciando Gunicorn en puerto $PORT"
 echo "=========================================="
 
+# Asegurar que estamos en el directorio correcto
+cd /home/site/wwwroot
+
+# Verificar que Gunicorn está instalado
+if ! python -c "import gunicorn" 2>/dev/null; then
+    echo "⚠ ERROR: Gunicorn no está instalado. Instalando..."
+    pip install gunicorn
+fi
+
+# Iniciar Gunicorn (exec reemplaza el proceso actual)
+# IMPORTANTE: exec hace que Gunicorn reemplace el proceso del script
+echo "Ejecutando: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 180"
 exec gunicorn config.wsgi:application \
     --bind 0.0.0.0:$PORT \
     --workers 2 \
     --timeout 180 \
     --access-logfile - \
     --error-logfile - \
-    --log-level info
+    --log-level info \
+    --capture-output \
+    --preload
