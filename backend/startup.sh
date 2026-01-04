@@ -18,36 +18,14 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
     # Crear/activar entorno virtual e instalar dependencias
     # IMPORTANTE: Instalamos aquí para evitar problemas de compatibilidad GLIBC
     # (cryptography compilado en GitHub Actions puede no ser compatible con Azure)
-    # ESTRATEGIA: Siempre eliminar y recrear antenv para asegurar dependencias correctas
-    # Esto es necesario porque el entorno virtual puede tener dependencias compiladas
-    # para un entorno diferente (GLIBC más nuevo)
+    # ESTRATEGIA: Siempre eliminar antenv si existe y recrearlo
+    # Esto asegura que las dependencias se instalen para el entorno correcto de Azure
     if [ -d "antenv" ]; then
         echo "⚠ Entorno virtual existente detectado"
-        echo "  Verificando compatibilidad de cryptography..."
-        source antenv/bin/activate
-        
-        # Intentar importar y usar cryptography para detectar problemas de GLIBC
-        # El error solo aparece cuando se intenta usar, no solo importar
-        CRYPTO_TEST=$(python -c "
-import cryptography
-from cryptography.hazmat.primitives.asymmetric import ec
-print('OK')
-" 2>&1)
-        
-        if echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
-            echo "✗ ERROR DETECTADO: cryptography tiene problemas de compatibilidad GLIBC"
-            echo "  Eliminando entorno virtual para recrearlo con dependencias correctas..."
-            deactivate
-            rm -rf antenv
-            echo "✓ Entorno virtual eliminado"
-        elif echo "$CRYPTO_TEST" | grep -q "OK"; then
-            echo "✓ cryptography funciona correctamente"
-        else
-            echo "⚠ No se pudo verificar cryptography, reinstalando por seguridad..."
-            pip uninstall -y cryptography || true
-            pip install --upgrade pip
-            pip install --no-cache-dir cryptography
-        fi
+        echo "  Puede tener dependencias compiladas para un entorno diferente (GLIBC)"
+        echo "  Eliminando para recrearlo con dependencias correctas para Azure..."
+        rm -rf antenv
+        echo "✓ Entorno virtual eliminado"
     fi
     
     # Crear entorno virtual si no existe
