@@ -30,9 +30,19 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
         if ! python -c "import django" 2>/dev/null; then
             echo "⚠ Django no encontrado en el entorno virtual"
             echo "  Instalando dependencias desde requirements.txt..."
+            echo "  (Esto puede tardar 10-15 minutos - por favor espere)"
             pip install --upgrade pip
             if [ -f "requirements.txt" ]; then
-                pip install --no-cache-dir -r requirements.txt
+                # Instalar con logging periódico para evitar que Azure lo considere colgado
+                echo "  Iniciando instalación de dependencias..."
+                pip install --no-cache-dir -r requirements.txt 2>&1 | while IFS= read -r line; do
+                    echo "$line"
+                    # Log cada 30 segundos para mantener vivo el proceso
+                    if [ $(date +%s) -gt $((LAST_LOG + 30)) ]; then
+                        echo "  [$(date +%H:%M:%S)] Instalando dependencias... (proceso activo)"
+                        LAST_LOG=$(date +%s)
+                    fi
+                done
                 echo "✓ Dependencias instaladas"
             else
                 echo "✗ ERROR: requirements.txt no encontrado"
@@ -50,11 +60,18 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
         
         if [ -f "requirements.txt" ]; then
             echo "Instalando dependencias desde requirements.txt..."
+            echo "  (Esto puede tardar 10-15 minutos - por favor espere)"
             # Instalar dependencias normalmente (Azure compilará para su entorno)
-            pip install --no-cache-dir -r requirements.txt
-            
-            # No verificar cryptography durante el startup (muy lento)
-            # Si hay problemas GLIBC, se detectarán al usar la aplicación
+            # Usar timeout y logging para evitar que se cuelgue
+            pip install --no-cache-dir -r requirements.txt 2>&1 | tee /tmp/pip_install.log || {
+                echo "⚠ ERROR durante instalación, revisando logs..."
+                tail -50 /tmp/pip_install.log || true
+                echo "  Reintentando instalación..."
+                pip install --no-cache-dir -r requirements.txt || {
+                    echo "✗ ERROR CRÍTICO: No se pudieron instalar las dependencias"
+                    exit 1
+                }
+            }
             echo "✓ Dependencias instaladas"
         else
             echo "✗ ERROR: requirements.txt no encontrado"
