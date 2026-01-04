@@ -18,23 +18,41 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
     # Crear/activar entorno virtual e instalar dependencias
     # IMPORTANTE: Instalamos aquí para evitar problemas de compatibilidad GLIBC
     # (cryptography compilado en GitHub Actions puede no ser compatible con Azure)
-    # Si antenv existe pero tiene dependencias incompatibles, lo recreamos
+    # ESTRATEGIA: Siempre verificar y reinstalar cryptography si es necesario
     if [ -d "antenv" ]; then
         echo "⚠ Entorno virtual existente detectado"
-        echo "  Verificando compatibilidad de dependencias..."
-        
-        # Verificar si cryptography tiene problemas de GLIBC
+        echo "  Verificando compatibilidad de cryptography..."
         source antenv/bin/activate
-        if python -c "import cryptography" 2>&1 | grep -q "GLIBC"; then
-            echo "⚠ ERROR: cryptography tiene problemas de compatibilidad GLIBC"
-            echo "  Eliminando entorno virtual para recrearlo con dependencias correctas..."
-            deactivate
-            rm -rf antenv
-            echo "✓ Entorno virtual eliminado"
+        
+        # Intentar importar cryptography para detectar problemas de GLIBC
+        CRYPTO_ERROR=$(python -c "import cryptography" 2>&1 || echo "ERROR")
+        if echo "$CRYPTO_ERROR" | grep -q "GLIBC"; then
+            echo "⚠ ERROR DETECTADO: cryptography tiene problemas de compatibilidad GLIBC"
+            echo "  Reinstalando cryptography para el entorno correcto de Azure..."
+            pip uninstall -y cryptography || true
+            pip install --upgrade pip
+            # Reinstalar cryptography (se compilará para el entorno de Azure)
+            pip install --no-cache-dir --force-reinstall cryptography || {
+                echo "⚠ Falló reinstalación de cryptography, intentando sin cache..."
+                pip install --no-cache-dir --no-binary cryptography cryptography
+            }
+            
+            # Verificar nuevamente
+            if python -c "import cryptography" 2>&1 | grep -q "GLIBC"; then
+                echo "✗ ERROR CRÍTICO: cryptography aún tiene problemas después de reinstalación"
+                echo "  Eliminando entorno virtual completo para recrearlo..."
+                deactivate
+                rm -rf antenv
+                echo "✓ Entorno virtual eliminado, se recreará a continuación"
+            else
+                echo "✓ cryptography reinstalado correctamente"
+            fi
+        else
+            echo "✓ cryptography funciona correctamente"
         fi
     fi
     
-    # Crear o recrear entorno virtual
+    # Crear entorno virtual si no existe
     if [ ! -d "antenv" ]; then
         echo "Creando entorno virtual e instalando dependencias..."
         python3 -m venv antenv
@@ -43,34 +61,36 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
         
         if [ -f "requirements.txt" ]; then
             echo "Instalando dependencias desde requirements.txt..."
-            echo "  (Esto puede tardar varios minutos la primera vez)"
+            echo "  (Esto puede tardar varios minutos - las dependencias se compilarán para Azure)"
             # Instalar dependencias normalmente (Azure compilará para su entorno)
             pip install --no-cache-dir -r requirements.txt
             
             # Verificar que cryptography se instaló correctamente
             echo "Verificando instalación de cryptography..."
             if python -c "import cryptography" 2>&1 | grep -q "GLIBC"; then
-                echo "⚠ ERROR: cryptography aún tiene problemas de GLIBC"
+                echo "⚠ ERROR: cryptography tiene problemas de GLIBC después de instalación"
                 echo "  Intentando reinstalar cryptography específicamente..."
                 pip uninstall -y cryptography || true
                 pip install --no-cache-dir --no-binary cryptography cryptography || {
-                    echo "⚠ Falló reinstalación de cryptography, continuando..."
+                    echo "✗ ERROR: No se pudo instalar cryptography compatible"
+                    echo "  La aplicación puede fallar al usar JWT tokens"
                 }
             else
-                echo "✓ cryptography instalado correctamente"
+                echo "✓ cryptography instalado y verificado correctamente"
             fi
         fi
     else
-        echo "Activando entorno virtual existente..."
-        source antenv/bin/activate
+        # Si antenv existe y pasó la verificación, solo activar
+        if [ -z "$VIRTUAL_ENV" ]; then
+            echo "Activando entorno virtual existente..."
+            source antenv/bin/activate
+        fi
         
         # Verificar que Django está instalado
         if ! python -c "import django" 2>/dev/null; then
             echo "⚠ Django no encontrado, instalando dependencias..."
             pip install --upgrade pip
             pip install --no-cache-dir -r requirements.txt
-        else
-            echo "✓ Entorno virtual activado y dependencias verificadas"
         fi
     fi
 
