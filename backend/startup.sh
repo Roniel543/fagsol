@@ -18,65 +18,77 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
     # Crear/activar entorno virtual e instalar dependencias
     # IMPORTANTE: Instalamos aquí para evitar problemas de compatibilidad GLIBC
     # (cryptography compilado en GitHub Actions puede no ser compatible con Azure)
-    # ESTRATEGIA: Siempre verificar y reinstalar cryptography si es necesario
+    # ESTRATEGIA: Siempre eliminar y recrear antenv para asegurar dependencias correctas
+    # Esto es necesario porque el entorno virtual puede tener dependencias compiladas
+    # para un entorno diferente (GLIBC más nuevo)
     if [ -d "antenv" ]; then
         echo "⚠ Entorno virtual existente detectado"
         echo "  Verificando compatibilidad de cryptography..."
         source antenv/bin/activate
         
-        # Intentar importar cryptography para detectar problemas de GLIBC
-        CRYPTO_ERROR=$(python -c "import cryptography" 2>&1 || echo "ERROR")
-        if echo "$CRYPTO_ERROR" | grep -q "GLIBC"; then
-            echo "⚠ ERROR DETECTADO: cryptography tiene problemas de compatibilidad GLIBC"
-            echo "  Reinstalando cryptography para el entorno correcto de Azure..."
+        # Intentar importar y usar cryptography para detectar problemas de GLIBC
+        # El error solo aparece cuando se intenta usar, no solo importar
+        CRYPTO_TEST=$(python -c "
+import cryptography
+from cryptography.hazmat.primitives.asymmetric import ec
+print('OK')
+" 2>&1)
+        
+        if echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
+            echo "✗ ERROR DETECTADO: cryptography tiene problemas de compatibilidad GLIBC"
+            echo "  Eliminando entorno virtual para recrearlo con dependencias correctas..."
+            deactivate
+            rm -rf antenv
+            echo "✓ Entorno virtual eliminado"
+        elif echo "$CRYPTO_TEST" | grep -q "OK"; then
+            echo "✓ cryptography funciona correctamente"
+        else
+            echo "⚠ No se pudo verificar cryptography, reinstalando por seguridad..."
             pip uninstall -y cryptography || true
             pip install --upgrade pip
-            # Reinstalar cryptography (se compilará para el entorno de Azure)
-            pip install --no-cache-dir --force-reinstall cryptography || {
-                echo "⚠ Falló reinstalación de cryptography, intentando sin cache..."
-                pip install --no-cache-dir --no-binary cryptography cryptography
-            }
-            
-            # Verificar nuevamente
-            if python -c "import cryptography" 2>&1 | grep -q "GLIBC"; then
-                echo "✗ ERROR CRÍTICO: cryptography aún tiene problemas después de reinstalación"
-                echo "  Eliminando entorno virtual completo para recrearlo..."
-                deactivate
-                rm -rf antenv
-                echo "✓ Entorno virtual eliminado, se recreará a continuación"
-            else
-                echo "✓ cryptography reinstalado correctamente"
-            fi
-        else
-            echo "✓ cryptography funciona correctamente"
+            pip install --no-cache-dir cryptography
         fi
     fi
     
     # Crear entorno virtual si no existe
     if [ ! -d "antenv" ]; then
         echo "Creando entorno virtual e instalando dependencias..."
+        echo "  (Esto puede tardar varios minutos - las dependencias se compilarán para Azure)"
         python3 -m venv antenv
         source antenv/bin/activate
         pip install --upgrade pip
         
         if [ -f "requirements.txt" ]; then
             echo "Instalando dependencias desde requirements.txt..."
-            echo "  (Esto puede tardar varios minutos - las dependencias se compilarán para Azure)"
             # Instalar dependencias normalmente (Azure compilará para su entorno)
             pip install --no-cache-dir -r requirements.txt
             
-            # Verificar que cryptography se instaló correctamente
+            # Verificar que cryptography funciona correctamente
             echo "Verificando instalación de cryptography..."
-            if python -c "import cryptography" 2>&1 | grep -q "GLIBC"; then
-                echo "⚠ ERROR: cryptography tiene problemas de GLIBC después de instalación"
-                echo "  Intentando reinstalar cryptography específicamente..."
+            CRYPTO_TEST=$(python -c "
+import cryptography
+from cryptography.hazmat.primitives.asymmetric import ec
+print('OK')
+" 2>&1)
+            
+            if echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
+                echo "✗ ERROR: cryptography tiene problemas de GLIBC después de instalación"
+                echo "  Intentando reinstalar cryptography sin binarios pre-compilados..."
                 pip uninstall -y cryptography || true
                 pip install --no-cache-dir --no-binary cryptography cryptography || {
-                    echo "✗ ERROR: No se pudo instalar cryptography compatible"
-                    echo "  La aplicación puede fallar al usar JWT tokens"
+                    echo "✗ ERROR CRÍTICO: No se pudo instalar cryptography compatible"
+                    echo "  La aplicación fallará al usar JWT tokens"
+                    exit 1
                 }
-            else
+                echo "✓ cryptography reinstalado, verificando nuevamente..."
+                python -c "import cryptography; from cryptography.hazmat.primitives.asymmetric import ec; print('✓ cryptography funciona')" || {
+                    echo "✗ ERROR: cryptography aún no funciona después de reinstalación"
+                    exit 1
+                }
+            elif echo "$CRYPTO_TEST" | grep -q "OK"; then
                 echo "✓ cryptography instalado y verificado correctamente"
+            else
+                echo "⚠ Advertencia: No se pudo verificar cryptography completamente"
             fi
         fi
     else
