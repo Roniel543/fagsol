@@ -18,23 +18,39 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
     # Crear/activar entorno virtual e instalar dependencias
     # IMPORTANTE: Instalamos aquí para evitar problemas de compatibilidad GLIBC
     # (cryptography compilado en GitHub Actions puede no ser compatible con Azure)
-    # ESTRATEGIA: Siempre eliminar antenv si existe y recrearlo
-    # Esto asegura que las dependencias se instalen para el entorno correcto de Azure
+    # ESTRATEGIA: Verificar si antenv existe y funciona, solo recrear si hay problemas
+    # Esto hace el startup más rápido (no reinstala dependencias cada vez)
     if [ -d "antenv" ]; then
         echo "⚠ Entorno virtual existente detectado"
-        echo "  Puede tener dependencias compiladas para un entorno diferente (GLIBC)"
-        echo "  Eliminando para recrearlo con dependencias correctas para Azure..."
-        # Usar find para eliminar recursivamente con permisos forzados
-        # Esto evita errores de "Directory not empty" con archivos bloqueados
-        find antenv -type f -exec chmod u+w {} \; 2>/dev/null || true
-        find antenv -type d -exec chmod u+w {} \; 2>/dev/null || true
-        rm -rf antenv
-        # Verificar que se eliminó correctamente
-        if [ -d "antenv" ]; then
-            echo "⚠ Advertencia: No se pudo eliminar completamente, intentando con find -delete..."
-            find antenv -delete 2>/dev/null || rm -rf antenv 2>/dev/null || true
+        echo "  Verificando si funciona correctamente..."
+        source antenv/bin/activate
+        
+        # Verificar que cryptography funciona (problema común de GLIBC)
+        CRYPTO_TEST=$(python -c "
+import cryptography
+from cryptography.hazmat.primitives.asymmetric import ec
+print('OK')
+" 2>&1)
+        
+        if echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
+            echo "✗ ERROR DETECTADO: cryptography tiene problemas de compatibilidad GLIBC"
+            echo "  Eliminando entorno virtual para recrearlo con dependencias correctas..."
+            deactivate 2>/dev/null || true
+            # Usar find para eliminar recursivamente con permisos forzados
+            find antenv -type f -exec chmod u+w {} \; 2>/dev/null || true
+            find antenv -type d -exec chmod u+w {} \; 2>/dev/null || true
+            rm -rf antenv
+            # Verificar que se eliminó correctamente
+            if [ -d "antenv" ]; then
+                echo "⚠ Advertencia: No se pudo eliminar completamente, intentando con find -delete..."
+                find antenv -delete 2>/dev/null || rm -rf antenv 2>/dev/null || true
+            fi
+            echo "✓ Entorno virtual eliminado"
+        elif echo "$CRYPTO_TEST" | grep -q "OK"; then
+            echo "✓ Entorno virtual funciona correctamente"
+        else
+            echo "⚠ No se pudo verificar cryptography, pero continuando..."
         fi
-        echo "✓ Entorno virtual eliminado"
     fi
     
     # Crear entorno virtual si no existe
