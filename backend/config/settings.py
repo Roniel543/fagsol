@@ -217,8 +217,12 @@ SIMPLE_JWT = {
 
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://127.0.0.1:3000',
-    cast=lambda v: [s.strip() for s in v.split(',')]
+    default=(
+        'http://localhost:3000,'
+        'http://127.0.0.1:3000,'
+        'https://fagsol-frontend-a2awgdejacgvcrex.centralus-01.azurewebsites.net'
+    ),
+    cast=lambda v: [s   .strip() for s in v.split(',')]
 )
 
 CORS_ALLOW_CREDENTIALS = True
@@ -309,7 +313,11 @@ CSRF_COOKIE_HTTPONLY = False  # CSRF token debe ser accesible desde JavaScript p
 CSRF_COOKIE_SAMESITE = 'Strict'  # Protección CSRF adicional
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
-    default='http://localhost:3000,http://127.0.0.1:3000',
+    default=(
+        'http://localhost:3000,'
+        'http://127.0.0.1:3000,'
+        'https://fagsol-frontend-a2awgdejacgvcrex.centralus-01.azurewebsites.net'
+    ),
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
