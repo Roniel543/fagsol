@@ -157,11 +157,13 @@ jobs:
       - name: Configure Azure settings
         run: |
           echo "Configurando Azure para desactivar build automático..."
-          # Desactivar build automático
+          # Desactivar build automático y aumentar timeout para instalación de dependencias
           az webapp config appsettings set \
             --name fagsol-backend \
             --resource-group fagsol-rg \
-            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false || true
+            --settings \
+              SCM_DO_BUILD_DURING_DEPLOYMENT=false \
+              WEBSITES_CONTAINER_START_TIME_LIMIT=1800 || true
           # Configurar comando de inicio (usar ruta relativa, Azure lo resuelve desde /home/site/wwwroot)
           az webapp config set \
             --name fagsol-backend \
