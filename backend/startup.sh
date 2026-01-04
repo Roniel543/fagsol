@@ -18,18 +18,30 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
     # Crear/activar entorno virtual e instalar dependencias
     # IMPORTANTE: Instalamos aquí para evitar problemas de compatibilidad GLIBC
     # (cryptography compilado en GitHub Actions puede no ser compatible con Azure)
-    # ESTRATEGIA: Si antenv existe, simplemente activarlo y continuar
-    # Solo recrearemos si hay errores explícitos al ejecutar la aplicación
-    # Esto hace el startup MUY rápido (solo activar, no verificar)
+    # ESTRATEGIA: Si antenv existe, activarlo y verificar si tiene dependencias
+    # Si faltan dependencias, instalarlas (puede ser que el entorno esté vacío)
     if [ -d "antenv" ]; then
         echo "✓ Entorno virtual existente detectado"
-        echo "  Activando y continuando (sin verificación para startup rápido)..."
+        echo "  Activando y verificando dependencias..."
         source antenv/bin/activate
         echo "✓ Entorno virtual activado"
-    fi
-    
-    # Crear entorno virtual si no existe
-    if [ ! -d "antenv" ]; then
+        
+        # Verificar si Django está instalado (verificación rápida)
+        if ! python -c "import django" 2>/dev/null; then
+            echo "⚠ Django no encontrado en el entorno virtual"
+            echo "  Instalando dependencias desde requirements.txt..."
+            pip install --upgrade pip
+            if [ -f "requirements.txt" ]; then
+                pip install --no-cache-dir -r requirements.txt
+                echo "✓ Dependencias instaladas"
+            else
+                echo "✗ ERROR: requirements.txt no encontrado"
+            fi
+        else
+            echo "✓ Django encontrado, dependencias OK"
+        fi
+    else
+        # Crear entorno virtual si no existe
         echo "Creando entorno virtual e instalando dependencias..."
         echo "  (Esto puede tardar varios minutos - las dependencias se compilarán para Azure)"
         python3 -m venv antenv
@@ -44,6 +56,8 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
             # No verificar cryptography durante el startup (muy lento)
             # Si hay problemas GLIBC, se detectarán al usar la aplicación
             echo "✓ Dependencias instaladas"
+        else
+            echo "✗ ERROR: requirements.txt no encontrado"
         fi
     fi
     
