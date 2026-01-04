@@ -15,27 +15,40 @@ echo "  - WEBSITES_PORT: ${WEBSITES_PORT:-no configurado}"
 echo "  - DB_HOST: ${DB_HOST:-no configurado}"
 echo "  - DB_NAME: ${DB_NAME:-no configurado}"
 
-# Activar entorno virtual (ya viene instalado desde el build)
-if [ -d "antenv" ]; then
-    echo "Activando entorno virtual existente..."
-    source antenv/bin/activate
-    echo "✓ Entorno virtual activado"
-else
-    echo "⚠ ADVERTENCIA: entorno virtual no encontrado, creándolo..."
-    python3 -m venv antenv
-    source antenv/bin/activate
-    pip install --upgrade pip
-    if [ -f "requirements.txt" ]; then
-        echo "Instalando dependencias desde requirements.txt..."
-        pip install --no-cache-dir -r requirements.txt
+    # Crear/activar entorno virtual e instalar dependencias
+    # IMPORTANTE: Instalamos aquí para evitar problemas de compatibilidad GLIBC
+    # (cryptography compilado en GitHub Actions puede no ser compatible con Azure)
+    if [ -d "antenv" ]; then
+        echo "Activando entorno virtual existente..."
+        source antenv/bin/activate
+        
+        # Verificar que Django está instalado
+        if ! python -c "import django" 2>/dev/null; then
+            echo "⚠ Django no encontrado, instalando dependencias..."
+            pip install --upgrade pip
+            # Usar --only-binary para evitar compilación (usa wheels pre-compilados compatibles)
+            pip install --no-cache-dir --only-binary :all: -r requirements.txt || {
+                echo "⚠ Falló con --only-binary, intentando instalación normal..."
+                pip install --no-cache-dir -r requirements.txt
+            }
+        else
+            echo "✓ Entorno virtual activado y dependencias verificadas"
+        fi
+    else
+        echo "Creando entorno virtual e instalando dependencias..."
+        python3 -m venv antenv
+        source antenv/bin/activate
+        pip install --upgrade pip
+        
+        if [ -f "requirements.txt" ]; then
+            echo "Instalando dependencias desde requirements.txt..."
+            # Intentar primero con --only-binary para usar wheels compatibles
+            pip install --no-cache-dir --only-binary :all: -r requirements.txt || {
+                echo "⚠ Falló con --only-binary, intentando instalación normal..."
+                pip install --no-cache-dir -r requirements.txt
+            }
+        fi
     fi
-fi
-
-# Verificar que Django está instalado
-if ! python -c "import django" 2>/dev/null; then
-    echo "⚠ ADVERTENCIA: Django no encontrado, instalando dependencias..."
-    pip install --no-cache-dir -r requirements.txt
-fi
 
 # Función para esperar la base de datos
 wait_for_db() {

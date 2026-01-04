@@ -38,10 +38,11 @@ jobs:
             tcl-dev \
             tk-dev
 
-      - name: Prepare deployment package with dependencies
+      - name: Prepare deployment package
         run: |
           mkdir -p deploy_package
-          # Copiar código del backend
+          # Copiar código del backend (SIN instalar dependencias aquí)
+          # Las dependencias se instalarán en Azure para evitar problemas de compatibilidad GLIBC
           rsync -av --exclude='__pycache__' \
                     --exclude='*.pyc' \
                     --exclude='.pytest_cache' \
@@ -53,42 +54,14 @@ jobs:
                     --exclude='.DS_Store' \
                     --exclude='Thumbs.db' \
                     --exclude='media' \
+                    --exclude='staticfiles' \
                     --exclude='venv' \
                     --exclude='antenv' \
                     backend/ deploy_package/
           
-          # Crear entorno virtual e instalar dependencias en el paquete
-          cd deploy_package
-          python3 -m venv antenv
-          source antenv/bin/activate
-          pip install --upgrade pip
-          pip install --no-cache-dir -r requirements.txt
-          
-          # IMPORTANTE: Ejecutar collectstatic durante el build para generar archivos estáticos
-          # Esto incluye el manifest.json necesario para CompressedManifestStaticFilesStorage
-          echo "Ejecutando collectstatic durante el build..."
-          python manage.py collectstatic --noinput --clear || {
-            echo "⚠ ADVERTENCIA: collectstatic falló durante el build"
-            echo "  Se intentará ejecutar durante el startup en Azure"
-          }
-          
-          # Verificar que se generaron los archivos estáticos
-          if [ -d "staticfiles" ]; then
-            echo "✓ staticfiles generado durante el build"
-            echo "  Tamaño: $(du -sh staticfiles | cut -f1)"
-            echo "  Archivos: $(find staticfiles -type f | wc -l)"
-            # Verificar manifest.json (crítico para CompressedManifestStaticFilesStorage)
-            if [ -f "staticfiles/staticfiles.json" ] || [ -f "staticfiles/manifest.json" ]; then
-              echo "  ✓ manifest.json encontrado"
-            else
-              echo "  ⚠ ADVERTENCIA: manifest.json no encontrado"
-            fi
-          else
-            echo "⚠ staticfiles no se generó durante el build"
-          fi
-          
-          deactivate
-          cd ..
+          echo "✓ Código copiado al paquete de despliegue"
+          echo "  Las dependencias se instalarán en Azure durante el startup"
+          echo "  Esto evita problemas de compatibilidad GLIBC entre GitHub Actions y Azure"
           
           # Copiar startup.sh
           if [ -f backend/startup.sh ]; then
