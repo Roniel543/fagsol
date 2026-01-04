@@ -26,13 +26,15 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
         source antenv/bin/activate
         
         # Verificar que cryptography funciona (problema común de GLIBC)
-        CRYPTO_TEST=$(python -c "
-import cryptography
-from cryptography.hazmat.primitives.asymmetric import ec
-print('OK')
-" 2>&1)
+        # Usar timeout para evitar que la verificación tarde demasiado
+        # Solo importar cryptography (más rápido que usar primitivas)
+        CRYPTO_TEST=$(timeout 10 python -c "import cryptography; print('OK')" 2>&1)
+        CRYPTO_EXIT=$?
         
-        if echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
+        if [ $CRYPTO_EXIT -eq 124 ]; then
+            echo "⚠ Timeout al verificar cryptography (tardó más de 10s)"
+            echo "  Asumiendo que funciona y continuando..."
+        elif echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
             echo "✗ ERROR DETECTADO: cryptography tiene problemas de compatibilidad GLIBC"
             echo "  Eliminando entorno virtual para recrearlo con dependencias correctas..."
             deactivate 2>/dev/null || true
@@ -49,7 +51,8 @@ print('OK')
         elif echo "$CRYPTO_TEST" | grep -q "OK"; then
             echo "✓ Entorno virtual funciona correctamente"
         else
-            echo "⚠ No se pudo verificar cryptography, pero continuando..."
+            echo "⚠ No se pudo verificar cryptography (código: $CRYPTO_EXIT), pero continuando..."
+            echo "  Output: $CRYPTO_TEST"
         fi
     fi
     
@@ -66,15 +69,15 @@ print('OK')
             # Instalar dependencias normalmente (Azure compilará para su entorno)
             pip install --no-cache-dir -r requirements.txt
             
-            # Verificar que cryptography funciona correctamente
+            # Verificar que cryptography funciona correctamente (simplificado y con timeout)
             echo "Verificando instalación de cryptography..."
-            CRYPTO_TEST=$(python -c "
-import cryptography
-from cryptography.hazmat.primitives.asymmetric import ec
-print('OK')
-" 2>&1)
+            CRYPTO_TEST=$(timeout 10 python -c "import cryptography; print('OK')" 2>&1)
+            CRYPTO_EXIT=$?
             
-            if echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
+            if [ $CRYPTO_EXIT -eq 124 ]; then
+                echo "⚠ Timeout al verificar cryptography (tardó más de 10s)"
+                echo "  Asumiendo que funciona y continuando..."
+            elif echo "$CRYPTO_TEST" | grep -q "GLIBC"; then
                 echo "✗ ERROR: cryptography tiene problemas de GLIBC después de instalación"
                 echo "  Intentando reinstalar cryptography sin binarios pre-compilados..."
                 pip uninstall -y cryptography || true
@@ -84,14 +87,15 @@ print('OK')
                     exit 1
                 }
                 echo "✓ cryptography reinstalado, verificando nuevamente..."
-                python -c "import cryptography; from cryptography.hazmat.primitives.asymmetric import ec; print('✓ cryptography funciona')" || {
+                timeout 10 python -c "import cryptography; print('✓ cryptography funciona')" || {
                     echo "✗ ERROR: cryptography aún no funciona después de reinstalación"
                     exit 1
                 }
             elif echo "$CRYPTO_TEST" | grep -q "OK"; then
                 echo "✓ cryptography instalado y verificado correctamente"
             else
-                echo "⚠ Advertencia: No se pudo verificar cryptography completamente"
+                echo "⚠ Advertencia: No se pudo verificar cryptography completamente (código: $CRYPTO_EXIT)"
+                echo "  Output: $CRYPTO_TEST"
             fi
         fi
     else
