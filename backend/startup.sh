@@ -24,7 +24,16 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
         echo "⚠ Entorno virtual existente detectado"
         echo "  Puede tener dependencias compiladas para un entorno diferente (GLIBC)"
         echo "  Eliminando para recrearlo con dependencias correctas para Azure..."
+        # Usar find para eliminar recursivamente con permisos forzados
+        # Esto evita errores de "Directory not empty" con archivos bloqueados
+        find antenv -type f -exec chmod u+w {} \; 2>/dev/null || true
+        find antenv -type d -exec chmod u+w {} \; 2>/dev/null || true
         rm -rf antenv
+        # Verificar que se eliminó correctamente
+        if [ -d "antenv" ]; then
+            echo "⚠ Advertencia: No se pudo eliminar completamente, intentando con find -delete..."
+            find antenv -delete 2>/dev/null || rm -rf antenv 2>/dev/null || true
+        fi
         echo "✓ Entorno virtual eliminado"
     fi
     
