@@ -18,23 +18,24 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
     # Crear/activar entorno virtual e instalar dependencias
     # IMPORTANTE: Instalamos aquí para evitar problemas de compatibilidad GLIBC
     # (cryptography compilado en GitHub Actions puede no ser compatible con Azure)
+    # Si antenv existe pero tiene dependencias incompatibles, lo recreamos
     if [ -d "antenv" ]; then
-        echo "Activando entorno virtual existente..."
-        source antenv/bin/activate
+        echo "⚠ Entorno virtual existente detectado"
+        echo "  Verificando compatibilidad de dependencias..."
         
-        # Verificar que Django está instalado
-        if ! python -c "import django" 2>/dev/null; then
-            echo "⚠ Django no encontrado, instalando dependencias..."
-            pip install --upgrade pip
-            # Usar --only-binary para evitar compilación (usa wheels pre-compilados compatibles)
-            pip install --no-cache-dir --only-binary :all: -r requirements.txt || {
-                echo "⚠ Falló con --only-binary, intentando instalación normal..."
-                pip install --no-cache-dir -r requirements.txt
-            }
-        else
-            echo "✓ Entorno virtual activado y dependencias verificadas"
+        # Verificar si cryptography tiene problemas de GLIBC
+        source antenv/bin/activate
+        if python -c "import cryptography" 2>&1 | grep -q "GLIBC"; then
+            echo "⚠ ERROR: cryptography tiene problemas de compatibilidad GLIBC"
+            echo "  Eliminando entorno virtual para recrearlo con dependencias correctas..."
+            deactivate
+            rm -rf antenv
+            echo "✓ Entorno virtual eliminado"
         fi
-    else
+    fi
+    
+    # Crear o recrear entorno virtual
+    if [ ! -d "antenv" ]; then
         echo "Creando entorno virtual e instalando dependencias..."
         python3 -m venv antenv
         source antenv/bin/activate
@@ -42,11 +43,34 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
         
         if [ -f "requirements.txt" ]; then
             echo "Instalando dependencias desde requirements.txt..."
-            # Intentar primero con --only-binary para usar wheels compatibles
-            pip install --no-cache-dir --only-binary :all: -r requirements.txt || {
-                echo "⚠ Falló con --only-binary, intentando instalación normal..."
-                pip install --no-cache-dir -r requirements.txt
-            }
+            echo "  (Esto puede tardar varios minutos la primera vez)"
+            # Instalar dependencias normalmente (Azure compilará para su entorno)
+            pip install --no-cache-dir -r requirements.txt
+            
+            # Verificar que cryptography se instaló correctamente
+            echo "Verificando instalación de cryptography..."
+            if python -c "import cryptography" 2>&1 | grep -q "GLIBC"; then
+                echo "⚠ ERROR: cryptography aún tiene problemas de GLIBC"
+                echo "  Intentando reinstalar cryptography específicamente..."
+                pip uninstall -y cryptography || true
+                pip install --no-cache-dir --no-binary cryptography cryptography || {
+                    echo "⚠ Falló reinstalación de cryptography, continuando..."
+                }
+            else
+                echo "✓ cryptography instalado correctamente"
+            fi
+        fi
+    else
+        echo "Activando entorno virtual existente..."
+        source antenv/bin/activate
+        
+        # Verificar que Django está instalado
+        if ! python -c "import django" 2>/dev/null; then
+            echo "⚠ Django no encontrado, instalando dependencias..."
+            pip install --upgrade pip
+            pip install --no-cache-dir -r requirements.txt
+        else
+            echo "✓ Entorno virtual activado y dependencias verificadas"
         fi
     fi
 
