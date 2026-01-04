@@ -69,10 +69,9 @@ jobs:
             chmod +x deploy_package/startup.sh
           fi
           
-          echo "Tamaño del paquete de despliegue:"
+          echo "✓ Tamaño del paquete de despliegue:"
           du -sh deploy_package
-          echo "Tamaño del entorno virtual:"
-          du -sh deploy_package/antenv
+          echo "  (El entorno virtual se creará en Azure durante el startup)"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
