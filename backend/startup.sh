@@ -24,7 +24,7 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
         echo "✓ Entorno virtual existente detectado"
         echo "  Activando y verificando dependencias..."
         source antenv/bin/activate
-        echo "✓ Entorno virtual activado"
+        echo "✓ Entorno virtual activado" 
         
         # Verificar si Django está instalado (verificación rápida)
         if ! python -c "import django" 2>/dev/null; then
@@ -33,17 +33,16 @@ echo "  - DB_NAME: ${DB_NAME:-no configurado}"
             echo "  (Esto puede tardar 10-15 minutos - por favor espere)"
             pip install --upgrade pip
             if [ -f "requirements.txt" ]; then
-                # Instalar con logging periódico para evitar que Azure lo considere colgado
-                echo "  Iniciando instalación de dependencias..."
-                pip install --no-cache-dir -r requirements.txt 2>&1 | while IFS= read -r line; do
-                    echo "$line"
-                    # Log cada 30 segundos para mantener vivo el proceso
-                    if [ $(date +%s) -gt $((LAST_LOG + 30)) ]; then
-                        echo "  [$(date +%H:%M:%S)] Instalando dependencias... (proceso activo)"
-                        LAST_LOG=$(date +%s)
-                    fi
-                done
-                echo "✓ Dependencias instaladas"
+                # Instalar con output en tiempo real para que Azure vea progreso
+                echo "  [$(date +%H:%M:%S)] Iniciando instalación de dependencias..."
+                pip install --no-cache-dir -r requirements.txt || {
+                    echo "⚠ ERROR durante instalación, reintentando..."
+                    pip install --no-cache-dir -r requirements.txt || {
+                        echo "✗ ERROR CRÍTICO: No se pudieron instalar las dependencias"
+                        exit 1
+                    }
+                }
+                echo "  [$(date +%H:%M:%S)] ✓ Dependencias instaladas"
             else
                 echo "✗ ERROR: requirements.txt no encontrado"
             fi
