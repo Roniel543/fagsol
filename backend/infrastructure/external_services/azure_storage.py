@@ -13,7 +13,7 @@ from infrastructure.adapters import FileStorageService
 logger = logging.getLogger('apps')
 
 try:
-    from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+    from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient, ContentSettings
     from azure.core.exceptions import AzureError
     AZURE_AVAILABLE = True
 except ImportError:
@@ -74,14 +74,17 @@ class AzureBlobStorageService(FileStorageService):
         try:
             blob_client = self.container_client.get_blob_client(file_path)
             
+            # Crear ContentSettings correctamente
+            content_settings = ContentSettings(
+                content_type=content_type,
+                cache_control='public, max-age=31536000'  # Cache por 1 año
+            )
+            
             # Subir archivo
             blob_client.upload_blob(
                 file_content,
                 overwrite=False,  # No sobrescribir archivos existentes
-                content_settings={
-                    'content_type': content_type,
-                    'cache_control': 'public, max-age=31536000'  # Cache por 1 año
-                }
+                content_settings=content_settings
             )
             
             # Obtener URL pública
