@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { ChevronRight, Menu, Search, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Button } from ".";
-import { Menu, X, ChevronRight, Search } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 const Header = () => {
     const router = useRouter();
@@ -123,20 +122,19 @@ const Header = () => {
 
     return (
         <>
-            <header 
+            <header
                 ref={headerRef}
-                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-                    isScrolled 
-                        ? 'bg-black/95 backdrop-blur-xl shadow-2xl border-b border-zinc-800' 
+                className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
+                        ? 'bg-black/95 backdrop-blur-xl shadow-2xl border-b border-zinc-800'
                         : 'bg-black/40 backdrop-blur-md'
-                }`}
+                    }`}
             >
                 <nav className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
                     <div className="flex items-center justify-between h-20 sm:h-24 gap-4">
                         {/* Logo */}
                         <div className="flex items-center flex-shrink-0">
-                            <Link 
-                                href="/" 
+                            <Link
+                                href="/"
                                 className="group relative flex items-center gap-3 transition-all duration-300 hover:scale-105"
                                 onClick={(e) => handleNavClick(e, '#inicio', 'inicio')}
                             >
@@ -155,20 +153,18 @@ const Header = () => {
                         <div className="hidden lg:flex items-center gap-8 flex-1 min-w-0 max-w-2xl mx-6" ref={searchRef}>
                             <form onSubmit={handleSearchSubmit} className="relative w-full min-w-0">
                                 <div className="relative">
-                                    <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-300 ${
-                                        isSearchFocused ? 'text-primary-orange' : 'text-gray-400'
-                                    }`} />
+                                    <Search className={`absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 transition-colors duration-300 ${isSearchFocused ? 'text-primary-orange' : 'text-gray-400'
+                                        }`} />
                                     <input
                                         type="text"
                                         placeholder="¿Qué quieres aprender?"
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         onFocus={() => setIsSearchFocused(true)}
-                                        className={`w-full pl-12 pr-4 py-2.5 bg-zinc-900/70 border-2 rounded-xl text-sm text-gray-200 placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 ${
-                                            isSearchFocused
+                                        className={`w-full pl-12 pr-4 py-2.5 bg-zinc-900/70 border-2 rounded-xl text-sm text-gray-200 placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 ${isSearchFocused
                                                 ? 'border-primary-orange focus:ring-primary-orange/30 bg-zinc-900 shadow-xl shadow-primary-orange/30'
                                                 : 'border-zinc-700/50 hover:border-zinc-600 hover:bg-zinc-900'
-                                        }`}
+                                            }`}
                                     />
                                 </div>
                             </form>
@@ -231,17 +227,15 @@ const Header = () => {
                                     key={link.name}
                                     href={link.href}
                                     onClick={(e) => handleNavClick(e, link.href, link.section)}
-                                    className={`relative px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg group ${
-                                        activeSection === link.section
+                                    className={`relative px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg group ${activeSection === link.section
                                             ? 'text-primary-orange'
                                             : 'text-gray-300 hover:text-primary-orange'
-                                    }`}
+                                        }`}
                                 >
                                     {link.name}
                                     {/* Underline animado */}
-                                    <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary-orange to-amber-600 rounded-full transform origin-left transition-all duration-300 ${
-                                        activeSection === link.section ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100'
-                                    }`}></span>
+                                    <span className={`absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-primary-orange to-amber-600 rounded-full transform origin-left transition-all duration-300 ${activeSection === link.section ? 'scale-x-100 opacity-100' : 'scale-x-0 opacity-0 group-hover:scale-x-100 group-hover:opacity-100'
+                                        }`}></span>
                                 </Link>
                             ))}
                         </div>
@@ -291,11 +285,10 @@ const Header = () => {
 
             {/* Mobile Menu */}
             <div
-                className={`fixed inset-0 z-40 md:hidden transition-all duration-300 ${
-                    isMobileMenuOpen
+                className={`fixed inset-0 z-40 md:hidden transition-all duration-300 ${isMobileMenuOpen
                         ? 'opacity-100 pointer-events-auto'
                         : 'opacity-0 pointer-events-none'
-                }`}
+                    }`}
             >
                 {/* Backdrop */}
                 <div
@@ -305,9 +298,8 @@ const Header = () => {
 
                 {/* Menu Panel */}
                 <div
-                    className={`absolute left-0 right-0 bg-zinc-950 border-t border-zinc-800 transform transition-transform duration-300 ${
-                        isMobileMenuOpen ? 'translate-y-0' : '-translate-y-full'
-                    }`}
+                    className={`absolute left-0 right-0 bg-zinc-950 border-t border-zinc-800 transform transition-transform duration-300 ${isMobileMenuOpen ? 'translate-y-0' : '-translate-y-full'
+                        }`}
                     style={{ top: `${headerHeight}px` }}
                 >
                     <nav className="px-4 py-6 space-y-3 max-h-[calc(100vh-80px)] overflow-y-auto">
@@ -316,16 +308,14 @@ const Header = () => {
                                 key={link.name}
                                 href={link.href}
                                 onClick={(e) => handleNavClick(e, link.href, link.section)}
-                                className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
-                                    activeSection === link.section
+                                className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${activeSection === link.section
                                         ? 'bg-gradient-to-r from-primary-orange/20 to-amber-600/20 text-primary-orange border-2 border-primary-orange/50'
                                         : 'text-gray-300 hover:bg-zinc-900 hover:text-primary-orange border-2 border-transparent'
-                                }`}
+                                    }`}
                             >
                                 {link.name}
-                                <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${
-                                    activeSection === link.section ? 'translate-x-1' : ''
-                                }`} />
+                                <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${activeSection === link.section ? 'translate-x-1' : ''
+                                    }`} />
                             </Link>
                         ))}
 
@@ -344,11 +334,10 @@ const Header = () => {
 
             {/* Mobile Search Modal */}
             <div
-                className={`fixed inset-0 z-40 lg:hidden transition-all duration-300 ${
-                    isSearchFocused && !isMobileMenuOpen
+                className={`fixed inset-0 z-40 lg:hidden transition-all duration-300 ${isSearchFocused && !isMobileMenuOpen
                         ? 'opacity-100 pointer-events-auto'
                         : 'opacity-0 pointer-events-none'
-                }`}
+                    }`}
             >
                 {/* Backdrop */}
                 <div
@@ -357,7 +346,7 @@ const Header = () => {
                 ></div>
 
                 {/* Search Panel */}
-                <div 
+                <div
                     className="absolute left-0 right-0 bg-zinc-950 border-t border-zinc-800 p-4 overflow-y-auto"
                     style={{ top: `${headerHeight}px`, maxHeight: `calc(100vh - ${headerHeight}px)` }}
                 >
