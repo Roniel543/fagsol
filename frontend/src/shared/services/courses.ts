@@ -268,28 +268,33 @@ export async function uploadCourseImage(
     file: File,
     imageType: 'thumbnail' | 'banner'
 ): Promise<UploadImageResponse> {
-    const { getAccessToken } = await import('@/shared/utils/tokenStorage');
-    const { API_CONFIG } = await import('@/shared/services/api');
-
-    const token = getAccessToken();
-    if (!token) {
-        throw new Error('No autenticado');
-    }
+    const { API_CONFIG, refreshAccessToken } = await import('@/shared/services/api');
 
     // Crear FormData
     const formData = new FormData();
     formData.append('file', file);
     formData.append('type', imageType);
 
-    // Hacer request con FormData (no JSON)
-    const response = await fetch(`${API_CONFIG.BASE_URL}/courses/upload-image/`, {
+    // Hacer request con FormData usando cookies (credentials: 'include')
+    // NO incluir Content-Type, el navegador lo hará automáticamente con el boundary
+    let response = await fetch(`${API_CONFIG.BASE_URL}/courses/upload-image/`, {
         method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${token}`,
-            // NO incluir Content-Type, el navegador lo hará automáticamente con el boundary
-        },
+        credentials: 'include', // IMPORTANTE: Incluir cookies HTTP-Only
         body: formData,
     });
+
+    // Si el token expiró (401), intentar refrescar y reintentar
+    if (response.status === 401) {
+        const refreshSuccess = await refreshAccessToken();
+        if (refreshSuccess) {
+            // Reintentar con las mismas opciones (las cookies se actualizaron automáticamente)
+            response = await fetch(`${API_CONFIG.BASE_URL}/courses/upload-image/`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData,
+            });
+        }
+    }
 
     if (!response.ok) {
         let errorMessage = `HTTP error! status: ${response.status}`;
@@ -297,6 +302,8 @@ export async function uploadCourseImage(
             const errorData = await response.json();
             if (errorData.message) {
                 errorMessage = errorData.message;
+            } else if (errorData.error) {
+                errorMessage = errorData.error;
             }
         } catch (e) {
             // Si no se puede parsear JSON, usar el mensaje por defecto
