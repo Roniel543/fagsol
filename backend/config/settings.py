@@ -310,7 +310,8 @@ if not DEBUG:
 
 CSRF_COOKIE_HTTPONLY = False  # CSRF token debe ser accesible desde JavaScript para APIs
 # CSRF_COOKIE_SECURE ya está configurado arriba en el bloque if not DEBUG
-CSRF_COOKIE_SAMESITE = 'Strict'  # Protección CSRF adicional
+# SameSite=Lax para Azure (frontend y backend en dominios diferentes)
+CSRF_COOKIE_SAMESITE = 'Lax'  # Lax permite cookies en cross-site GET pero mantiene protección CSRF
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
     default=(
@@ -340,7 +341,9 @@ COOKIE_REFRESH_TOKEN_MAX_AGE = 24 * 60 * 60  # 1 día (igual que REFRESH_TOKEN_L
 # Configuración de seguridad de cookies
 COOKIE_HTTPONLY = True  # No accesible desde JavaScript (protección XSS)
 COOKIE_SECURE = not DEBUG  # Solo HTTPS en producción
-COOKIE_SAMESITE = 'Strict'  # Protección CSRF
+# SameSite=Lax permite cookies en cross-site GET requests (necesario para Azure)
+# pero mantiene protección CSRF en POST/PUT/DELETE
+COOKIE_SAMESITE = 'Lax' if not DEBUG else 'Lax'  # Lax para Azure (frontend y backend en dominios diferentes)
 
 # ==================================
 # RATE LIMITING (Axes) - SEGURIDAD PARA PRODUCCIÓN
