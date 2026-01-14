@@ -47,10 +47,47 @@ jobs:
           echo "  NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}"
           echo "  NODE_ENV=${NODE_ENV}"
           npm run build
+          # Verificar que el build standalone se creó correctamente
+          echo "✓ Verificando que el build standalone se creó:"
+          if [ ! -d ".next/standalone" ]; then
+            echo "✗ ERROR: .next/standalone no existe después del build"
+            echo "  Contenido de .next:"
+            ls -la .next/ | head -20
+            exit 1
+          fi
+          echo "  ✓ .next/standalone existe"
+          if [ ! -f ".next/standalone/server.js" ]; then
+            echo "✗ ERROR: server.js no encontrado en .next/standalone/"
+            echo "  Contenido de .next/standalone:"
+            ls -la .next/standalone/ | head -20
+            echo "  Buscando server.js:"
+            find .next/standalone -name "server.js" -type f || echo "  ✗ server.js no encontrado"
+            exit 1
+          fi
+          echo "  ✓ server.js encontrado en .next/standalone/"
 
       - name: Prepare standalone build for Azure
         run: |
           cd frontend
+          # Verificar que el build standalone existe
+          echo "✓ Verificando estructura del build standalone:"
+          if [ ! -d ".next/standalone" ]; then
+            echo "✗ ERROR: .next/standalone no existe"
+            echo "  Contenido de .next:"
+            ls -la .next/ | head -20
+            exit 1
+          fi
+          echo "  ✓ .next/standalone existe"
+          echo "  ✓ Contenido de .next/standalone:"
+          ls -la .next/standalone/ | head -20
+          # Verificar que server.js existe en standalone
+          if [ ! -f ".next/standalone/server.js" ]; then
+            echo "✗ ERROR: server.js no encontrado en .next/standalone/"
+            echo "  Buscando server.js en .next/standalone:"
+            find .next/standalone -name "server.js" -type f || echo "  ✗ server.js no encontrado"
+            exit 1
+          fi
+          echo "  ✓ server.js encontrado en .next/standalone/"
           # El build standalone crea .next/standalone con solo lo necesario
           # Copiamos los archivos necesarios para el despliegue
           mkdir -p deploy-package
@@ -59,6 +96,14 @@ jobs:
           shopt -s dotglob
           cp -r .next/standalone/* deploy-package/
           shopt -u dotglob
+          # Verificar que server.js se copió correctamente
+          if [ ! -f "deploy-package/server.js" ]; then
+            echo "✗ ERROR: server.js no se copió a deploy-package/"
+            echo "  Contenido de deploy-package después de copiar:"
+            ls -la deploy-package/ | head -20
+            exit 1
+          fi
+          echo "  ✓ server.js copiado correctamente a deploy-package/"
           # Copiar la carpeta static necesaria para los assets
           # La carpeta .next debe existir en la raíz del deploy para que Next.js encuentre los assets
           mkdir -p deploy-package/.next
@@ -127,28 +172,40 @@ jobs:
       - name: Upload artifact for deployment job
         run: |
           cd frontend
-          # Verificar que node_modules existe antes de crear el tar
-          if [ ! -d "deploy-package/node_modules" ]; then
-            echo "✗ ERROR: node_modules no encontrado en deploy-package antes de crear tar"
-            echo "  Contenido de deploy-package:"
-            ls -la deploy-package/ | head -20
-            exit 1
-          fi
+          # Verificar estructura ANTES de crear el tar
+          echo "✓ Verificando estructura de deploy-package antes de crear tar:"
+          echo "  Contenido de deploy-package:"
+          ls -la deploy-package/ | head -20
+          # Verificar archivos críticos
+          [ -f "deploy-package/server.js" ] && echo "  ✓ server.js encontrado" || (echo "  ✗ server.js NO encontrado" && exit 1)
+          [ -d "deploy-package/node_modules" ] && echo "  ✓ node_modules encontrado" || (echo "  ✗ node_modules NO encontrado" && exit 1)
+          [ -d "deploy-package/.next" ] && echo "  ✓ .next encontrado" || (echo "  ✗ .next NO encontrado" && exit 1)
+          [ -d "deploy-package/public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
           # Crear un tar.gz que incluya todo, incluyendo archivos ocultos y node_modules
-          echo "✓ Creando archivo tar con todo el contenido (incluyendo node_modules)..."
+          echo "✓ Creando archivo tar con todo el contenido..."
+          # Usar tar con opciones para incluir archivos ocultos y preservar estructura
           tar -czf deploy-package.tar.gz -C deploy-package .
           echo "✓ Archivo tar creado:"
           ls -lh deploy-package.tar.gz
-          # Verificar que .next y node_modules están en el tar
+          # Verificar contenido del tar de forma exhaustiva
           echo "✓ Verificando contenido del tar:"
-          echo "  Verificando .next:"
-          tar -tzf deploy-package.tar.gz | grep "^\.next" | head -5 || echo "  ⚠ .next no encontrado en tar"
+          echo "  Verificando server.js:"
+          if tar -tzf deploy-package.tar.gz | grep -q "^server\.js$"; then
+            echo "    ✓ server.js encontrado en tar"
+          else
+            echo "    ✗ server.js NO encontrado en tar"
+            echo "    Archivos en la raíz del tar:"
+            tar -tzf deploy-package.tar.gz | grep "^[^/]*$" | head -20
+            exit 1
+          fi
           echo "  Verificando node_modules:"
-          tar -tzf deploy-package.tar.gz | grep "^node_modules" | head -5 || echo "  ⚠ node_modules no encontrado en tar"
+          tar -tzf deploy-package.tar.gz | grep "^node_modules" | head -3 || echo "  ⚠ node_modules no encontrado en tar"
           echo "  Verificando node_modules/next:"
           tar -tzf deploy-package.tar.gz | grep "^node_modules/next" | head -3 || (echo "  ✗ node_modules/next NO encontrado en tar" && exit 1)
-          echo "  Verificando server.js:"
-          tar -tzf deploy-package.tar.gz | grep "^server.js" || (echo "  ✗ server.js NO encontrado en tar" && exit 1)
+          echo "  Verificando .next:"
+          tar -tzf deploy-package.tar.gz | grep "^\.next" | head -3 || echo "  ⚠ .next no encontrado en tar"
+          echo "  Verificando public:"
+          tar -tzf deploy-package.tar.gz | grep "^public" | head -3 || echo "  ⚠ public no encontrado en tar"
           
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
