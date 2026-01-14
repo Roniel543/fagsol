@@ -28,7 +28,7 @@ jobs:
           # ⚠️ CRÍTICO: NEXT_PUBLIC_* se inyectan en tiempo de BUILD, no runtime
           # Si no están aquí, el frontend usará localhost:8000 (valor por defecto)
           NODE_ENV: production
-          NEXT_PUBLIC_API_URL: https://fagsol-backend-e5ghbzhyhnd2f7bn.centralus-01.azurewebsites.net/api/v1
+          NEXT_PUBLIC_API_URL: https://fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net/api/v1
           NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: TEST-2742c5af-4c5d-4ea6-9924-da7ba403fd7a
         run: |
           cd frontend
@@ -60,7 +60,7 @@ jobs:
           # Crear un package.json optimizado para Azure con el comando correcto
           cat > deploy-package/package.json << 'EOF'
           {
-            "name": "fagsol-frontend",
+            "name": "fagsol-front",
             "version": "0.1.0",
             "private": true,
             "scripts": {
@@ -220,15 +220,15 @@ jobs:
           echo "Configurando comando de inicio y desactivando build automático..."
           # Configurar comando de inicio
           az webapp config set \
-            --name fagsol-frontend \
-            --resource-group fagsol-rg \
+            --name fagsol-front \
+            --resource-group fagsol-rs \
             --startup-file "npm start" || {
             echo "⚠ No se pudo configurar el comando de inicio, pero continuando..."
           }
           # Desactivar build automático y optimización de Node.js
           az webapp config appsettings set \
-            --name fagsol-frontend \
-            --resource-group fagsol-rg \
+            --name fagsol-fronte \
+            --resource-group fagsol-rs \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=false \
               ENABLE_ORYX_BUILD=false \
@@ -256,10 +256,12 @@ jobs:
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'fagsol-frontend'
-          resource-group-name: 'fagsol-rg'
+          app-name: 'fagsol-front'
+          resource-group-name: 'fagsol-rs'
           slot-name: 'Production'
           package: .
           retry-on-timeout: true
           retry-count: 3
+
           
+
