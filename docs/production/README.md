@@ -19,6 +19,7 @@ Esta carpeta contiene documentación relacionada con producción, seguridad y de
 - **[`COMANDOS_AZURE.md`](./COMANDOS_AZURE.md)** - Comandos útiles de Azure CLI
 
 #### 📖 **Guías Detalladas**
+- [`CONFIGURAR_AZURE_BLOB_STORAGE.md`](./CONFIGURAR_AZURE_BLOB_STORAGE.md) - **Guía completa para configurar Azure Blob Storage** (imágenes de cursos)
 - [`PASO_A_PASO_AZURE.md`](./PASO_A_PASO_AZURE.md) - Guía paso a paso desde Azure Portal
 - [`DESPLIEGUE_AZURE.md`](./DESPLIEGUE_AZURE.md) - Documentación técnica de despliegue
 - [`CREAR_FRONTEND_AZURE_PORTAL.md`](./CREAR_FRONTEND_AZURE_PORTAL.md) - Guía específica para frontend
