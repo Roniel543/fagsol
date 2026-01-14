@@ -16,7 +16,11 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this-in-produc
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='localhost,127.0.0.1,fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
 
 # Application definition
 INSTALLED_APPS = [  
@@ -220,9 +224,9 @@ CORS_ALLOWED_ORIGINS = config(
     default=(
         'http://localhost:3000,'
         'http://127.0.0.1:3000,'
-        'https://fagsol-frontend-a2awgdejacgvcrex.centralus-01.azurewebsites.net'
+        'https://fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net'
     ),
-    cast=lambda v: [s   .strip() for s in v.split(',')]
+    cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
 CORS_ALLOW_CREDENTIALS = True
@@ -261,7 +265,10 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # FRONTEND URL CONFIGURATION todo lo jala del ENV
 # ==================================
 
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:3000')
+FRONTEND_URL = config(
+    'FRONTEND_URL', 
+    default='https://fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net'
+)
 
 # ==================================
 # EMAIL CONFIGURATION
@@ -317,7 +324,8 @@ CSRF_TRUSTED_ORIGINS = config(
     default=(
         'http://localhost:3000,'
         'http://127.0.0.1:3000,'
-        'https://fagsol-frontend-a2awgdejacgvcrex.centralus-01.azurewebsites.net'
+        'https://fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net,'
+        'https://fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net'
     ),
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
@@ -548,7 +556,4 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 USE_X_FORWARDED_HOST = True
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://fagsol-backend-e5ghbzhyhnd2f7bn.centralus-01.azurewebsites.net",
-    "https://fagsol-frontend.azurewebsites.net",
-]
+# CSRF_TRUSTED_ORIGINS ya está configurado arriba con config() incluyendo las URLs de producción
