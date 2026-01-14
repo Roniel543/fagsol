@@ -295,6 +295,7 @@ fagsol/
 - Crear cursos (draft)
 - Gestionar sus cursos
 - Ver estadísticas
+- PoW
 
 ### **Administrador (admin):**
 - Acceso completo
