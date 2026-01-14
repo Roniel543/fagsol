@@ -1,7 +1,15 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy Node.js app to Azure Web App - fagsol-frontend
+name: Build and deploy Node.js app to Azure Web App - fagsol-front
+
+# Configuración de Azure:
+# - App Service name: fagsol-front
+# - Resource Group: fagsol-rs
+# - Subscription ID: 759b41e8-9b8e-4340-b885-e05e7ec853f7
+# - Runtime: Node.js 20 LTS
+# - OS: Linux
+# - Domain: fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net
 
 on:
   push:
@@ -25,9 +33,9 @@ jobs:
 
       - name: npm install, build, and test
         env:
-          # ⚠️ CRÍTICO: NEXT_PUBLIC_* se inyectan en tiempo de BUILD, no runtime
           # Si no están aquí, el frontend usará localhost:8000 (valor por defecto)
           NODE_ENV: production
+          # URL del backend en producción
           NEXT_PUBLIC_API_URL: https://fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net/api/v1
           NEXT_PUBLIC_MERCADOPAGO_PUBLIC_KEY: TEST-2742c5af-4c5d-4ea6-9924-da7ba403fd7a
         run: |
@@ -214,6 +222,7 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_105BBE8F84F949B3882B33709BC89CAC }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_98FCEBD4DC7841DCAB92A5D7FB37677E }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_17BC8AF7D9BA44A3B1223EB76D1D181A }}
+          # Subscription ID: 759b41e8-9b8e-4340-b885-e05e7ec853f7
 
       - name: Configure startup command and disable build
         run: |
@@ -227,7 +236,7 @@ jobs:
           }
           # Desactivar build automático y optimización de Node.js
           az webapp config appsettings set \
-            --name fagsol-fronte \
+            --name fagsol-front \
             --resource-group fagsol-rs \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=false \
@@ -240,8 +249,8 @@ jobs:
           }
           # Desactivar optimización de node_modules (no crear tar.gz)
           az webapp config set \
-            --name fagsol-frontend \
-            --resource-group fagsol-rg \
+            --name fagsol-front \
+            --resource-group fagsol-rs \
             --generic-configurations '{"nodeDefaultVersion": "~20"}' || {
             echo "⚠ No se pudo configurar node version, pero continuando..."
           }
