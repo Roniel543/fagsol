@@ -1,4 +1,11 @@
-name: Build and deploy Python app to Azure Web App - fagsol-backend
+name: Build and deploy Python app to Azure Web App - fagsol-back
+
+# Configuración de Azure:
+# - App Service name: fagsol-back
+# - Resource Group: fagsol-rs
+# - Subscription ID: 759b41e8-9b8e-4340-b885-e05e7ec853f7
+# - Runtime: Python 3.12
+# - OS: Linux
 
 on:
   push:
@@ -98,6 +105,7 @@ jobs:
           client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_CEE14BBB8DEE4611B42DC7D5719AB4CE }}
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6C82FA05A127426E8E34B7E0673E74E9 }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_41FB12A187CD40539F6433521BF34E7F }}
+          # Subscription ID: 759b41e8-9b8e-4340-b885-e05e7ec853f7
 
       - name: Prepare deployment package
         run: |
@@ -145,7 +153,7 @@ jobs:
             find . -name "requirements.txt" 2>/dev/null || echo "No encontrado"
             exit 1
           fi
-          
+            
           # Crear .deployment para desactivar build automático
           echo "[config]" > .deployment
           echo "SCM_DO_BUILD_DURING_DEPLOYMENT=false" >> .deployment
@@ -159,15 +167,15 @@ jobs:
           echo "Configurando Azure para desactivar build automático..."
           # Desactivar build automático y aumentar timeout para instalación de dependencias
           az webapp config appsettings set \
-            --name fagsol-backend \
-            --resource-group fagsol-rg \
+            --name fagsol-back \
+            --resource-group fagsol-rs \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=false \
               WEBSITES_CONTAINER_START_TIME_LIMIT=1800 || true
           # Configurar comando de inicio (usar ruta relativa, Azure lo resuelve desde /home/site/wwwroot)
           az webapp config set \
-            --name fagsol-backend \
-            --resource-group fagsol-rg \
+            --name fagsol-back \
+            --resource-group fagsol-rs \
             --startup-file "bash startup.sh" || true
           echo "Esperando 120 segundos para que el contenedor SCM se estabilice después de la configuración..."
           sleep 120
@@ -176,8 +184,8 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'fagsol-backend'
-          resource-group-name: 'fagsol-rg'
+          app-name: 'fagsol-back'
+          resource-group-name: 'fagsol-rs'
           slot-name: 'Production'
           package: '.'
           restart: true
