@@ -176,8 +176,9 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'fagsol-backend'
-          resource-group-name: 'fagsol-rg'
+          app-name: 'fagsol-back'
+          resource-group-name: 'fagsol-rs'
           slot-name: 'Production'
           package: '.'
           restart: true
+
