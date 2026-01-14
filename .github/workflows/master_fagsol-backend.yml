@@ -159,15 +159,15 @@ jobs:
           echo "Configurando Azure para desactivar build automático..."
           # Desactivar build automático y aumentar timeout para instalación de dependencias
           az webapp config appsettings set \
-            --name fagsol-backend \
-            --resource-group fagsol-rg \
+            --name fagsol-back \
+            --resource-group fagsol-rs \
             --settings \
               SCM_DO_BUILD_DURING_DEPLOYMENT=false \
               WEBSITES_CONTAINER_START_TIME_LIMIT=1800 || true
           # Configurar comando de inicio (usar ruta relativa, Azure lo resuelve desde /home/site/wwwroot)
           az webapp config set \
-            --name fagsol-backend \
-            --resource-group fagsol-rg \
+            --name fagsol-back \
+            --resource-group fagsol-rs \
             --startup-file "bash startup.sh" || true
           echo "Esperando 120 segundos para que el contenedor SCM se estabilice después de la configuración..."
           sleep 120
@@ -181,4 +181,5 @@ jobs:
           slot-name: 'Production'
           package: '.'
           restart: true
+
 
