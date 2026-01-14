@@ -18,7 +18,7 @@ DEBUG = config('DEBUG', default=True, cast=bool)
 
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
-    default='localhost,127.0.0.1,fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net',
+    default='localhost,127.0.0.1,fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net,fagsol.com,www.fagsol.com',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
 
@@ -224,7 +224,9 @@ CORS_ALLOWED_ORIGINS = config(
     default=(
         'http://localhost:3000,'
         'http://127.0.0.1:3000,'
-        'https://fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net'
+        'https://fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net,'
+        'https://fagsol.com,'
+        'https://www.fagsol.com'
     ),
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
@@ -267,7 +269,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 
 FRONTEND_URL = config(
     'FRONTEND_URL', 
-    default='https://fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net'
+    default='https://fagsol.com'
 )
 
 # ==================================
@@ -325,7 +327,9 @@ CSRF_TRUSTED_ORIGINS = config(
         'http://localhost:3000,'
         'http://127.0.0.1:3000,'
         'https://fagsol-front-e2gsa9ekhwc2cae5.centralus-01.azurewebsites.net,'
-        'https://fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net'
+        'https://fagsol-back-fqakcgaegpg9fsgu.centralus-01.azurewebsites.net,'
+        'https://fagsol.com,'
+        'https://www.fagsol.com'
     ),
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
