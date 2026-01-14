@@ -219,9 +219,10 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_105BBE8F84F949B3882B33709BC89CAC }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_98FCEBD4DC7841DCAB92A5D7FB37677E }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_17BC8AF7D9BA44A3B1223EB76D1D181A }}
+            client-id: ${{ secrets.AZURE_CLIENT_ID }}
+            tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+            client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+            subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }
           # Subscription ID: 759b41e8-9b8e-4340-b885-e05e7ec853f7
 
       - name: Configure startup command and disable build

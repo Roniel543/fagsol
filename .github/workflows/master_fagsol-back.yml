@@ -102,9 +102,10 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_CEE14BBB8DEE4611B42DC7D5719AB4CE }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6C82FA05A127426E8E34B7E0673E74E9 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_41FB12A187CD40539F6433521BF34E7F }}
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           # Subscription ID: 759b41e8-9b8e-4340-b885-e05e7ec853f7
 
       - name: Prepare deployment package
