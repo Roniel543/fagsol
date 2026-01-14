@@ -111,24 +111,44 @@ jobs:
           find deploy-package -maxdepth 2 -type d | sort
           echo "✓ Verificando que .next/static tenga contenido:"
           ls -la deploy-package/.next/static/ | head -5 || echo "  ⚠ .next/static está vacío o no existe"
-          # Asegurar que no haya node_modules en la raíz (el standalone ya los incluye)
+          # CRÍTICO: Verificar que node_modules del standalone existe (es necesario para ejecutar server.js)
           if [ -d "deploy-package/node_modules" ]; then
-            echo "⚠ ADVERTENCIA: node_modules encontrado en deploy-package, removiendo..."
-            rm -rf deploy-package/node_modules
-            echo "✓ node_modules removido (el standalone ya los incluye)"
+            echo "✓ node_modules encontrado en deploy-package (necesario para standalone)"
+            echo "  ✓ Verificando que 'next' esté en node_modules:"
+            [ -d "deploy-package/node_modules/next" ] && echo "    ✓ next encontrado" || (echo "    ✗ next NO encontrado en node_modules" && exit 1)
+          else
+            echo "✗ ERROR: node_modules NO encontrado en deploy-package"
+            echo "  El standalone de Next.js requiere node_modules para ejecutar server.js"
+            echo "  Verificando contenido de .next/standalone:"
+            ls -la .next/standalone/ | head -10
+            exit 1
           fi
 
       - name: Upload artifact for deployment job
         run: |
           cd frontend
-          # Crear un tar.gz que incluya todo, incluyendo archivos ocultos
-          echo "✓ Creando archivo tar con todo el contenido..."
+          # Verificar que node_modules existe antes de crear el tar
+          if [ ! -d "deploy-package/node_modules" ]; then
+            echo "✗ ERROR: node_modules no encontrado en deploy-package antes de crear tar"
+            echo "  Contenido de deploy-package:"
+            ls -la deploy-package/ | head -20
+            exit 1
+          fi
+          # Crear un tar.gz que incluya todo, incluyendo archivos ocultos y node_modules
+          echo "✓ Creando archivo tar con todo el contenido (incluyendo node_modules)..."
           tar -czf deploy-package.tar.gz -C deploy-package .
           echo "✓ Archivo tar creado:"
           ls -lh deploy-package.tar.gz
-          # Verificar que .next está en el tar
+          # Verificar que .next y node_modules están en el tar
           echo "✓ Verificando contenido del tar:"
-          tar -tzf deploy-package.tar.gz | grep "\.next" | head -10 || echo "⚠ .next no encontrado en tar"
+          echo "  Verificando .next:"
+          tar -tzf deploy-package.tar.gz | grep "^\.next" | head -5 || echo "  ⚠ .next no encontrado en tar"
+          echo "  Verificando node_modules:"
+          tar -tzf deploy-package.tar.gz | grep "^node_modules" | head -5 || echo "  ⚠ node_modules no encontrado en tar"
+          echo "  Verificando node_modules/next:"
+          tar -tzf deploy-package.tar.gz | grep "^node_modules/next" | head -3 || (echo "  ✗ node_modules/next NO encontrado en tar" && exit 1)
+          echo "  Verificando server.js:"
+          tar -tzf deploy-package.tar.gz | grep "^server.js" || (echo "  ✗ server.js NO encontrado en tar" && exit 1)
           
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -156,11 +176,33 @@ jobs:
           # El artefacto viene como tar.gz, necesitamos extraerlo
           echo "✓ Extrayendo artefacto..."
           if [ -f "deploy/deploy-package.tar.gz" ]; then
+            echo "  Encontrado: deploy/deploy-package.tar.gz"
             tar -xzf deploy/deploy-package.tar.gz
             echo "✓ Artefacto extraído"
+            # Verificar que node_modules se extrajo correctamente
+            if [ -d "node_modules" ]; then
+              echo "  ✓ node_modules extraído correctamente"
+              [ -d "node_modules/next" ] && echo "    ✓ next encontrado en node_modules" || echo "    ⚠ next NO encontrado en node_modules"
+            else
+              echo "  ✗ ERROR: node_modules NO se extrajo del tar.gz"
+              echo "  Contenido del directorio actual:"
+              ls -la | head -20
+              exit 1
+            fi
           elif [ -f "deploy/node-app/deploy-package.tar.gz" ]; then
+            echo "  Encontrado: deploy/node-app/deploy-package.tar.gz"
             tar -xzf deploy/node-app/deploy-package.tar.gz
             echo "✓ Artefacto extraído desde node-app/"
+            # Verificar que node_modules se extrajo correctamente
+            if [ -d "node_modules" ]; then
+              echo "  ✓ node_modules extraído correctamente"
+              [ -d "node_modules/next" ] && echo "    ✓ next encontrado en node_modules" || echo "    ⚠ next NO encontrado en node_modules"
+            else
+              echo "  ✗ ERROR: node_modules NO se extrajo del tar.gz"
+              echo "  Contenido del directorio actual:"
+              ls -la | head -20
+              exit 1
+            fi
           else
             echo "⚠ No se encontró tar.gz, intentando usar estructura directa..."
             # Buscar el directorio que contiene server.js
@@ -176,6 +218,14 @@ jobs:
             fi
             echo "✓ Copiando desde $DEPLOY_ROOT..."
             cp -a $DEPLOY_ROOT/. .
+            # Verificar que node_modules se copió
+            if [ -d "node_modules" ]; then
+              echo "  ✓ node_modules copiado correctamente"
+            else
+              echo "  ⚠ node_modules NO encontrado después de copiar"
+              echo "  Buscando node_modules en $DEPLOY_ROOT:"
+              find $DEPLOY_ROOT -type d -name "node_modules" | head -3
+            fi
           fi
           
           # Verificar estructura del despliegue
@@ -184,6 +234,17 @@ jobs:
           echo "✓ Verificando archivos críticos:"
           [ -f "package.json" ] && echo "  ✓ package.json encontrado" || (echo "  ✗ package.json NO encontrado" && exit 1)
           [ -f "server.js" ] && echo "  ✓ server.js encontrado" || (echo "  ✗ server.js NO encontrado" && exit 1)
+          # CRÍTICO: Verificar que node_modules existe (necesario para ejecutar server.js)
+          if [ -d "node_modules" ]; then
+            echo "  ✓ node_modules encontrado"
+            [ -d "node_modules/next" ] && echo "    ✓ next encontrado en node_modules" || (echo "    ✗ next NO encontrado en node_modules" && exit 1)
+          else
+            echo "  ✗ node_modules NO encontrado - CRÍTICO"
+            echo "  ⚠ Buscando node_modules en el artefacto..."
+            find deploy -type d -name "node_modules" | head -5
+            echo "  ✗ ERROR: node_modules es necesario para ejecutar server.js"
+            exit 1
+          fi
           if [ -d ".next" ]; then
             echo "  ✓ .next encontrado"
             ls -la .next/ | head -10
@@ -192,25 +253,6 @@ jobs:
             echo "  ✗ .next NO encontrado"
             echo "  ⚠ Buscando .next en el artefacto..."
             find deploy -type d -name ".next" | head -5
-            exit 1
-          fi
-          [ -d "public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
-          [ -f ".deployment" ] && echo "  ✓ .deployment encontrado" || echo "  ⚠ .deployment no encontrado (se creará)"
-          
-          # Verificar estructura del despliegue
-          echo "✓ Estructura del despliegue final:"
-          ls -la | head -20
-          echo "✓ Verificando archivos críticos:"
-          [ -f "package.json" ] && echo "  ✓ package.json encontrado" || (echo "  ✗ package.json NO encontrado" && exit 1)
-          [ -f "server.js" ] && echo "  ✓ server.js encontrado" || (echo "  ✗ server.js NO encontrado" && exit 1)
-          if [ -d ".next" ]; then
-            echo "  ✓ .next encontrado"
-            ls -la .next/ | head -10
-            [ -d ".next/static" ] && echo "  ✓ .next/static encontrado" || (echo "  ✗ .next/static NO encontrado" && exit 1)
-          else
-            echo "  ✗ .next NO encontrado"
-            echo "  ⚠ Intentando crear .next desde el artefacto..."
-            find deploy -type d -name "static" | head -5
             exit 1
           fi
           [ -d "public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
