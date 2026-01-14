@@ -183,19 +183,26 @@ jobs:
           [ -d "deploy-package/public" ] && echo "  ✓ public encontrado" || (echo "  ✗ public NO encontrado" && exit 1)
           # Crear un tar.gz que incluya todo, incluyendo archivos ocultos y node_modules
           echo "✓ Creando archivo tar con todo el contenido..."
-          # Usar tar con opciones para incluir archivos ocultos y preservar estructura
-          tar -czf deploy-package.tar.gz -C deploy-package .
+          # Cambiar al directorio deploy-package y crear el tar desde ahí
+          cd deploy-package
+          # Crear tar incluyendo todos los archivos (usar --no-ignore para asegurar que incluya todo)
+          tar -czf ../deploy-package.tar.gz .
+          cd ..
           echo "✓ Archivo tar creado:"
           ls -lh deploy-package.tar.gz
           # Verificar contenido del tar de forma exhaustiva
           echo "✓ Verificando contenido del tar:"
+          echo "  Listando TODOS los archivos en la raíz del tar:"
+          tar -tzf deploy-package.tar.gz | grep "^[^/]*$" | head -30
           echo "  Verificando server.js:"
           if tar -tzf deploy-package.tar.gz | grep -q "^server\.js$"; then
             echo "    ✓ server.js encontrado en tar"
           else
             echo "    ✗ server.js NO encontrado en tar"
-            echo "    Archivos en la raíz del tar:"
-            tar -tzf deploy-package.tar.gz | grep "^[^/]*$" | head -20
+            echo "    Buscando cualquier archivo que contenga 'server':"
+            tar -tzf deploy-package.tar.gz | grep "server" | head -10
+            echo "    Verificando si server.js está en algún subdirectorio:"
+            tar -tzf deploy-package.tar.gz | grep "server.js" | head -10
             exit 1
           fi
           echo "  Verificando node_modules:"
