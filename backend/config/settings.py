@@ -305,7 +305,9 @@ SECURE_HSTS_PRELOAD = True
 if not DEBUG:
     SECURE_SSL_REDIRECT = False  # Azure ya maneja HTTPS
     SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = 'None'  # Necesario para dominio personalizado (fagsol.com) → backend Azure
     CSRF_COOKIE_SECURE = True
+    CSRF_COOKIE_SAMESITE = 'None'  # Necesario para requests cross-site desde fagsol.com
 
 
 # ==================================    
@@ -313,14 +315,11 @@ if not DEBUG:
 # ==================================
 
 # Configuración CSRF para cookies HTTP-Only
-# SameSite=Strict ya proporciona protección CSRF básica
 # Django REST Framework exime automáticamente las vistas API de CSRF cuando usan autenticación por token
-# Sin embargo, con cookies HTTP-Only, mantenemos la protección CSRF activa
-
 CSRF_COOKIE_HTTPONLY = False  # CSRF token debe ser accesible desde JavaScript para APIs
-# CSRF_COOKIE_SECURE ya está configurado arriba en el bloque if not DEBUG
-# SameSite=Lax para Azure (frontend y backend en dominios diferentes)
-CSRF_COOKIE_SAMESITE = 'Lax'  # Lax permite cookies en cross-site GET pero mantiene protección CSRF
+# CSRF_COOKIE_SECURE y CSRF_COOKIE_SAMESITE se configuran arriba en el bloque if not DEBUG
+# En desarrollo usamos Lax; en producción None para que fagsol.com envíe cookies al backend en Azure
+CSRF_COOKIE_SAMESITE = 'Lax' if DEBUG else 'None'
 CSRF_TRUSTED_ORIGINS = config(
     'CSRF_TRUSTED_ORIGINS',
     default=(
@@ -352,10 +351,10 @@ COOKIE_REFRESH_TOKEN_MAX_AGE = 24 * 60 * 60  # 1 día (igual que REFRESH_TOKEN_L
 
 # Configuración de seguridad de cookies
 COOKIE_HTTPONLY = True  # No accesible desde JavaScript (protección XSS)
-COOKIE_SECURE = not DEBUG  # Solo HTTPS en producción
-# SameSite=Lax permite cookies en cross-site GET requests (necesario para Azure)
-# pero mantiene protección CSRF en POST/PUT/DELETE
-COOKIE_SAMESITE = 'Lax' if not DEBUG else 'Lax'  # Lax para Azure (frontend y backend en dominios diferentes)
+COOKIE_SECURE = not DEBUG  # Obligatorio cuando SameSite=None
+# SameSite=None + Secure: permite enviar cookies en requests cross-site (fagsol.com → azurewebsites.net)
+# Sin esto, el navegador no envía access/refresh token y el backend responde 401
+COOKIE_SAMESITE = 'None' if not DEBUG else 'Lax'
 
 # ==================================
 # RATE LIMITING (Axes) - SEGURIDAD PARA PRODUCCIÓN
