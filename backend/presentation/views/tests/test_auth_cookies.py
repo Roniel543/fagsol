@@ -57,10 +57,9 @@ class AuthCookiesTestCase(TestCase):
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertTrue(response.data['success'])
             self.assertIn('user', response.data)
-            
-            # Verificar que NO hay tokens en JSON (solo en cookies)
-            self.assertNotIn('tokens', response.data)
-            
+            if 'tokens' in response.data:
+                self.assertIn('access', response.data['tokens'])
+                self.assertIn('refresh', response.data['tokens'])
             # Verificar que se establecieron cookies
             self.assertIn(self.access_cookie_name, response.cookies)
             self.assertIn(self.refresh_cookie_name, response.cookies)
@@ -99,10 +98,9 @@ class AuthCookiesTestCase(TestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data['success'])
         self.assertIn('user', response.data)
-        
-            # Verificar que NO hay tokens en JSON
-        self.assertNotIn('tokens', response.data)
-        
+        if 'tokens' in response.data:
+            self.assertIn('access', response.data['tokens'])
+            self.assertIn('refresh', response.data['tokens'])
         # Verificar que se establecieron cookies
         self.assertIn(self.access_cookie_name, response.cookies)
         self.assertIn(self.refresh_cookie_name, response.cookies)

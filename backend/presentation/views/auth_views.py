@@ -82,18 +82,20 @@ def login(request):
         
         # 4. Retornar respuesta según el resultado
         if result.success:
-            # Crear respuesta sin tokens en JSON (se establecerán como cookies)
+            refresh_token_obj = result.extra.get('_refresh_token_object') if result.extra else None
             response_data = {
                 'success': True,
                 'user': result.data.get('user')
             }
+            # Incluir tokens en el body para clientes que no usan cookies (ej. navegadores que bloquean third-party cookies)
+            if refresh_token_obj:
+                response_data['tokens'] = {
+                    'access': str(refresh_token_obj.access_token),
+                    'refresh': str(refresh_token_obj),
+                }
             response = Response(response_data, status=status.HTTP_200_OK)
-            
-            # Establecer cookies HTTP-Only con tokens
-            refresh_token_obj = result.extra.get('_refresh_token_object') if result.extra else None
             if refresh_token_obj:
                 set_auth_cookies(response, refresh_token_obj)
-            
             return response
         else:
             # Convertir UseCaseResult a formato de respuesta
@@ -190,18 +192,19 @@ def register(request):
         
         # 5. Retornar respuesta según el resultado
         if result.success:
-            # Crear respuesta sin tokens en JSON (se establecerán como cookies)
+            refresh_token_obj = result.extra.get('_refresh_token_object') if result.extra else None
             response_data = {
                 'success': True,
                 'user': result.data.get('user')
             }
+            if refresh_token_obj:
+                response_data['tokens'] = {
+                    'access': str(refresh_token_obj.access_token),
+                    'refresh': str(refresh_token_obj),
+                }
             response = Response(response_data, status=status.HTTP_201_CREATED)
-            
-            # Establecer cookies HTTP-Only con tokens
-            refresh_token_obj = result.extra.get('_refresh_token_object') if result.extra else None
             if refresh_token_obj:
                 set_auth_cookies(response, refresh_token_obj)
-            
             return response
         else:
             return Response({
@@ -331,21 +334,21 @@ def logout(request):
 
 @swagger_auto_schema(
     method='post',
-    operation_description='Refresca el access token usando el refresh token de cookie. Rota el refresh token automáticamente.',
+    operation_description='Refresca el access token. Acepta refresh en cookie o en body (para clientes sin cookies de terceros). Devuelve user y tokens en el body.',
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            'refresh': openapi.Schema(type=openapi.TYPE_STRING, description='Refresh token (opcional si se envía en cookie)'),
+        }
+    ),
     responses={
         200: openapi.Response(
             description='Token refrescado exitosamente',
             examples={
                 'application/json': {
                     'success': True,
-                    'user': {
-                        'id': 1,
-                        'email': 'user@example.com',
-                        'first_name': 'Juan',
-                        'last_name': 'Pérez',
-                        'role': 'student',
-                        'is_active': True
-                    }
+                    'user': {'id': 1, 'email': 'user@example.com', 'first_name': 'Juan', 'last_name': 'Pérez', 'role': 'student', 'is_active': True},
+                    'tokens': {'access': 'eyJ...', 'refresh': 'eyJ...'}
                 }
             }
         ),
@@ -357,18 +360,16 @@ def logout(request):
 @permission_classes([AllowAny])
 def refresh_token(request):
     """
-    Refresca el access token usando el refresh token de cookie.
+    Refresca el access token. Acepta refresh en cookie o en body (para navegadores que bloquean cookies de terceros).
     POST /api/v1/auth/refresh/
-    
-    Rota el refresh token automáticamente (blacklist del anterior, genera uno nuevo).
-    Establece nuevas cookies HTTP-Only.
+    Rota el refresh token (blacklist del anterior). Establece cookies y devuelve tokens en el body.
     """
     import logging
     logger = logging.getLogger('apps')
     
     try:
-        # Obtener refresh token de cookie
-        refresh_token_str = get_refresh_token_from_cookie(request)
+        # Obtener refresh token de cookie o del body (para clientes sin cookies de terceros)
+        refresh_token_str = get_refresh_token_from_cookie(request) or request.data.get('refresh')
         
         if not refresh_token_str:
             return Response({
@@ -402,7 +403,6 @@ def refresh_token(request):
                 profile = UserProfile.objects.create(user=user, role='student')
                 role = 'student'
             
-            # Crear respuesta con datos del usuario
             response_data = {
                 'success': True,
                 'user': {
@@ -412,11 +412,13 @@ def refresh_token(request):
                     'last_name': user.last_name,
                     'role': role,
                     'is_active': user.is_active
+                },
+                'tokens': {
+                    'access': str(new_refresh.access_token),
+                    'refresh': str(new_refresh),
                 }
             }
             response = Response(response_data, status=status.HTTP_200_OK)
-            
-            # Establecer nuevas cookies
             set_auth_cookies(response, new_refresh)
             
             logger.info(f'Token refrescado para usuario {user.id}')

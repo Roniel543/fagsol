@@ -40,9 +40,11 @@ class AuthIntegrationTestCase(TestCase):
         # Verificar respuesta
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertTrue(response.data['success'])
-        # Con cookies HTTP-Only, los tokens NO están en JSON, solo en cookies
-        self.assertNotIn('tokens', response.data)
         self.assertIn('user', response.data)
+        # Tokens pueden estar en JSON (modo dual para clientes sin cookies de terceros) y/o en cookies
+        if 'tokens' in response.data:
+            self.assertIn('access', response.data['tokens'])
+            self.assertIn('refresh', response.data['tokens'])
         self.assertEqual(response.data['user']['email'], 'newuser@test.com')
         self.assertEqual(response.data['user']['role'], 'student')
         
@@ -124,10 +126,11 @@ class AuthIntegrationTestCase(TestCase):
             # Verificar respuesta
             self.assertEqual(response.status_code, status.HTTP_200_OK)
             self.assertTrue(response.data['success'])
-            # Con cookies HTTP-Only, los tokens NO están en JSON, solo en cookies
-            self.assertNotIn('tokens', response.data)
             self.assertIn('user', response.data)
             self.assertEqual(response.data['user']['email'], 'login@test.com')
+            if 'tokens' in response.data:
+                self.assertIn('access', response.data['tokens'])
+                self.assertIn('refresh', response.data['tokens'])
             
             # Verificar que se establecieron cookies
             from django.conf import settings
