@@ -4,7 +4,7 @@ import { authAPI } from '@/shared/services/api';
 import { AuthResponse, LoginRequest, RegisterRequest, User } from '@/shared/types';
 // clearTokens solo para limpiar tokens residuales en storage (si existen)
 import { logger } from '@/shared/utils/logger';
-import { clearTokens } from '@/shared/utils/tokenStorage';
+import { clearTokens, setTokens } from '@/shared/utils/tokenStorage';
 import { useRouter } from 'next/navigation';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 
@@ -172,8 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const response = await authAPI.login(credentials.email, credentials.password);
 
             if (response.success && response.user) {
-                // Las cookies HTTP-Only ya fueron establecidas por el backend
-                // Solo actualizar el estado del usuario
+                if (response.tokens?.access && response.tokens?.refresh) {
+                    setTokens(response.tokens.access, response.tokens.refresh);
+                }
                 setUser(response.user);
                 setLoadingUser(false);
 
@@ -240,8 +241,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const response = await authAPI.register(userData);
 
             if (response.success && response.user) {
-                // Las cookies HTTP-Only ya fueron establecidas por el backend
-                // Solo actualizar el estado del usuario
+                if (response.tokens?.access && response.tokens?.refresh) {
+                    setTokens(response.tokens.access, response.tokens.refresh);
+                }
                 setUser(response.user);
                 setLoadingUser(false);
 

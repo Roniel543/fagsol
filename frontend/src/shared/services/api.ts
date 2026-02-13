@@ -1,7 +1,6 @@
 import { ApiResponse, AuthResponse } from '@/shared/types';
-// Se mantiene solo para compatibilidad y limpieza
 import { logger } from '@/shared/utils/logger';
-import { clearTokens } from '@/shared/utils/tokenStorage';
+import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '@/shared/utils/tokenStorage';
 
 // Configuración de la API
 
@@ -61,13 +60,12 @@ let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
 /**
- * Refresca el access token usando el refresh token de cookie.
- * Las cookies se envían automáticamente con credentials: 'include'.
- * 
+ * Refresca el access token usando cookie o, si no hay cookies (third-party bloqueadas), el refresh en body.
+ * Permite que la app funcione sin cookies de terceros (ej. Chrome con "Bloquear cookies de terceros").
+ *
  * @returns true si el refresh fue exitoso, false en caso contrario
  */
 export async function refreshAccessToken(): Promise<boolean> {
-    // Si ya hay un refresh en curso, esperar a que termine
     if (isRefreshing && refreshPromise) {
         return refreshPromise;
     }
@@ -75,24 +73,32 @@ export async function refreshAccessToken(): Promise<boolean> {
     isRefreshing = true;
     refreshPromise = (async () => {
         try {
+            const refreshFromStorage = typeof window !== 'undefined' ? getRefreshToken() : null;
+
+            // Enviar refresh en el body cuando esté en storage: evita depender de cookies
+            // (Chrome y otros navegadores pueden bloquear cookies de terceros en fagsol.com → API)
+            const body = refreshFromStorage
+                ? JSON.stringify({ refresh: refreshFromStorage })
+                : undefined;
+
             const response = await fetch(`${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.REFRESH}`, {
                 method: 'POST',
-                credentials: 'include', // IMPORTANTE: Incluir cookies
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                ...(body ? { body } : {}),
             });
 
             if (!response.ok) {
                 throw new Error('Failed to refresh token');
             }
 
-            // El backend establece nuevas cookies automáticamente
-            // No necesitamos hacer nada más, las cookies se actualizan en el navegador
+            const data = await response.json().catch(() => ({}));
+            if (data.tokens?.access && data.tokens?.refresh) {
+                setTokens(data.tokens.access, data.tokens.refresh);
+            }
             return true;
         } catch (error) {
             logger.debug('Error refreshing token (normal si no hay sesión activa)');
-            // Si falla el refresh, limpiar tokens locales (si existen) y forzar re-login
             clearTokens();
             return false;
         } finally {
@@ -104,69 +110,60 @@ export async function refreshAccessToken(): Promise<boolean> {
     return refreshPromise;
 }
 
+/** Construye headers incluyendo Bearer si hay access token (para funcionar sin cookies de terceros). */
+function buildRequestHeaders(overrides: HeadersInit = {}): HeadersInit {
+    const base: Record<string, string> = { 'Content-Type': 'application/json' };
+    const fromOverrides = overrides && typeof overrides === 'object' && !(overrides instanceof Headers)
+        ? (overrides as Record<string, string>)
+        : {};
+    const headers: Record<string, string> = { ...base, ...fromOverrides };
+    const access = typeof window !== 'undefined' ? getAccessToken() : null;
+    if (access) {
+        headers['Authorization'] = `Bearer ${access}`;
+    }
+    return headers;
+}
+
 /**
- * Función base para hacer requests a la API con refresh automático
+ * Función base para hacer requests a la API con refresh automático.
+ * Usa cookies y, si hay token en storage, Authorization Bearer (funciona sin cookies de terceros).
  */
 export const apiRequest = async <T = any>(
     endpoint: string,
     options: RequestInit = {}
 ): Promise<ApiResponse<T>> => {
-    // Asegurar que el endpoint comience con /
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
     const url = `${API_CONFIG.BASE_URL}${normalizedEndpoint}`;
 
-    // Log de request (solo método y endpoint, sin información sensible)
     logger.apiRequest(options.method || 'GET', normalizedEndpoint);
 
-    // Configurar opciones por defecto con credentials: 'include' para cookies
-    const defaultHeaders: HeadersInit = {
-        'Content-Type': 'application/json',
-    };
-
-    // Fusionar headers: primero defaults, luego los que vienen en options
-    const mergedHeaders: HeadersInit = {
-        ...defaultHeaders,
-        ...(options.headers || {}),
-    };
-
-    const defaultOptions: RequestInit = {
-        credentials: 'include', // IMPORTANTE: Incluir cookies en todas las requests
-        headers: mergedHeaders,
-    };
-
-    // Construir las opciones finales para la petición
-    // IMPORTANTE: No sobrescribir headers aquí, ya están fusionados arriba
+    const mergedHeaders = buildRequestHeaders(options.headers as Record<string, string>);
     const finalOptions: RequestInit = {
-        ...defaultOptions,
         ...options,
-        // Asegurar que headers estén fusionados correctamente
-        headers: mergedHeaders,
-        // Asegurar que credentials esté presente
         credentials: options.credentials ?? 'include',
+        headers: mergedHeaders,
     };
 
     try {
         let response = await fetch(url, finalOptions);
 
-        // Si el token expiró (401), intentar refrescar y reintentar
-        // No intentar refrescar en endpoints de autenticación (login, register)
-        // porque esos endpoints no requieren token y el 401 es un error de credenciales
         const isAuthEndpoint = normalizedEndpoint.includes('/auth/login') ||
             normalizedEndpoint.includes('/auth/register') ||
             normalizedEndpoint.includes('/auth/logout');
 
         if (response.status === 401 && !isAuthEndpoint) {
             logger.auth('Token expirado, intentando refrescar...');
-            // Guardar el response original antes de intentar refrescar
             const originalResponse = response.clone();
             const refreshSuccess = await refreshAccessToken();
 
             if (refreshSuccess) {
                 logger.auth('Token refrescado exitosamente, reintentando petición...');
-                // Reintentar con las mismas opciones (las cookies se actualizaron automáticamente)
-                response = await fetch(url, finalOptions);
+                const retryOptions: RequestInit = {
+                    ...finalOptions,
+                    headers: buildRequestHeaders(options.headers as Record<string, string>),
+                };
+                response = await fetch(url, retryOptions);
             } else {
-                // Si no se pudo refrescar, usar el response original para extraer el mensaje
                 logger.warn('No se pudo refrescar el token');
                 response = originalResponse;
             }
