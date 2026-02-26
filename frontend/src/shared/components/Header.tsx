@@ -125,8 +125,8 @@ const Header = () => {
             <header
                 ref={headerRef}
                 className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-                        ? 'bg-black/95 backdrop-blur-xl shadow-2xl border-b border-zinc-800'
-                        : 'bg-black/40 backdrop-blur-md'
+                    ? 'bg-black/95 backdrop-blur-xl shadow-2xl border-b border-zinc-800'
+                    : 'bg-black/40 backdrop-blur-md'
                     }`}
             >
                 <nav className="mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -162,8 +162,8 @@ const Header = () => {
                                         onChange={(e) => setSearchQuery(e.target.value)}
                                         onFocus={() => setIsSearchFocused(true)}
                                         className={`w-full pl-12 pr-4 py-2.5 bg-zinc-900/70 border-2 rounded-xl text-sm text-gray-200 placeholder-gray-400 transition-all duration-300 focus:outline-none focus:ring-2 ${isSearchFocused
-                                                ? 'border-primary-orange focus:ring-primary-orange/30 bg-zinc-900 shadow-xl shadow-primary-orange/30'
-                                                : 'border-zinc-700/50 hover:border-zinc-600 hover:bg-zinc-900'
+                                            ? 'border-primary-orange focus:ring-primary-orange/30 bg-zinc-900 shadow-xl shadow-primary-orange/30'
+                                            : 'border-zinc-700/50 hover:border-zinc-600 hover:bg-zinc-900'
                                             }`}
                                     />
                                 </div>
@@ -228,8 +228,8 @@ const Header = () => {
                                     href={link.href}
                                     onClick={(e) => handleNavClick(e, link.href, link.section)}
                                     className={`relative px-3 py-2 text-sm font-medium transition-all duration-300 rounded-lg group ${activeSection === link.section
-                                            ? 'text-primary-orange'
-                                            : 'text-gray-300 hover:text-primary-orange'
+                                        ? 'text-primary-orange'
+                                        : 'text-gray-300 hover:text-primary-orange'
                                         }`}
                                 >
                                     {link.name}
@@ -286,8 +286,8 @@ const Header = () => {
             {/* Mobile Menu */}
             <div
                 className={`fixed inset-0 z-40 md:hidden transition-all duration-300 ${isMobileMenuOpen
-                        ? 'opacity-100 pointer-events-auto'
-                        : 'opacity-0 pointer-events-none'
+                    ? 'opacity-100 pointer-events-auto'
+                    : 'opacity-0 pointer-events-none'
                     }`}
             >
                 {/* Backdrop */}
@@ -309,8 +309,8 @@ const Header = () => {
                                 href={link.href}
                                 onClick={(e) => handleNavClick(e, link.href, link.section)}
                                 className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${activeSection === link.section
-                                        ? 'bg-gradient-to-r from-primary-orange/20 to-amber-600/20 text-primary-orange border-2 border-primary-orange/50'
-                                        : 'text-gray-300 hover:bg-zinc-900 hover:text-primary-orange border-2 border-transparent'
+                                    ? 'bg-gradient-to-r from-primary-orange/20 to-amber-600/20 text-primary-orange border-2 border-primary-orange/50'
+                                    : 'text-gray-300 hover:bg-zinc-900 hover:text-primary-orange border-2 border-transparent'
                                     }`}
                             >
                                 {link.name}
@@ -335,8 +335,8 @@ const Header = () => {
             {/* Mobile Search Modal */}
             <div
                 className={`fixed inset-0 z-40 lg:hidden transition-all duration-300 ${isSearchFocused && !isMobileMenuOpen
-                        ? 'opacity-100 pointer-events-auto'
-                        : 'opacity-0 pointer-events-none'
+                    ? 'opacity-100 pointer-events-auto'
+                    : 'opacity-0 pointer-events-none'
                     }`}
             >
                 {/* Backdrop */}
