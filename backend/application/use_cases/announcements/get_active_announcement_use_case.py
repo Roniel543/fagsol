@@ -31,13 +31,14 @@ class GetActiveAnnouncementUseCase:
         if not announcement:
             return UseCaseResult(success=True, data=None)
         image_url = ''
-        if announcement.image:
+        # Prioridad: image_url (Blob o externa); luego image (MEDIA)
+        if announcement.image_url:
+            image_url = announcement.image_url
+        elif announcement.image:
             if request:
                 image_url = request.build_absolute_uri(announcement.image.url)
             else:
                 image_url = announcement.image.url or ''
-        elif announcement.image_url:
-            image_url = announcement.image_url
         return UseCaseResult(
             success=True,
             data={

@@ -167,6 +167,24 @@ class AzureBlobStorageService(FileStorageService):
         
         # Ruta: courses/images/{type}/{year}/{month}/{filename}
         file_path = f'courses/images/{image_type}/{year}/{month:02d}/{file_name}'
-        
+
         return file_path
+
+    @staticmethod
+    def generate_announcement_file_path(file_extension: str) -> str:
+        """
+        Genera una ruta única para la imagen de un anuncio.
+
+        Args:
+            file_extension: Extensión del archivo (ej: '.jpg')
+
+        Returns:
+            str: Ruta del archivo en el contenedor (ej: announcements/images/2026/02/announcement_xxx.jpg)
+        """
+        now = datetime.now()
+        year = now.year
+        month = now.month
+        unique_id = uuid.uuid4().hex[:12]
+        file_name = f'announcement_{unique_id}{file_extension}'
+        return f'announcements/images/{year}/{month:02d}/{file_name}'
 

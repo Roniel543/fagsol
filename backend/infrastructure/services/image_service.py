@@ -20,7 +20,8 @@ class ImageOptimizer:
     # Dimensiones máximas por tipo
     THUMBNAIL_MAX_SIZE = (400, 300)
     BANNER_MAX_SIZE = (1920, 600)
-    
+    ANNOUNCEMENT_MAX_SIZE = (1200, 800)
+
     # Dimensiones mínimas
     THUMBNAIL_MIN_SIZE = (200, 150)
     BANNER_MIN_SIZE = (800, 300)
@@ -101,8 +102,11 @@ class ImageOptimizer:
                 min_width, min_height = cls.BANNER_MIN_SIZE
                 if width < min_width or height < min_height:
                     return False, f'Dimensiones mínimas para banner: {min_width}x{min_height}px. Actual: {width}x{height}px'
+            elif image_type == 'announcement':
+                # Sin requisito mínimo estricto para anuncios
+                return True, None
             else:
-                return False, 'Tipo de imagen inválido. Debe ser "thumbnail" o "banner"'
+                return False, 'Tipo de imagen inválido. Debe ser "thumbnail", "banner" o "announcement"'
             
             return True, None
             
@@ -143,6 +147,8 @@ class ImageOptimizer:
                 max_size = cls.THUMBNAIL_MAX_SIZE
             elif image_type == 'banner':
                 max_size = cls.BANNER_MAX_SIZE
+            elif image_type == 'announcement':
+                max_size = cls.ANNOUNCEMENT_MAX_SIZE
             else:
                 raise ValueError(f'Tipo de imagen inválido: {image_type}')
             

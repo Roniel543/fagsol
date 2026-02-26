@@ -20,9 +20,6 @@ from application.use_cases.announcements import (
     UpdateAnnouncementUseCase,
 )
 
-logger = logging.getLogger('apps')
-
-
 @swagger_auto_schema(
     method='get',
     operation_description='Obtiene el anuncio activo a mostrar en el sitio (banner/modal). Público.',
@@ -324,5 +321,63 @@ def update_announcement(request, announcement_id):
         logger.error(f"Error en update_announcement: {str(e)}", exc_info=True)
         return Response(
             {'success': False, 'message': 'Error interno del servidor'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+
+@swagger_auto_schema(
+    method='post',
+    operation_description='Sube la imagen de un anuncio a Blob Storage (misma lógica que posters de cursos). Solo administradores.',
+    manual_parameters=[
+        openapi.Parameter('file', openapi.IN_FORM, type=openapi.TYPE_FILE, required=True, description='Archivo de imagen'),
+    ],
+    responses={
+        200: openapi.Response(description='Imagen subida', examples={'application/json': {'success': True, 'data': {'url': 'https://...'}}}),
+        400: openapi.Response(description='Sin archivo o validación fallida'),
+        401: openapi.Response(description='No autenticado'),
+        403: openapi.Response(description='Solo administradores'),
+        500: openapi.Response(description='Error interno'),
+    },
+    security=[{'Bearer': []}],
+    tags=['Anuncios - Admin']
+)
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsAdmin])
+def upload_announcement_image(request):
+    """
+    POST /api/v1/announcements/upload-image/
+    Sube la imagen del anuncio a Azure Blob (o local si DEBUG). Devuelve la URL para guardar en image_url.
+    """
+    try:
+        from infrastructure.services.image_upload_service import ImageUploadService
+
+        if 'file' not in request.FILES:
+            return Response(
+                {'success': False, 'message': 'No se proporcionó ningún archivo'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        image_file = request.FILES['file']
+        upload_service = ImageUploadService()
+        success, result, metadata = upload_service.upload_announcement_image(image_file)
+
+        if not success:
+            return Response(
+                {'success': False, 'message': result},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        image_url = metadata.get('url', '')
+        if image_url and not image_url.startswith('http'):
+            if image_url.startswith('/'):
+                scheme, host = request.scheme, request.get_host()
+                image_url = f"{scheme}://{host}{image_url}"
+            else:
+                image_url = request.build_absolute_uri(image_url)
+            metadata['url'] = image_url
+
+        return Response({'success': True, 'data': metadata}, status=status.HTTP_200_OK)
+    except Exception as e:
+        logger.error(f"Error en upload_announcement_image: {str(e)}", exc_info=True)
+        return Response(
+            {'success': False, 'message': 'Error interno del servidor al procesar la imagen'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )

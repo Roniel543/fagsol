@@ -118,11 +118,80 @@ class ImageUploadService:
             
             logger.info(f'Imagen subida exitosamente: {url}')
             return True, url, response_metadata
-            
+
         except Exception as e:
             logger.error(f'Error en upload_course_image: {str(e)}')
             return False, f'Error al procesar la imagen: {str(e)}', None
-    
+
+    def upload_announcement_image(self, image_file) -> Tuple[bool, Optional[str], Optional[Dict[str, Any]]]:
+        """
+        Sube y optimiza la imagen de un anuncio (misma lógica que cursos: Blob en producción).
+
+        Args:
+            image_file: Archivo de imagen
+
+        Returns:
+            Tuple[bool, Optional[str], Optional[Dict]]:
+                (éxito, url_o_mensaje_error, metadata con 'url', etc.)
+        """
+        try:
+            # 1. Validar archivo
+            is_valid, error_message = ImageOptimizer.validate_image(image_file)
+            if not is_valid:
+                return False, error_message, None
+
+            # 2. Validar dimensiones (announcement no tiene mínimo estricto)
+            is_valid_dimensions, error_message = ImageOptimizer.validate_dimensions(image_file, 'announcement')
+            if not is_valid_dimensions:
+                return False, error_message, None
+
+            # 3. Optimizar imagen
+            try:
+                optimized_image, metadata = ImageOptimizer.optimize_image(image_file, 'announcement')
+            except Exception as e:
+                logger.error(f'Error optimizando imagen de anuncio: {str(e)}')
+                return False, f'Error al optimizar la imagen: {str(e)}', None
+
+            # 4. Generar ruta
+            file_extension = ImageOptimizer.get_file_extension('announcement', metadata.get('format', 'JPEG'))
+
+            if isinstance(self.storage_service, LocalFileStorageService):
+                import uuid
+                from datetime import datetime
+                now = datetime.now()
+                unique_id = uuid.uuid4().hex[:12]
+                file_name = f'announcement_{unique_id}{file_extension}'
+                file_path = f'announcements/images/{now.year}/{now.month:02d}/{file_name}'
+            else:
+                from infrastructure.external_services.azure_storage import AzureBlobStorageService
+                file_path = AzureBlobStorageService.generate_announcement_file_path(file_extension)
+
+            # 5. Content type y subida
+            content_type = 'image/jpeg' if metadata.get('format') == 'JPEG' else 'image/png'
+            try:
+                url = self.storage_service.upload_file(file_path, optimized_image, content_type)
+            except Exception as e:
+                logger.error(f'Error subiendo imagen de anuncio: {str(e)}')
+                return False, f'Error al subir el archivo: {str(e)}', None
+
+            response_metadata = {
+                'url': url,
+                'width': metadata['final_width'],
+                'height': metadata['final_height'],
+                'original_width': metadata['original_width'],
+                'original_height': metadata['original_height'],
+                'size': metadata['optimized_size'],
+                'original_size': metadata['original_size'],
+                'compression_ratio': metadata['compression_ratio'],
+                'format': metadata['format'],
+            }
+            logger.info(f'Imagen de anuncio subida exitosamente: {url}')
+            return True, url, response_metadata
+
+        except Exception as e:
+            logger.error(f'Error en upload_announcement_image: {str(e)}')
+            return False, f'Error al procesar la imagen: {str(e)}', None
+
     def delete_course_image(self, image_url: str) -> bool:
         """
         Elimina una imagen de curso
