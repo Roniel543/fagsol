@@ -456,19 +456,6 @@ AZURE_STORAGE_ACCOUNT_NAME = config('AZURE_STORAGE_ACCOUNT_NAME', default='')
 AZURE_STORAGE_ACCOUNT_KEY = config('AZURE_STORAGE_ACCOUNT_KEY', default='')
 AZURE_STORAGE_CONTAINER_NAME = config('AZURE_STORAGE_CONTAINER_NAME', default='fagsol-media')
 
-# En producción, los archivos media (p. ej. imagen del anuncio) se guardan y sirven desde Azure Blob.
-# Así el ImageField del admin usa el mismo contenedor "fagsol-media" y las URLs son las de Blob.
-if USE_AZURE_STORAGE and AZURE_STORAGE_ACCOUNT_NAME and AZURE_STORAGE_ACCOUNT_KEY:
-    STORAGES = {
-        "default": {
-            "BACKEND": "storages.backends.azure_storage.AzureStorage",
-            "OPTIONS": {
-                "account_name": AZURE_STORAGE_ACCOUNT_NAME,
-                "account_key": AZURE_STORAGE_ACCOUNT_KEY,
-                "azure_container": AZURE_STORAGE_CONTAINER_NAME,
-            },
-        },
-    }
 
 # ==================================
 # OPENAPI/SWAGGER CONFIGURATION
