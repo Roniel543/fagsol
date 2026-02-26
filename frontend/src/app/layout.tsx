@@ -1,3 +1,4 @@
+import { AnnouncementBanner } from '@/shared/components/AnnouncementBanner'
 import { ErrorHandler } from '@/shared/components/ErrorHandler'
 import { ToastProvider } from '@/shared/components/Toast'
 import { CartProvider } from '@/shared/contexts/CartContext'
@@ -42,6 +43,7 @@ export default function RootLayout({
           <AuthProvider>
             <CartProvider>
               <ToastProvider>
+                <AnnouncementBanner />
                 {children}
               </ToastProvider>
             </CartProvider>

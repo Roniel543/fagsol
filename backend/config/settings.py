@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     
     # Django Apps (Models & Admin)
     'apps.core',
+    'apps.announcements',
     'apps.users',
     'apps.courses',
     'apps.payments',

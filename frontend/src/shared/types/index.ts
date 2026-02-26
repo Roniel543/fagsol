@@ -42,6 +42,18 @@ export interface ApiResponse<T = any> {
     errors?: Record<string, string[]>;
 }
 
+/** Anuncio/convocatoria para el banner del sitio */
+export interface Announcement {
+    id: number;
+    slug: string;
+    title: string;
+    summary: string;
+    body: string;
+    cta_text: string;
+    cta_url: string;
+    image_url: string;
+}
+
 // Course types
 export interface Instructor {
     id: string;

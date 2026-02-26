@@ -1,6 +1,7 @@
 import { Eye, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 export { AnimatedCounter } from './AnimatedCounter';
+export { AnnouncementBanner } from './AnnouncementBanner';
 export { AuthBackground } from './AuthBackground';
 export { Badge, CleanProcessBadge, PurityBadge, RecoveryBadge } from './Badge';
 export { CoursePlaceholder } from './CoursePlaceholder';

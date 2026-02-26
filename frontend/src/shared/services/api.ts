@@ -1,4 +1,4 @@
-import { ApiResponse, AuthResponse } from '@/shared/types';
+import { ApiResponse, AuthResponse, Announcement } from '@/shared/types';
 import { logger } from '@/shared/utils/logger';
 import { clearTokens, getAccessToken, getRefreshToken, setTokens } from '@/shared/utils/tokenStorage';
 
@@ -49,6 +49,7 @@ export const API_CONFIG = {
         LOGOUT: '/auth/logout/',
         REFRESH: '/auth/refresh/', // Endpoint de refresh con cookies
         ME: '/auth/me/', // Obtener usuario actual
+        ANNOUNCEMENTS_ACTIVE: '/announcements/active/',
         // Payments endpoints (requieren backend)
         PAYMENT_INTENT: '/payments/intent/',
         PAYMENT_PROCESS: '/payments/process/',
@@ -338,5 +339,16 @@ export const authAPI = {
             ...response,
             valid: (response as any).valid ?? false,
         } as ApiResponse & { valid: boolean };
+    },
+};
+
+/** API de anuncios/convocatorias (endpoint público) */
+export const announcementsAPI = {
+    getActive: async (): Promise<{ success: boolean; data: Announcement | null }> => {
+        const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.ANNOUNCEMENTS_ACTIVE}`;
+        const res = await fetch(url, { method: 'GET', credentials: 'include' });
+        const json = await res.json().catch(() => ({ success: false, data: null }));
+        if (!res.ok) return { success: false, data: null };
+        return { success: true, data: json.data ?? null };
     },
 };
